@@ -1,83 +1,126 @@
-# شركة إعمار اليوم - الموقع الإلكتروني
+# MD Group — Internal Platform
 
-موقع إلكتروني لشركة إعمار اليوم - الخدمات العقارية والاستثمار العقاري والمقاولات العامة.
+منصة إدارة داخلية لمجموعة MD تجمع خمس شركات تحت مظلة واحدة، مع صلاحيات متعددة
+المستويات ومنظومة موحّدة للحضور والأوراق الرسمية والمراسلات.
 
-## المميزات
+## Tech stack
 
-- ✅ موقع ثابت بالكامل (Static Site) - سريع جدًا
-- ✅ ثلاث صفحات: الرئيسية، عن الشركة، اتصل بنا
-- ✅ تصميم عصري ومتجاوب مع جميع الأجهزة
-- ✅ دعم اللغة العربية (RTL)
-- ✅ جاهز للنشر على Vercel
+- **Next.js 16** (App Router, RSC, Server Actions, Route Handlers)
+- **Tailwind CSS** + `lucide-react` + `react-hot-toast`
+- **Supabase** for Auth, Postgres (with RLS), and Storage (PDFs / letters)
+- **TypeScript**, **Zod** for validation
+- **pdf-parse** for extracting searchable text from uploaded PDFs
 
-## التقنيات المستخدمة
+Hosted on **Vercel**. No separate backend server for v1.
 
-- **Next.js 15** - مع App Router
-- **TypeScript** - للكتابة الآمنة
-- **Tailwind CSS** - للتصميم
-- **Lucide React** - للأيقونات
+## Roles
 
-## التثبيت والتشغيل
+| Role              | Visibility                                        |
+| ----------------- | ------------------------------------------------- |
+| `md_admin`        | All 5 companies + all data                        |
+| `company_manager` | Only rows belonging to their single `company_id`  |
+| `employee`        | Own profile, own attendance, own personal papers  |
 
-### تثبيت المتطلبات
+All restrictions are enforced at the database level via Postgres **RLS**.
+
+## Feature map
+
+- `/` — public landing page (5 company cards, CTA to login)
+- `/about`, `/contact` — public brand pages
+- `/login` — Supabase email + password
+- `/portal` — role-aware dashboard
+- `/portal/companies` — company list + detail
+- `/portal/employees` — CRUD for employees (+ managers for admins)
+- `/portal/attendance` — check-in / check-out (employee), daily grid + CSV export (manager/admin)
+- `/portal/papers` — upload PDFs/images, full-text search inside content, signed-URL preview
+- `/portal/mail` — inbound/outbound mail log with document attachments
+- `/portal/contacts` — contacts directory
+- `/portal/settings` — edit own profile
+
+## Setup
+
+### 1. Install deps
 
 ```bash
-npm install
+npm install --legacy-peer-deps
 ```
 
-### التشغيل في وضع التطوير
+### 2. Create a Supabase project
+
+- Sign up at [supabase.com](https://supabase.com).
+- In **Settings → API**, copy `Project URL`, `anon key`, and `service_role key`.
+
+### 3. Configure environment variables
+
+Copy `.env.example` to `.env.local` and fill in the values:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+### 4. Run the migration
+
+Open the Supabase **SQL editor** and run the contents of
+[`supabase/migrations/0001_init.sql`](./supabase/migrations/0001_init.sql).
+
+This creates:
+
+- `companies`, `profiles`, `attendance`, `documents`, `mail`, `contacts`, `audit_log`
+- All enums + indexes + RLS policies
+- 5 placeholder companies (rename them to your real company names)
+- A trigger that auto-creates a `profiles` row on user signup
+
+### 5. Create the documents storage bucket
+
+**Storage → New bucket**, name `documents`, keep it **private**.
+Signed URLs are generated server-side on demand with a 5-minute expiry.
+
+### 6. Create the first admin user
+
+1. **Authentication → Users → Add user** (email + password).
+2. In the **SQL editor**:
+
+   ```sql
+   update public.profiles
+     set role = 'md_admin', full_name = 'Your Name'
+     where id = '<uuid-from-users-table>';
+   ```
+
+3. For each `company_manager`, repeat but set `role = 'company_manager'` and
+   `company_id = <a company id>`.
+
+### 7. Run locally
 
 ```bash
 npm run dev
 ```
 
-افتح [http://localhost:3000](http://localhost:3000) في المتصفح.
+The middleware redirects unauthenticated users hitting `/portal/*` to `/login`.
+Managers can create employees via `/portal/employees/new`; the app provisions
+the auth user + profile row in one flow using the service-role key
+(server-only).
 
-### بناء الموقع للانتاج
+## Deployment (Vercel)
 
-```bash
-npm run build
-```
+1. Push to GitHub.
+2. In Vercel, import the repo.
+3. Add the four env vars under **Settings → Environment Variables**.
+4. Deploy. Vercel auto-detects Next.js.
 
-سيتم إنشاء مجلد `.next` يحتوي على الملفات جاهزة للنشر.
+## Notes for the future
 
-## النشر على Vercel
+- The platform will grow into an HR system. Suggested next steps:
+  - Payroll + leave requests tables (same RLS shape)
+  - Performance reviews
+  - Bulk PDF ingestion via a small Express worker on Railway
+- Supabase Storage has per-bucket size & bandwidth limits. Monitor usage in the
+  Supabase dashboard. For heavy archives, consider moving to S3-backed buckets.
+- Audit trail lives in `audit_log`; every sensitive create action writes a row
+  via the admin client.
 
-1. ارفع المشروع على GitHub
-2. اذهب إلى [Vercel](https://vercel.com)
-3. استورد المشروع من GitHub
-4. Vercel سيكتشف تلقائيًا أنه Next.js وسيقوم بالنشر
+---
 
-أو استخدم Vercel CLI:
-
-```bash
-npm i -g vercel
-vercel
-```
-
-## البنية
-
-```
-.
-├── app/
-│   ├── layout.tsx      # التخطيط الرئيسي
-│   ├── page.tsx        # الصفحة الرئيسية
-│   ├── about/
-│   │   └── page.tsx    # صفحة عن الشركة
-│   ├── contact/
-│   │   └── page.tsx    # صفحة اتصل بنا
-│   └── globals.css     # الأنماط العامة
-├── components/
-│   └── Navigation.tsx  # شريط التنقل
-└── public/             # الملفات الثابتة (الصور، إلخ)
-```
-
-## معلومات الشركة
-
-- **الاسم**: شركة إعمار اليوم للمقاولات العامة والاستثمار العقاري
-- **النشاط**: الخدمات العقارية والاستثمار العقاري والمقاولات العامة
-- **الخدمات**: تصميم وتنفيذ المشاريع السكنية والتجارية، المقاولات العامة، الاستشارات العقارية
-
-## الترخيص
-
-جميع الحقوق محفوظة © 2024 شركة إعمار اليوم
+© MD Group. All rights reserved.

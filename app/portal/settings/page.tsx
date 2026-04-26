@@ -1,0 +1,31 @@
+import { requireUser } from "@/lib/auth";
+import { PageHeader } from "@/components/portal/PageHeader";
+import { SettingsForm } from "./settings-form";
+import { AppearanceCard } from "./appearance-card";
+
+export const metadata = { title: "الإعدادات" };
+
+export default async function SettingsPage() {
+  const { profile } = await requireUser();
+
+  return (
+    <div className="max-w-2xl space-y-5 sm:space-y-6">
+      <PageHeader
+        title="الإعدادات"
+        description="تعديل معلومات حسابك والمظهر."
+      />
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 mb-4">
+          المعلومات الشخصية
+        </h2>
+        <SettingsForm
+          profileId={profile.id}
+          fullName={profile.full_name}
+          phone={profile.phone}
+          jobTitle={profile.job_title}
+        />
+      </div>
+      <AppearanceCard />
+    </div>
+  );
+}

@@ -1,22 +1,30 @@
 {
-  "name": "emaar-alyoum-website",
+  "name": "md-group-platform",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "export": "next build"
+    "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.104.0",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^0.556.0",
     "next": "16.0.7",
+    "pdf-parse": "^2.4.5",
     "react": "19.0.1",
     "react-dom": "19.0.1",
-    "lucide-react": "^0.556.0"
+    "react-hot-toast": "^2.6.0",
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.1",
     "autoprefixer": "^10.4.17",
@@ -25,4 +33,3 @@
     "typescript": "^5.3.3"
   }
 }
-
