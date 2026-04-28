@@ -140,11 +140,15 @@ export function Sidebar({ role, fullName, companyName, isOpen, onClose }: Props)
       >
         <div className="px-5 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <Link href="/portal" className="flex items-center gap-3 group">
-            <img
-              src="/logo.png"
-              alt="MD Group"
-              className="w-10 h-10 object-contain"
-            />
+            <span className="flex-shrink-0 inline-flex rounded-xl bg-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-1 transition-transform group-hover:scale-105">
+              <img
+                src="/Icon-MD.png"
+                alt="MD Group"
+                className="w-8 h-8 object-contain"
+                width={32}
+                height={32}
+              />
+            </span>
             <div>
               <div className="text-lg font-bold text-gray-900 dark:text-gray-50">
                 MD Group

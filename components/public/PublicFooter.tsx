@@ -7,20 +7,16 @@ export function PublicFooter() {
         <div className="py-14">
           <div className="grid md:grid-cols-3 gap-12 mb-10">
             <div>
-              <div className="flex items-center gap-4 mb-5">
-                <img
-                  src="/logo.png"
-                  alt="MD Group"
-                  className="w-16 h-16 object-contain flex-shrink-0"
-                  width={64}
-                  height={64}
-                />
-                <div>
-                  <h3 className="text-lg font-bold">MD Group</h3>
-                  <p className="text-xs text-gray-400">
-                    مجموعة شركات متكاملة
-                  </p>
-                </div>
+              <div className="mb-5">
+                <span className="inline-flex rounded-xl bg-white shadow-sm p-2">
+                  <img
+                    src="/Logo-MD.png"
+                    alt="MD Group Holding Company"
+                    className="h-20 w-auto object-contain"
+                    width={160}
+                    height={80}
+                  />
+                </span>
               </div>
               <p className="text-gray-400 text-sm leading-relaxed">
                 مجموعة أعمال تضمّ عدّة شركات تعمل في قطاعات متنوّعة تحت إدارة

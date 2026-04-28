@@ -21,20 +21,19 @@ export default async function LoginPage(props: { searchParams: SearchParams }) {
         <div className="text-center mb-6 md:mb-8">
           <Link
             href="/"
-            className="inline-flex items-center gap-3 mb-5 md:mb-6 group"
+            className="inline-flex flex-col items-center gap-4 mb-5 md:mb-6 group"
           >
-            <img
-              src="/logo.png"
-              alt="MD Group"
-              className="w-12 h-12 md:w-14 md:h-14 object-contain"
-            />
-            <div className="text-right">
-              <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-50">
-                MD Group
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                منصة الإدارة الداخلية
-              </div>
+            <span className="inline-flex rounded-2xl bg-white shadow-md ring-1 ring-gray-100 p-3 transition-transform group-hover:scale-105">
+              <img
+                src="/Logo-MD.png"
+                alt="MD Group Holding Company"
+                className="h-20 w-auto object-contain"
+                width={160}
+                height={80}
+              />
+            </span>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              منصة الإدارة الداخلية
             </div>
           </Link>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-50 mb-2">

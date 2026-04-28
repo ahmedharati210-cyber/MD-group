@@ -39,7 +39,15 @@ export function PortalShell({ role, fullName, companyName, children }: Props) {
           <Menu className="w-6 h-6" />
         </button>
         <Link href="/portal" className="flex items-center gap-2">
-          <img src="/logo.png" alt="MD Group" className="w-8 h-8 object-contain" />
+          <span className="inline-flex rounded-lg bg-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-0.5">
+            <img
+              src="/Icon-MD.png"
+              alt="MD Group"
+              className="w-7 h-7 object-contain"
+              width={28}
+              height={28}
+            />
+          </span>
           <span className="font-bold text-gray-900 dark:text-gray-100">
             MD Group
           </span>

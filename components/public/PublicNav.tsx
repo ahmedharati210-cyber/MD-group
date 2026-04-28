@@ -37,13 +37,15 @@ export function PublicNav() {
       <div className="container-custom">
         <div className="flex items-center justify-between h-16 md:h-20">
           <Link href="/" className="flex items-center gap-3 md:gap-4 group min-w-0">
-            <img
-              src="/logo.png"
-              alt="MD Group"
-              className="w-10 h-10 md:w-14 md:h-14 object-contain transition-transform group-hover:scale-105 flex-shrink-0"
-              width={56}
-              height={56}
-            />
+            <span className="flex-shrink-0 rounded-xl bg-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-1 transition-transform group-hover:scale-105 inline-flex">
+              <img
+                src="/Icon-MD.png"
+                alt="MD Group"
+                className="w-8 h-8 md:w-11 md:h-11 object-contain"
+                width={44}
+                height={44}
+              />
+            </span>
             <div className="hidden sm:block min-w-0">
               <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-50 leading-tight truncate">
                 MD Group
