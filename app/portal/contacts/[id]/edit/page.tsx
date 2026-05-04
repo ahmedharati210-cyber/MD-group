@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { ContactForm } from "../../contact-form";
 import { updateContactAction } from "../../actions";
+import { isConstructionCompany } from "@/lib/features";
 
 export const metadata = { title: "تعديل جهة اتصال" };
 
@@ -25,6 +26,10 @@ export default async function EditContactPage({
 
   if (!contact) notFound();
 
+  // For company_manager, use their own company. For md_admin, use the contact's company.
+  const relevantCompanyId = profile.role === "md_admin" ? contact.company_id : profile.company_id;
+  const showTradeCategory = await isConstructionCompany(supabase, relevantCompanyId);
+
   return (
     <div className="max-w-2xl">
       <Link
@@ -42,6 +47,7 @@ export default async function EditContactPage({
           lockedCompanyId={
             profile.role === "company_manager" ? profile.company_id : null
           }
+          showTradeCategory={showTradeCategory}
           initial={contact}
           submitLabel="حفظ التعديلات"
         />

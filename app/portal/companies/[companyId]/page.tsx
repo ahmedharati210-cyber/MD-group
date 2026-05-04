@@ -26,7 +26,6 @@ export default async function CompanyDetailPage({
   const { companyId } = await params;
   const { error: errorMessage } = await searchParams;
   const isAdmin = profile.role === "md_admin";
-
   const supabase = await createSupabaseServerClient();
 
   const { data: company } = await supabase
@@ -60,13 +59,15 @@ export default async function CompanyDetailPage({
 
   return (
     <div>
-      <Link
-        href="/portal/companies"
-        className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mb-3"
-      >
-        <ArrowRight className="w-4 h-4" />
-        العودة إلى الشركات
-      </Link>
+      {isAdmin ? (
+        <Link
+          href="/portal/companies"
+          className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mb-3"
+        >
+          <ArrowRight className="w-4 h-4" />
+          العودة إلى الشركات
+        </Link>
+      ) : null}
 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">

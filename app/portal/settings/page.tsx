@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { SettingsForm } from "./settings-form";
 import { AppearanceCard } from "./appearance-card";
+import { AvatarUpload } from "./avatar-upload";
 
 export const metadata = { title: "الإعدادات" };
 
@@ -14,6 +15,12 @@ export default async function SettingsPage() {
         title="الإعدادات"
         description="تعديل معلومات حسابك والمظهر."
       />
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 mb-4">
+          الصورة الشخصية
+        </h2>
+        <AvatarUpload currentUrl={profile.avatar_url} fullName={profile.full_name} />
+      </div>
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
         <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 mb-4">
           المعلومات الشخصية

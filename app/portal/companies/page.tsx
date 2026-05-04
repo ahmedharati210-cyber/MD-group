@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Building2, Users, ArrowLeft, Plus } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -9,6 +10,16 @@ export const metadata = { title: "الشركات" };
 
 export default async function CompaniesPage() {
   const { profile } = await requireRole(["md_admin", "company_manager"]);
+
+  // Company managers only manage their own company — send them directly there.
+  if (profile.role === "company_manager") {
+    redirect(
+      profile.company_id
+        ? `/portal/companies/${profile.company_id}`
+        : "/portal",
+    );
+  }
+
   const isAdmin = profile.role === "md_admin";
 
   const supabase = await createSupabaseServerClient();

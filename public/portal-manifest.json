@@ -1,0 +1,36 @@
+{
+  "name": "MD Group — الإدارة الداخلية",
+  "short_name": "MD Group",
+  "description": "منصة الإدارة الداخلية لمجموعة MD: الموظفون، الحضور، المشاريع، الطلبات، والمراسلات.",
+  "start_url": "/portal",
+  "scope": "/portal",
+  "display": "standalone",
+  "background_color": "#f5f3f0",
+  "theme_color": "#8c6032",
+  "lang": "ar",
+  "dir": "rtl",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/Icon-MD.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/Icon-MD.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/Icon-MD.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

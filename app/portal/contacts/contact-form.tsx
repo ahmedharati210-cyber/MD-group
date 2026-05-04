@@ -47,6 +47,8 @@ type Props = {
   lockedCompanyId: string | null;
   initial?: Partial<Contact> | null;
   submitLabel?: string;
+  /** Show construction-specific trade category field (Emaar Al Youm only) */
+  showTradeCategory?: boolean;
 };
 
 export function ContactForm({
@@ -55,6 +57,7 @@ export function ContactForm({
   lockedCompanyId,
   initial,
   submitLabel = "حفظ",
+  showTradeCategory = false,
 }: Props) {
   const [state, formAction] = useActionState<ActionState, FormData>(
     action,
@@ -119,6 +122,23 @@ export function ContactForm({
             ))}
           </select>
         </div>
+        {showTradeCategory ? (
+          <div>
+            <label className={labelClasses}>التخصص / الفئة</label>
+            <select
+              name="trade_category"
+              defaultValue={(initial as { trade_category?: string | null })?.trade_category ?? ""}
+              className={inputClasses}
+            >
+              <option value="">— غير محدد —</option>
+              <option value="laborer">عمال</option>
+              <option value="technician">فني</option>
+              <option value="mechanic">ميكانيكي</option>
+              <option value="electrician">كهربائي</option>
+              <option value="other">أخرى</option>
+            </select>
+          </div>
+        ) : null}
         <div className="sm:col-span-2">
           <label className={labelClasses}>ملاحظات</label>
           <textarea

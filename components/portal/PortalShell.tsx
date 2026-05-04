@@ -4,32 +4,59 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
-import type { UserRole } from "@/types/db";
+import { PwaInstallBanner } from "./PwaInstallBanner";
+import type { UserRole, AppFeature, RoleFeatures } from "@/types/db";
 
 type Props = {
   role: UserRole;
   fullName: string;
+  companyId: string | null;
   companyName: string | null;
+  isSuperAdmin: boolean;
+  enabledFeatures: AppFeature[] | null;
+  roleFeatures: RoleFeatures | null;
+  pendingRequestsCount: number;
+  unreadWarningsCount: number;
   children: React.ReactNode;
 };
 
-export function PortalShell({ role, fullName, companyName, children }: Props) {
+export function PortalShell({
+  role,
+  fullName,
+  companyId,
+  companyName,
+  isSuperAdmin,
+  enabledFeatures,
+  roleFeatures,
+  pendingRequestsCount,
+  unreadWarningsCount,
+  children,
+}: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const handleClose = useCallback(() => setIsOpen(false), []);
   const handleOpen = useCallback(() => setIsOpen(true), []);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Sidebar
-        role={role}
-        fullName={fullName}
-        companyName={companyName}
-        isOpen={isOpen}
-        onClose={handleClose}
-      />
+      <PwaInstallBanner />
+      <div className="print:hidden">
+        <Sidebar
+          role={role}
+          fullName={fullName}
+          companyId={companyId}
+          companyName={companyName}
+          isSuperAdmin={isSuperAdmin}
+          enabledFeatures={enabledFeatures}
+          roleFeatures={roleFeatures}
+          pendingRequestsCount={pendingRequestsCount}
+          unreadWarningsCount={unreadWarningsCount}
+          isOpen={isOpen}
+          onClose={handleClose}
+        />
+      </div>
 
       {/* Mobile topbar */}
-      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+      <header className="print:hidden md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
         <button
           type="button"
           onClick={handleOpen}
@@ -55,8 +82,8 @@ export function PortalShell({ role, fullName, companyName, children }: Props) {
         <div className="w-9" aria-hidden />
       </header>
 
-      <div className="md:mr-64">
-        <main className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto">{children}</main>
+      <div className="md:mr-64 print:mr-0">
+        <main className="p-4 sm:p-6 md:p-8 print:p-0 max-w-7xl mx-auto">{children}</main>
       </div>
     </div>
   );

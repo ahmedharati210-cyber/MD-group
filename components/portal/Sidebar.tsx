@@ -14,16 +14,27 @@ import {
   Settings,
   LogOut,
   X,
+  FolderKanban,
+  FileBarChart2,
+  ClipboardEdit,
+  Receipt,
+  Map,
+  AlertTriangle,
+  ShieldCheck,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getVisibleFeatures } from "@/lib/features";
 import { logoutAction } from "@/app/login/actions";
-import type { UserRole } from "@/types/db";
+import type { UserRole, AppFeature, RoleFeatures } from "@/types/db";
 
 type Item = {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   roles: UserRole[];
+  /** Feature key required for this item; undefined = always visible */
+  feature?: AppFeature;
 };
 
 const items: Item[] = [
@@ -34,10 +45,11 @@ const items: Item[] = [
     roles: ["md_admin", "company_manager", "employee"],
   },
   {
+    // href is dynamically overridden for company_manager in the render loop
     href: "/portal/companies",
     label: "الشركات",
     icon: Building2,
-    roles: ["md_admin", "company_manager"],
+    roles: ["md_admin"],
   },
   {
     href: "/portal/employees",
@@ -50,24 +62,70 @@ const items: Item[] = [
     label: "الحضور",
     icon: CalendarCheck,
     roles: ["md_admin", "company_manager", "employee"],
+    feature: "attendance",
+  },
+  {
+    href: "/portal/timeline",
+    label: "المشاريع",
+    icon: FolderKanban,
+    roles: ["md_admin", "company_manager", "employee"],
+    feature: "timeline",
+  },
+  {
+    href: "/portal/reports",
+    label: "التقارير",
+    icon: FileBarChart2,
+    roles: ["md_admin", "company_manager", "employee"],
+    feature: "reports",
+  },
+  {
+    href: "/portal/requests",
+    label: "الطلبات",
+    icon: ClipboardEdit,
+    roles: ["md_admin", "company_manager", "employee"],
+    feature: "requests",
+  },
+  {
+    href: "/portal/claims",
+    label: "المطالبات",
+    icon: Receipt,
+    roles: ["md_admin", "company_manager"],
+    feature: "claims",
+  },
+  {
+    href: "/portal/maps",
+    label: "الخرائط",
+    icon: Map,
+    roles: ["md_admin", "company_manager", "employee"],
+    feature: "maps",
+  },
+  {
+    href: "/portal/warnings",
+    label: "الإنذارات",
+    icon: AlertTriangle,
+    roles: ["md_admin", "company_manager", "employee"],
+    feature: "warnings",
   },
   {
     href: "/portal/papers",
     label: "الأوراق الرسمية",
     icon: FileText,
     roles: ["md_admin", "company_manager", "employee"],
+    feature: "papers",
   },
   {
     href: "/portal/mail",
     label: "البريد",
     icon: Mail,
     roles: ["md_admin", "company_manager"],
+    feature: "mail",
   },
   {
     href: "/portal/contacts",
     label: "جهات الاتصال",
     icon: Contact,
     roles: ["md_admin", "company_manager", "employee"],
+    feature: "contacts",
   },
   {
     href: "/portal/settings",
@@ -80,17 +138,33 @@ const items: Item[] = [
 type Props = {
   role: UserRole;
   fullName: string;
+  companyId: string | null;
   companyName: string | null;
+  isSuperAdmin: boolean;
+  enabledFeatures: AppFeature[] | null;
+  roleFeatures: RoleFeatures | null;
+  pendingRequestsCount: number;
+  unreadWarningsCount: number;
   isOpen: boolean;
   onClose: () => void;
 };
 
-export function Sidebar({ role, fullName, companyName, isOpen, onClose }: Props) {
+export function Sidebar({
+  role,
+  fullName,
+  companyId,
+  companyName,
+  isSuperAdmin,
+  enabledFeatures,
+  roleFeatures,
+  pendingRequestsCount,
+  unreadWarningsCount,
+  isOpen,
+  onClose,
+}: Props) {
   const pathname = usePathname();
   const prevPathRef = useRef(pathname);
 
-  // Auto-close on route change (mobile). Only fires when the path actually
-  // changes — not on every re-render, otherwise the drawer can never stay open.
   useEffect(() => {
     if (prevPathRef.current !== pathname) {
       prevPathRef.current = pathname;
@@ -98,7 +172,6 @@ export function Sidebar({ role, fullName, companyName, isOpen, onClose }: Props)
     }
   }, [pathname, onClose]);
 
-  // Lock scroll when drawer is open on mobile.
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -108,7 +181,23 @@ export function Sidebar({ role, fullName, companyName, isOpen, onClose }: Props)
     }
   }, [isOpen]);
 
-  const visibleItems = items.filter((i) => i.roles.includes(role));
+  // Compute the effective feature list for this role
+  const visibleFeatures = getVisibleFeatures(
+    role,
+    enabledFeatures,
+    roleFeatures,
+    isSuperAdmin,
+  );
+
+  const visibleItems = items.filter((item) => {
+    if (!item.roles.includes(role)) return false;
+    if (!item.feature) return true;
+    // Super admins and md_admin see everything
+    if (isSuperAdmin || role === "md_admin") return true;
+    if (visibleFeatures === null) return true;
+    return visibleFeatures.includes(item.feature);
+  });
+
   const isActive = (href: string) =>
     href === "/portal" ? pathname === "/portal" : pathname.startsWith(href);
 
@@ -117,6 +206,24 @@ export function Sidebar({ role, fullName, companyName, isOpen, onClose }: Props)
     company_manager: "مدير شركة",
     employee: "موظف",
   };
+
+  /**
+   * For company_manager, the "الشركات" entry resolves to their own company page.
+   * For md_admin, it stays at the full companies list.
+   */
+  function resolveHref(item: Item): string {
+    if (item.href === "/portal/companies" && role === "company_manager" && companyId) {
+      return `/portal/companies/${companyId}`;
+    }
+    return item.href;
+  }
+
+  function resolveLabel(item: Item): string {
+    if (item.href === "/portal/companies" && role === "company_manager") {
+      return "شركتي";
+    }
+    return item.label;
+  }
 
   return (
     <>
@@ -138,6 +245,7 @@ export function Sidebar({ role, fullName, companyName, isOpen, onClose }: Props)
           isOpen ? "translate-x-0" : "translate-x-full md:translate-x-0",
         )}
       >
+        {/* Logo */}
         <div className="px-5 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <Link href="/portal" className="flex items-center gap-3 group">
             <span className="flex-shrink-0 inline-flex rounded-xl bg-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-1 transition-transform group-hover:scale-105">
@@ -168,22 +276,41 @@ export function Sidebar({ role, fullName, companyName, isOpen, onClose }: Props)
           </button>
         </div>
 
+        {/* User badge */}
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
           <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
             {fullName}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {roleLabel[role]}
-            {companyName ? ` • ${companyName}` : ""}
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {roleLabel[role]}
+              {companyName ? ` • ${companyName}` : ""}
+            </span>
+            {isSuperAdmin ? (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-bold">
+                <ShieldCheck className="w-3 h-3" />
+                Super Admin
+              </span>
+            ) : null}
           </div>
         </div>
 
+        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 px-3">
           <ul className="space-y-1">
-            {visibleItems.map(({ href, label, icon: Icon }) => {
+            {visibleItems.map((item) => {
+              const href = resolveHref(item);
+              const label = resolveLabel(item);
               const active = isActive(href);
+              const Icon = item.icon;
+              const badge =
+                item.href === "/portal/requests" && pendingRequestsCount > 0
+                  ? { count: pendingRequestsCount, cls: "bg-amber-500" }
+                  : item.href === "/portal/warnings" && unreadWarningsCount > 0
+                    ? { count: unreadWarningsCount, cls: "bg-red-500" }
+                    : null;
               return (
-                <li key={href}>
+                <li key={item.href}>
                   <Link
                     href={href}
                     className={cn(
@@ -195,20 +322,53 @@ export function Sidebar({ role, fullName, companyName, isOpen, onClose }: Props)
                   >
                     <Icon
                       className={cn(
-                        "w-5 h-5",
+                        "w-5 h-5 flex-shrink-0",
                         active
                           ? "text-primary-600 dark:text-primary-400"
                           : "text-gray-400 dark:text-gray-500",
                       )}
                     />
-                    {label}
+                    <span className="flex-1 truncate">{label}</span>
+                    {badge ? (
+                      <span className={cn("flex-shrink-0 min-w-5 h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center tabular-nums", badge.cls)}>
+                        {badge.count > 99 ? "99+" : badge.count}
+                      </span>
+                    ) : null}
                   </Link>
                 </li>
               );
             })}
           </ul>
+
+          {/* Super admin section */}
+          {isSuperAdmin ? (
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <p className="px-4 mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                الإدارة العليا
+              </p>
+              {[
+                { href: "/portal/admin", label: "لوحة الإدارة العليا", Icon: ShieldCheck },
+                { href: "/portal/admin/audit", label: "سجل التدقيق", Icon: ScrollText },
+              ].map(({ href, label, Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors",
+                    pathname === href || (href !== "/portal/admin" && pathname.startsWith(href))
+                      ? "bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                      : "text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20",
+                  )}
+                >
+                  <Icon className="w-5 h-5" />
+                  {label}
+                </Link>
+              ))}
+            </div>
+          ) : null}
         </nav>
 
+        {/* Logout */}
         <div className="p-3 border-t border-gray-100 dark:border-gray-800">
           <form action={logoutAction}>
             <button

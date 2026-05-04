@@ -7,11 +7,18 @@ import {
   Mail,
   Contact,
   ArrowLeft,
+  FolderKanban,
+  FileBarChart2,
+  ClipboardEdit,
+  AlertCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getVisibleFeatures } from "@/lib/features";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { StatCard } from "@/components/portal/StatCard";
+import type { AppFeature, ProjectStatus, RoleFeatures } from "@/types/db";
 
 type Counts = {
   companies: number;
@@ -20,28 +27,58 @@ type Counts = {
   papers: number;
   mail: number;
   contacts: number;
+  activeProjects: number;
+  pendingRequests: number;
+  overdueTasks: number;
+  warnings: number;
 };
 
-async function getCounts(): Promise<Counts> {
-  const supabase = await createSupabaseServerClient();
+type ProjectProgressRow = {
+  id: string;
+  name: string;
+  status: ProjectStatus;
+  categories: { tasks: { is_completed: boolean }[] }[];
+};
 
-  // RLS already scopes counts to what the viewer can see.
+async function getCounts(profileId: string, isEmployee: boolean): Promise<Counts> {
+  const supabase = await createSupabaseServerClient();
   const today = new Date().toISOString().slice(0, 10);
 
-  const [companies, employees, attendance, papers, mail, contacts] =
+  // Employees see only their own pending requests; managers see all.
+  const requestsBase = supabase
+    .from("engineer_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
+  const requestsQuery = isEmployee
+    ? requestsBase.eq("requester_id", profileId)
+    : requestsBase;
+
+  // Employees see their own unread warnings; managers see total warnings sent.
+  const warningsQuery = isEmployee
+    ? supabase
+        .from("warnings")
+        .select("id", { count: "exact", head: true })
+        .eq("is_read", false)
+        .or(`target_profile_id.eq.${profileId},target_profile_id.is.null`)
+    : supabase.from("warnings").select("id", { count: "exact", head: true });
+
+  const [companies, employees, attendance, papers, mail, contacts, projects, requests, overdue, warnings] =
     await Promise.all([
       supabase.from("companies").select("id", { count: "exact", head: true }),
-      supabase
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("role", "employee"),
-      supabase
-        .from("attendance")
-        .select("id", { count: "exact", head: true })
-        .eq("date", today),
+      supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "employee"),
+      supabase.from("attendance").select("id", { count: "exact", head: true }).eq("date", today),
       supabase.from("documents").select("id", { count: "exact", head: true }),
       supabase.from("mail").select("id", { count: "exact", head: true }),
       supabase.from("contacts").select("id", { count: "exact", head: true }),
+      supabase.from("projects").select("id", { count: "exact", head: true }).eq("status", "active"),
+      requestsQuery,
+      supabase
+        .from("project_tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("is_completed", false)
+        .not("due_date", "is", null)
+        .lt("due_date", today),
+      warningsQuery,
     ]);
 
   return {
@@ -51,15 +88,66 @@ async function getCounts(): Promise<Counts> {
     papers: papers.count ?? 0,
     mail: mail.count ?? 0,
     contacts: contacts.count ?? 0,
+    activeProjects: projects.count ?? 0,
+    pendingRequests: requests.count ?? 0,
+    overdueTasks: overdue.count ?? 0,
+    warnings: warnings.count ?? 0,
   };
 }
 
+async function getTopProjects(): Promise<ProjectProgressRow[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("projects")
+    .select("id, name, status, categories:project_categories(tasks:project_tasks(is_completed))")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(3);
+  return (data ?? []) as unknown as ProjectProgressRow[];
+}
+
+const statusLabels: Record<ProjectStatus, { label: string; cls: string }> = {
+  planning: { label: "تخطيط", cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+  active: { label: "نشط", cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+  completed: { label: "مكتمل", cls: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400" },
+  on_hold: { label: "موقوف", cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
+};
+
 export default async function PortalDashboard() {
   const { profile } = await requireUser();
-  const counts = await getCounts();
+  const supabase = await createSupabaseServerClient();
+
+  // Load company feature flags so the dashboard can hide disabled modules
+  let enabledFeatures: AppFeature[] | null = null;
+  let roleFeatures: RoleFeatures | null = null;
+  if (profile.company_id) {
+    const { data } = await supabase
+      .from("companies")
+      .select("enabled_features, role_features")
+      .eq("id", profile.company_id)
+      .single<{ enabled_features: AppFeature[] | null; role_features: RoleFeatures | null }>();
+    enabledFeatures = data?.enabled_features ?? null;
+    roleFeatures = data?.role_features ?? null;
+  }
+
+  const visibleFeatures = getVisibleFeatures(
+    profile.role,
+    enabledFeatures,
+    roleFeatures,
+    profile.is_super_admin ?? false,
+  );
+
+  // null = no restrictions (md_admin / super admin)
+  const hasFeature = (f: AppFeature) =>
+    visibleFeatures === null || visibleFeatures.includes(f);
 
   const isAdmin = profile.role === "md_admin";
   const isEmployee = profile.role === "employee";
+
+  const [counts, topProjects] = await Promise.all([
+    getCounts(profile.id ?? "", isEmployee),
+    getTopProjects(),
+  ]);
 
   return (
     <div>
@@ -72,68 +160,133 @@ export default async function PortalDashboard() {
         }
       />
 
+      {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {isAdmin ? (
-          <StatCard
-            label="الشركات النشطة"
-            value={counts.companies}
-            icon={Building2}
-            tone="primary"
-          />
+          <StatCard label="الشركات النشطة" value={counts.companies} icon={Building2} tone="primary" href="/portal/companies" />
         ) : null}
         {!isEmployee ? (
-          <StatCard
-            label="الموظفون"
-            value={counts.employees}
-            icon={Users}
-            tone="primary"
-          />
+          <StatCard label="الموظفون" value={counts.employees} icon={Users} tone="primary" href="/portal/employees" />
         ) : null}
-        <StatCard
-          label={isEmployee ? "سجلاتك اليوم" : "حضور اليوم"}
-          value={counts.attendanceToday}
-          icon={CalendarCheck}
-          tone="success"
-        />
-        <StatCard
-          label="الأوراق الرسمية"
-          value={counts.papers}
-          icon={FileText}
-          tone="secondary"
-        />
-        {!isEmployee ? (
+        {hasFeature("attendance") ? (
+          <StatCard label={isEmployee ? "سجلاتك اليوم" : "حضور اليوم"} value={counts.attendanceToday} icon={CalendarCheck} tone="success" href="/portal/attendance" />
+        ) : null}
+        {hasFeature("papers") ? (
+          <StatCard label="الأوراق الرسمية" value={counts.papers} icon={FileText} tone="secondary" href="/portal/papers" />
+        ) : null}
+        {!isEmployee && hasFeature("mail") ? (
+          <StatCard label="رسائل البريد" value={counts.mail} icon={Mail} tone="warning" href="/portal/mail" />
+        ) : null}
+        {hasFeature("contacts") ? (
+          <StatCard label="جهات الاتصال" value={counts.contacts} icon={Contact} tone="primary" href="/portal/contacts" />
+        ) : null}
+        {hasFeature("timeline") ? (
+          <StatCard label="مشاريع نشطة" value={counts.activeProjects} icon={FolderKanban} tone="success" href="/portal/timeline" />
+        ) : null}
+        {hasFeature("requests") ? (
           <StatCard
-            label="رسائل البريد"
-            value={counts.mail}
-            icon={Mail}
+            label={isEmployee ? "طلباتي المعلقة" : "طلبات معلقة"}
+            value={counts.pendingRequests}
+            icon={ClipboardEdit}
             tone="warning"
+            href="/portal/requests"
           />
         ) : null}
-        <StatCard
-          label="جهات الاتصال"
-          value={counts.contacts}
-          icon={Contact}
-          tone="primary"
-        />
+        {hasFeature("timeline") && counts.overdueTasks > 0 ? (
+          <StatCard label="مهام متأخرة" value={counts.overdueTasks} icon={AlertCircle} tone="danger" href="/portal/timeline" />
+        ) : null}
+        {hasFeature("warnings") ? (
+          <StatCard
+            label={isEmployee ? "إنذارات غير مقروءة" : "الإنذارات"}
+            value={counts.warnings}
+            icon={AlertTriangle}
+            tone="danger"
+            href="/portal/warnings"
+          />
+        ) : null}
       </div>
 
+      {/* Active projects widget */}
+      {hasFeature("timeline") && topProjects.length > 0 ? (
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold text-gray-800 dark:text-gray-200">أبرز المشاريع النشطة</h2>
+            <Link href="/portal/timeline" className="text-sm text-primary-600 dark:text-primary-400 hover:underline">
+              عرض الكل
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            {topProjects.map((p) => {
+              const allTasks = p.categories.flatMap((c) => c.tasks);
+              const total = allTasks.length;
+              const done = allTasks.filter((t) => t.is_completed).length;
+              const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+              const { label, cls } = statusLabels[p.status];
+              return (
+                <Link
+                  key={p.id}
+                  href={`/portal/timeline/${p.id}`}
+                  className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-50 text-sm truncate">{p.name}</h3>
+                    <span className={`flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>{label}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1.5">
+                    <span>{total} مهمة</span>
+                    <span className="tabular-nums">{done}/{total} ({pct}%)</span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary-500 dark:bg-primary-400 rounded-full transition-all"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Quick links — only shown for enabled features */}
       <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
-        <QuickLink
-          href="/portal/papers"
-          title="إدارة الأوراق الرسمية"
-          description="رفع ملفات PDF، عقود، ومراسلات، مع بحث نصي داخل المحتوى."
-          icon={FileText}
-        />
-        <QuickLink
-          href="/portal/attendance"
-          title="الحضور والانصراف"
-          description={
-            isEmployee
-              ? "سجّل حضورك اليومي وراجع سجلاتك السابقة."
-              : "مراجعة سجلات الحضور اليومية والشهرية."
-          }
-          icon={CalendarCheck}
-        />
+        {hasFeature("timeline") ? (
+          <QuickLink
+            href="/portal/timeline"
+            title="المشاريع"
+            description="تابع مراحل المشاريع الهندسية ونسب الإنجاز."
+            icon={FolderKanban}
+          />
+        ) : null}
+        {hasFeature("reports") ? (
+          <QuickLink
+            href="/portal/reports"
+            title="التقارير"
+            description="أضف تقاريرك اليومية والأسبوعية عن مواقع العمل."
+            icon={FileBarChart2}
+          />
+        ) : null}
+        {hasFeature("papers") ? (
+          <QuickLink
+            href="/portal/papers"
+            title="إدارة الأوراق الرسمية"
+            description="رفع ملفات PDF، عقود، ومراسلات، مع بحث نصي داخل المحتوى."
+            icon={FileText}
+          />
+        ) : null}
+        {hasFeature("attendance") ? (
+          <QuickLink
+            href="/portal/attendance"
+            title="الحضور والانصراف"
+            description={
+              isEmployee
+                ? "سجّل حضورك اليومي وراجع سجلاتك السابقة."
+                : "مراجعة سجلات الحضور اليومية والشهرية."
+            }
+            icon={CalendarCheck}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -160,14 +313,10 @@ function QuickLink({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 mb-1">
-          <h3 className="font-bold text-gray-900 dark:text-gray-50 truncate">
-            {title}
-          </h3>
+          <h3 className="font-bold text-gray-900 dark:text-gray-50 truncate">{title}</h3>
           <ArrowLeft className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-primary-600 dark:group-hover:text-primary-400 group-hover:-translate-x-1 transition-all flex-shrink-0" />
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-          {description}
-        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{description}</p>
       </div>
     </Link>
   );

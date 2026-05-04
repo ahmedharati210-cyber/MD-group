@@ -1,0 +1,327 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { requireRole, requireUser } from "@/lib/auth";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { logAudit } from "@/lib/audit";
+
+export type ActionState = { error?: string; ok?: boolean };
+
+function revalidateTimeline(projectId?: string) {
+  revalidatePath("/portal/timeline");
+  if (projectId) revalidatePath(`/portal/timeline/${projectId}`);
+}
+
+/** Resolves the company that owns timeline features (Emaar Al Youm). */
+async function resolveCompanyId(profile: { role: string; company_id: string | null }): Promise<string | null> {
+  if (profile.company_id) return profile.company_id;
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("companies")
+    .select("id")
+    .contains("enabled_features", ["timeline"])
+    .limit(1)
+    .single();
+  return data?.id ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Projects
+// ---------------------------------------------------------------------------
+const projectSchema = z.object({
+  name: z.string().min(2, "الاسم مطلوب"),
+  description: z.string().optional().nullable(),
+  start_date: z.string().optional().nullable(),
+  end_date: z.string().optional().nullable(),
+  status: z.enum(["planning", "active", "completed", "on_hold"]).default("planning"),
+  location_notes: z.string().optional().nullable(),
+  manager_name: z.string().optional().nullable(),
+  manager_phone: z.string().optional().nullable(),
+  manager_email: z.string().email("بريد إلكتروني غير صحيح").optional().or(z.literal("")).nullable(),
+  default_engineer_id: z.string().uuid().optional().nullable(),
+});
+
+export async function createProjectAction(
+  _prev: ActionState | undefined,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId, profile } = await requireRole(["md_admin", "company_manager"]);
+  const parsed = projectSchema.safeParse({
+    name: formData.get("name"),
+    description: formData.get("description") || null,
+    start_date: formData.get("start_date") || null,
+    end_date: formData.get("end_date") || null,
+    status: formData.get("status") || "planning",
+    location_notes: formData.get("location_notes") || null,
+    manager_name: formData.get("manager_name") || null,
+    manager_phone: formData.get("manager_phone") || null,
+    manager_email: formData.get("manager_email") || null,
+    default_engineer_id: formData.get("default_engineer_id") || null,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
+
+  const company_id = await resolveCompanyId(profile);
+  if (!company_id) return { error: "لم يتم العثور على الشركة" };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: newProject, error } = await supabase
+    .from("projects")
+    .insert({ company_id, created_by: userId, ...parsed.data })
+    .select("id")
+    .single<{ id: string }>();
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "create", "project", newProject?.id, { name: parsed.data.name });
+
+  revalidatePath("/portal/timeline");
+  redirect("/portal/timeline");
+}
+
+export async function updateProjectAction(
+  id: string,
+  _prev: ActionState | undefined,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await requireRole(["md_admin", "company_manager"]);
+  const parsed = projectSchema.safeParse({
+    name: formData.get("name"),
+    description: formData.get("description") || null,
+    start_date: formData.get("start_date") || null,
+    end_date: formData.get("end_date") || null,
+    status: formData.get("status") || "planning",
+    location_notes: formData.get("location_notes") || null,
+    manager_name: formData.get("manager_name") || null,
+    manager_phone: formData.get("manager_phone") || null,
+    manager_email: formData.get("manager_email") || null,
+    default_engineer_id: formData.get("default_engineer_id") || null,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("projects")
+    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "project", id, {
+    name: parsed.data.name,
+    status: parsed.data.status,
+  });
+
+  revalidateTimeline(id);
+  redirect(`/portal/timeline/${id}`);
+}
+
+export async function deleteProjectAction(id: string): Promise<ActionState> {
+  const { userId } = await requireRole(["md_admin", "company_manager"]);
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("projects").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "delete", "project", id);
+
+  redirect("/portal/timeline");
+}
+
+// ---------------------------------------------------------------------------
+// Categories
+// ---------------------------------------------------------------------------
+const categorySchema = z.object({
+  name: z.string().min(1, "اسم الفئة مطلوب"),
+  sort_order: z.coerce.number().default(0),
+});
+
+export async function createCategoryAction(
+  projectId: string,
+  _prev: ActionState | undefined,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await requireRole(["md_admin", "company_manager"]);
+  const parsed = categorySchema.safeParse({
+    name: formData.get("name"),
+    sort_order: formData.get("sort_order") || 0,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: newCat, error } = await supabase
+    .from("project_categories")
+    .insert({ project_id: projectId, ...parsed.data })
+    .select("id")
+    .single<{ id: string }>();
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "create", "project_category", newCat?.id, {
+    name: parsed.data.name,
+    project_id: projectId,
+  });
+
+  revalidateTimeline(projectId);
+  return { ok: true };
+}
+
+export async function updateCategoryAction(
+  categoryId: string,
+  projectId: string,
+  _prev: ActionState | undefined,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await requireRole(["md_admin", "company_manager"]);
+  const parsed = categorySchema.safeParse({
+    name: formData.get("name"),
+    sort_order: formData.get("sort_order") || 0,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("project_categories").update(parsed.data).eq("id", categoryId);
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "project_category", categoryId, {
+    name: parsed.data.name,
+    project_id: projectId,
+  });
+
+  revalidateTimeline(projectId);
+  return { ok: true };
+}
+
+export async function deleteCategoryAction(categoryId: string, projectId: string): Promise<ActionState> {
+  const { userId } = await requireRole(["md_admin", "company_manager"]);
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("project_categories").delete().eq("id", categoryId);
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "delete", "project_category", categoryId, { project_id: projectId });
+
+  revalidateTimeline(projectId);
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Tasks
+// ---------------------------------------------------------------------------
+const taskSchema = z.object({
+  title: z.string().min(1, "عنوان المهمة مطلوب"),
+  description: z.string().optional().nullable(),
+  assigned_to: z.string().uuid().optional().nullable(),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  sort_order: z.coerce.number().default(0),
+});
+
+export async function createTaskAction(
+  categoryId: string,
+  projectId: string,
+  _prev: ActionState | undefined,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await requireRole(["md_admin", "company_manager"]);
+
+  const rawTitle = (formData.get("title") as string | null) ?? "";
+  const assigned_to = (formData.get("assigned_to") as string | null) || null;
+  const due_date = (formData.get("due_date") as string | null) || null;
+
+  // Support bulk creation: titles separated by newline
+  const titles = rawTitle
+    .split("\n")
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+  if (titles.length === 0) return { error: "عنوان المهمة مطلوب" };
+
+  const supabase = await createSupabaseServerClient();
+  const rows = titles.map((title, idx) => ({
+    category_id: categoryId,
+    project_id: projectId,
+    title,
+    assigned_to: assigned_to || null,
+    due_date: due_date || null,
+    sort_order: idx,
+  }));
+
+  const { error } = await supabase.from("project_tasks").insert(rows);
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "create", "project_task", null, {
+    titles: titles.join(", "),
+    project_id: projectId,
+    category_id: categoryId,
+  });
+
+  revalidateTimeline(projectId);
+  return { ok: true };
+}
+
+export async function updateTaskAction(
+  taskId: string,
+  projectId: string,
+  _prev: ActionState | undefined,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await requireRole(["md_admin", "company_manager"]);
+  const parsed = taskSchema.safeParse({
+    title: formData.get("title"),
+    description: formData.get("description") || null,
+    assigned_to: formData.get("assigned_to") || null,
+    due_date: formData.get("due_date") || null,
+    sort_order: formData.get("sort_order") || 0,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("project_tasks").update(parsed.data).eq("id", taskId);
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "project_task", taskId, {
+    title: parsed.data.title,
+    project_id: projectId,
+  });
+
+  revalidateTimeline(projectId);
+  return { ok: true };
+}
+
+export async function deleteTaskAction(taskId: string, projectId: string): Promise<ActionState> {
+  const { userId } = await requireRole(["md_admin", "company_manager"]);
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("project_tasks").delete().eq("id", taskId);
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "delete", "project_task", taskId, { project_id: projectId });
+
+  revalidateTimeline(projectId);
+  return { ok: true };
+}
+
+export async function toggleTaskAction(taskId: string, projectId: string, currentlyCompleted: boolean): Promise<ActionState> {
+  const { userId } = await requireUser();
+  const supabase = await createSupabaseServerClient();
+
+  const now = new Date().toISOString();
+  const { error } = await supabase.from("project_tasks").update({
+    is_completed: !currentlyCompleted,
+    completed_by: !currentlyCompleted ? userId : null,
+    completed_at: !currentlyCompleted ? now : null,
+  }).eq("id", taskId);
+
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "project_task", taskId, {
+    is_completed: !currentlyCompleted,
+    project_id: projectId,
+  });
+
+  revalidateTimeline(projectId);
+  return { ok: true };
+}
+
+export async function updateTaskNotesAction(taskId: string, projectId: string, notes: string): Promise<ActionState> {
+  await requireUser();
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("project_tasks").update({ notes }).eq("id", taskId);
+  if (error) return { error: error.message };
+  revalidateTimeline(projectId);
+  return { ok: true };
+}

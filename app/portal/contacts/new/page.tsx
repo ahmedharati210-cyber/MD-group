@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { ContactForm } from "../contact-form";
 import { createContactAction } from "../actions";
+import { isConstructionCompany } from "@/lib/features";
 
 export const metadata = { title: "إضافة جهة اتصال" };
 
@@ -15,6 +16,9 @@ export default async function NewContactPage() {
     .from("companies")
     .select("id, name_ar")
     .order("name_ar");
+
+  // Trade categories only shown for the construction company (has timeline feature)
+  const showTradeCategory = await isConstructionCompany(supabase, profile.company_id);
 
   return (
     <div className="max-w-2xl">
@@ -33,6 +37,7 @@ export default async function NewContactPage() {
           lockedCompanyId={
             profile.role === "company_manager" ? profile.company_id : null
           }
+          showTradeCategory={showTradeCategory}
           submitLabel="إضافة"
         />
       </div>

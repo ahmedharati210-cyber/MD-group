@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertCircle, Loader2, Mail, Lock } from "lucide-react";
@@ -66,12 +67,20 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
       </div>
 
       <div>
-        <label
-          htmlFor="password"
-          className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
-        >
-          كلمة المرور
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label
+            htmlFor="password"
+            className="block text-sm font-semibold text-gray-700 dark:text-gray-300"
+          >
+            كلمة المرور
+          </label>
+          <Link
+            href="/forgot-password"
+            className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+          >
+            نسيت كلمة المرور؟
+          </Link>
+        </div>
         <div className="relative">
           <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500 pointer-events-none" />
           <input

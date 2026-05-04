@@ -15,10 +15,10 @@ export default function NotFound() {
           تأكّد من الرابط أو ارجع إلى الرئيسية.
         </p>
         <Link
-          href="/"
+          href="/portal"
           className="inline-flex items-center px-5 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm hover:bg-primary-700"
         >
-          الرئيسية
+          العودة إلى البوابة
         </Link>
       </div>
     </div>

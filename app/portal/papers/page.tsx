@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FileText, Plus, Building2 } from "lucide-react";
-import { requireUser } from "@/lib/auth";
+import { requireFeature } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
@@ -26,7 +26,7 @@ export default async function PapersPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { profile } = await requireUser();
+  const { profile } = await requireFeature("papers");
   const { q, category, companyId } = await searchParams;
 
   const canUpload = profile.role !== "employee";

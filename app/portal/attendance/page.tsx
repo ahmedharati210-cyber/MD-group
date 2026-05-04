@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CalendarCheck, Download, Clock, Plus } from "lucide-react";
-import { requireUser } from "@/lib/auth";
+import { requireFeature } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
@@ -17,7 +17,7 @@ export default async function AttendancePage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { userId, profile } = await requireUser();
+  const { userId, profile } = await requireFeature("attendance");
   const params = await searchParams;
   const today = new Date().toISOString().slice(0, 10);
   const selectedDate = params.date ?? today;

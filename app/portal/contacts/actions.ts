@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { logAudit } from "@/lib/audit";
 
 const schema = z.object({
   full_name: z.string().min(2),
@@ -14,6 +15,7 @@ const schema = z.object({
   email: z.string().email().optional().nullable().or(z.literal("")),
   notes: z.string().optional().nullable(),
   company_id: z.string().uuid().optional().nullable().or(z.literal("")),
+  trade_category: z.enum(["laborer", "technician", "mechanic", "electrician", "other"]).optional().nullable(),
 });
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -27,6 +29,7 @@ function parseForm(formData: FormData) {
     email: formData.get("email") || null,
     notes: formData.get("notes") || null,
     company_id: formData.get("company_id") || null,
+    trade_category: formData.get("trade_category") || null,
   });
 }
 
@@ -56,8 +59,16 @@ export async function createContactAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("contacts").insert(row);
+  const { data: newContact, error } = await supabase
+    .from("contacts")
+    .insert(row)
+    .select("id")
+    .single<{ id: string }>();
   if (error) return { error: error.message };
+
+  void logAudit(current.userId, "create", "contact", newContact?.id, {
+    full_name: parsed.data.full_name,
+  });
 
   revalidatePath("/portal/contacts");
   redirect("/portal/contacts");
@@ -94,16 +105,23 @@ export async function updateContactAction(
   const { error } = await supabase.from("contacts").update(row).eq("id", id);
   if (error) return { error: error.message };
 
+  void logAudit(current.userId, "update", "contact", id, {
+    full_name: parsed.data.full_name,
+  });
+
   revalidatePath("/portal/contacts");
   revalidatePath(`/portal/contacts/${id}/edit`);
   redirect("/portal/contacts");
 }
 
 export async function deleteContactAction(formData: FormData) {
-  await requireRole(["md_admin", "company_manager"]);
+  const { userId } = await requireRole(["md_admin", "company_manager"]);
   const id = formData.get("id");
   if (typeof id !== "string") return;
   const supabase = await createSupabaseServerClient();
   await supabase.from("contacts").delete().eq("id", id);
+
+  void logAudit(userId, "delete", "contact", id);
+
   revalidatePath("/portal/contacts");
 }

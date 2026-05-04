@@ -69,7 +69,7 @@ export function NewEmployeeForm({
           hint="8 أحرف على الأقل"
         />
         <Field label="رقم الهاتف" name="phone" type="tel" />
-        <Field label="الرقم الوطني" name="national_id" />
+        <Field label="رقم جواز السفر" name="national_id" />
         <Field label="تاريخ التوظيف" name="hired_at" type="date" />
 
         <div>

@@ -119,7 +119,7 @@ export default async function EmployeeProfilePage({
         />
         <InfoRow label="الحالة" value={person.is_active ? "نشط" : "غير نشط"} />
         <InfoRow label="الهاتف" value={person.phone ?? "—"} />
-        <InfoRow label="الرقم الوطني" value={person.national_id ?? "—"} />
+        <InfoRow label="رقم جواز السفر" value={person.national_id ?? "—"} />
         <InfoRow
           label="الدور"
           value={

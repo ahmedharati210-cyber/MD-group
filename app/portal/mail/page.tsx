@@ -9,19 +9,23 @@ import {
   Send,
   LayoutList,
 } from "lucide-react";
-import { requireRole } from "@/lib/auth";
+import { requireFeature } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
+import { Pagination } from "@/components/portal/Pagination";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "البريد" };
 
+const PAGE_SIZE = 25;
+
 type SearchParams = Promise<{
   direction?: string;
   companyId?: string;
   q?: string;
+  page?: string;
 }>;
 
 export default async function MailPage({
@@ -29,8 +33,10 @@ export default async function MailPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { profile } = await requireRole(["md_admin", "company_manager"]);
-  const { direction, companyId, q } = await searchParams;
+  const { profile } = await requireFeature("mail", ["md_admin", "company_manager"]);
+  const { direction, companyId, q, page: pageStr } = await searchParams;
+  const page = Math.max(1, parseInt(pageStr ?? "1", 10));
+  const offset = (page - 1) * PAGE_SIZE;
 
   const tab: "all" | "inbound" | "outbound" =
     direction === "inbound" || direction === "outbound" ? direction : "all";
@@ -55,14 +61,15 @@ export default async function MailPage({
 
   let query = supabase
     .from("mail")
-    .select("*, companies(name_ar)")
+    .select("*, companies(name_ar)", { count: "exact" })
     .order("created_at", { ascending: false })
-    .limit(100);
+    .range(offset, offset + PAGE_SIZE - 1);
   if (tab !== "all") query = query.eq("direction", tab);
   if (companyId) query = query.eq("company_id", companyId);
   if (q) query = query.ilike("subject", `%${q}%`);
 
-  const { data: mails } = await query;
+  const { data: mails, count } = await query;
+  const totalCount = count ?? 0;
 
   const { data: companies } = await supabase
     .from("companies")
@@ -190,6 +197,7 @@ export default async function MailPage({
           description="ابدأ بتسجيل أول رسالة."
         />
       ) : (
+        <>
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
           <ul className="divide-y divide-gray-100 dark:divide-gray-800">
             {mails.map((m) => {
@@ -251,6 +259,18 @@ export default async function MailPage({
             })}
           </ul>
         </div>
+        <Pagination
+          page={page}
+          totalCount={totalCount}
+          pageSize={PAGE_SIZE}
+          baseUrl="/portal/mail"
+          extraParams={{
+            ...(tab !== "all" ? { direction: tab } : {}),
+            ...(companyId ? { companyId } : {}),
+            ...(q ? { q } : {}),
+          }}
+        />
+        </>
       )}
     </div>
   );
