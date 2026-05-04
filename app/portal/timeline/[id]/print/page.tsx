@@ -7,10 +7,12 @@ import { SaveAsPdfButton } from "@/components/timeline/SaveAsPdfButton";
 import type { ProjectStatus } from "@/types/db";
 
 const statusLabels: Record<ProjectStatus, string> = {
-  planning: "تخطيط",
-  active: "نشط",
-  completed: "مكتمل",
-  on_hold: "موقوف",
+  planning:    "تصميم",
+  active:      "انشاء (اعمال الهيكل)",
+  completed:   "تشطيب",
+  maintenance: "صيانة",
+  survey:      "رفع مساحي",
+  on_hold:     "موقوف",
 };
 
 type TaskRow = {

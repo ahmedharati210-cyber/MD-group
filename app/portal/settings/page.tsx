@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/portal/PageHeader";
 import { SettingsForm } from "./settings-form";
 import { AppearanceCard } from "./appearance-card";
 import { AvatarUpload } from "./avatar-upload";
+import { ChangePasswordForm } from "./change-password-form";
 
 export const metadata = { title: "الإعدادات" };
 
@@ -31,6 +32,15 @@ export default async function SettingsPage() {
           phone={profile.phone}
           jobTitle={profile.job_title}
         />
+      </div>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 mb-1">
+          كلمة المرور
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          اترك الحقلين فارغَين إذا لم ترد تغيير كلمة المرور.
+        </p>
+        <ChangePasswordForm />
       </div>
       <AppearanceCard />
     </div>

@@ -57,9 +57,11 @@ export function ProjectForm({
       <div>
         <label className={labelCls}>الحالة</label>
         <select name="status" defaultValue={project?.status ?? "planning"} className={inputCls}>
-          <option value="planning">تخطيط</option>
-          <option value="active">نشط</option>
-          <option value="completed">مكتمل</option>
+          <option value="planning">تصميم</option>
+          <option value="active">انشاء (اعمال الهيكل)</option>
+          <option value="completed">تشطيب</option>
+          <option value="maintenance">صيانة</option>
+          <option value="survey">رفع مساحي</option>
           <option value="on_hold">موقوف</option>
         </select>
       </div>

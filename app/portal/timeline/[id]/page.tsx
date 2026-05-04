@@ -4,6 +4,7 @@ import { Pencil, CalendarDays, Phone, Mail, HardHat, MapPin, Printer, AlertCircl
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { formatDateTime } from "@/lib/utils";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { DeleteProjectButton } from "@/components/timeline/DeleteProjectButton";
 import { TaskCheckbox } from "@/components/timeline/TaskCheckbox";
@@ -11,16 +12,19 @@ import { AddCategoryForm } from "@/components/timeline/AddCategoryForm";
 import { AddTaskForm } from "@/components/timeline/AddTaskForm";
 import { DeleteCategoryButton } from "@/components/timeline/DeleteCategoryButton";
 import { DeleteTaskButton } from "@/components/timeline/DeleteTaskButton";
+import { EditTaskButton } from "@/components/timeline/EditTaskButton";
 import { EditCategoryButton } from "@/components/timeline/EditCategoryButton";
 import { AssignEngineerButton } from "@/components/timeline/AssignEngineerButton";
 import { TimelineNav } from "@/components/timeline/TimelineNav";
 import type { ProjectStatus } from "@/types/db";
 
 const statusMap: Record<ProjectStatus, { label: string; cls: string }> = {
-  planning: { label: "تخطيط", cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
-  active: { label: "نشط", cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
-  completed: { label: "مكتمل", cls: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400" },
-  on_hold: { label: "موقوف", cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
+  planning:    { label: "تصميم",                cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+  active:      { label: "انشاء (اعمال الهيكل)", cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+  completed:   { label: "تشطيب",               cls: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+  maintenance: { label: "صيانة",               cls: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" },
+  survey:      { label: "رفع مساحي",            cls: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300" },
+  on_hold:     { label: "موقوف",               cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
 };
 
 type TaskRow = {
@@ -99,27 +103,30 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const overallPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   const { label: statusLabel, cls: statusCls } = statusMap[project.status];
-  const today = new Date().toISOString().slice(0, 10);
 
   function dueDateChip(due_date: string | null, is_completed: boolean) {
     if (!due_date || is_completed) return null;
-    if (due_date < today) {
+    const dt = new Date(due_date);
+    const now = new Date();
+    const isToday = dt.toDateString() === now.toDateString();
+    const label = formatDateTime(due_date);
+    if (!isToday && dt < now) {
       return (
         <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-          <AlertCircle className="w-3 h-3" /> متأخرة · {due_date}
+          <AlertCircle className="w-3 h-3" /> متأخرة · {label}
         </span>
       );
     }
-    if (due_date === today) {
+    if (isToday) {
       return (
         <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-          <AlertCircle className="w-3 h-3" /> اليوم
+          <AlertCircle className="w-3 h-3" /> اليوم · {label}
         </span>
       );
     }
     return (
       <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-        {due_date}
+        {label}
       </span>
     );
   }
@@ -310,7 +317,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                           {task.is_completed && task.completer ? (
                             <span className="text-xs text-green-600 dark:text-green-400">
                               ✓ {task.completer.full_name}
-                              {task.completed_at ? ` — ${new Date(task.completed_at).toLocaleDateString("ar-LY")}` : ""}
+                              {task.completed_at ? ` — ${formatDateTime(task.completed_at)}` : ""}
                             </span>
                           ) : null}
                           {task.notes ? (
@@ -319,7 +326,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                         </div>
                       </div>
                       {canManage ? (
-                        <DeleteTaskButton taskId={task.id} projectId={id} />
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <EditTaskButton
+                            taskId={task.id}
+                            projectId={id}
+                            initialTitle={task.title}
+                            initialDescription={task.description}
+                            initialAssignedTo={task.assigned_to}
+                            initialDueDate={task.due_date}
+                            engineers={(engineers as { id: string; full_name: string }[] | null) ?? []}
+                          />
+                          <DeleteTaskButton taskId={task.id} projectId={id} />
+                        </div>
                       ) : null}
                     </div>
                   ))}

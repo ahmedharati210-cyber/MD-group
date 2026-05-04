@@ -272,7 +272,13 @@ export interface PlanningTaskNote {
 // ---------------------------------------------------------------------------
 // Timeline module (Project = Site for Emaar Al Youm)
 // ---------------------------------------------------------------------------
-export type ProjectStatus = "planning" | "active" | "completed" | "on_hold";
+export type ProjectStatus =
+  | "planning"
+  | "active"
+  | "completed"
+  | "maintenance"
+  | "survey"
+  | "on_hold";
 
 export interface Project {
   id: string;

@@ -1,6 +1,6 @@
 import { Building2, Users, ShieldCheck, UserCog } from "lucide-react";
 import { requireSuperAdmin } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { FeatureToggleForm } from "./feature-toggle-form";
 import { SuperAdminToggle } from "./super-admin-toggle";
@@ -24,19 +24,28 @@ export default async function AdminPage() {
   const { userId } = await requireSuperAdmin();
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: companies }, { data: rawProfiles }] = await Promise.all([
-    supabase
-      .from("companies")
-      .select("id, name_ar, name_en, active, enabled_features, role_features")
-      .order("name_ar"),
-    supabase
-      .from("profiles")
-      .select(
-        "id, full_name, role, company_id, job_title, is_active, is_super_admin, companies:company_id(name_ar)",
-      )
-      .order("role")
-      .order("full_name"),
-  ]);
+  const adminClient = createSupabaseAdminClient();
+
+  const [{ data: companies }, { data: rawProfiles }, { data: authData }] =
+    await Promise.all([
+      supabase
+        .from("companies")
+        .select("id, name_ar, name_en, active, enabled_features, role_features")
+        .order("name_ar"),
+      supabase
+        .from("profiles")
+        .select(
+          "id, full_name, role, company_id, job_title, is_active, is_super_admin, companies:company_id(name_ar)",
+        )
+        .order("role")
+        .order("full_name"),
+      adminClient.auth.admin.listUsers({ perPage: 1000 }),
+    ]);
+
+  // Build id → email lookup from Supabase Auth
+  const emailMap = new Map(
+    (authData?.users ?? []).map((u) => [u.id, u.email ?? ""]),
+  );
 
   const profiles = (rawProfiles ?? []) as unknown as ProfileRow[];
   const companyList = (companies ?? []).map((c) => ({
@@ -93,6 +102,11 @@ export default async function AdminPage() {
                       {user.companies?.name_ar ?? "بدون شركة"}
                       {user.job_title ? ` · ${user.job_title}` : ""}
                     </div>
+                    {emailMap.get(user.id) ? (
+                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 font-mono">
+                        {emailMap.get(user.id)}
+                      </div>
+                    ) : null}
                   </div>
 
                   {/* Edit form / role badge */}
@@ -101,6 +115,7 @@ export default async function AdminPage() {
                       profile={user}
                       companies={companyList}
                       isSelf={isSelf}
+                      email={emailMap.get(user.id) ?? ""}
                     />
                   </div>
 

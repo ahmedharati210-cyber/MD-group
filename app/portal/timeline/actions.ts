@@ -35,7 +35,7 @@ const projectSchema = z.object({
   description: z.string().optional().nullable(),
   start_date: z.string().optional().nullable(),
   end_date: z.string().optional().nullable(),
-  status: z.enum(["planning", "active", "completed", "on_hold"]).default("planning"),
+  status: z.enum(["planning", "active", "completed", "maintenance", "survey", "on_hold"]).default("planning"),
   location_notes: z.string().optional().nullable(),
   manager_name: z.string().optional().nullable(),
   manager_phone: z.string().optional().nullable(),
@@ -77,6 +77,30 @@ export async function createProjectAction(
 
   revalidatePath("/portal/timeline");
   redirect("/portal/timeline");
+}
+
+/** Lightweight action — update only the status field of a project. */
+export async function updateProjectStatusAction(
+  projectId: string,
+  status: string,
+): Promise<ActionState> {
+  const { userId } = await requireRole(["md_admin", "company_manager"]);
+  const parsed = z
+    .enum(["planning", "active", "completed", "maintenance", "survey", "on_hold"])
+    .safeParse(status);
+  if (!parsed.success) return { error: "حالة غير صالحة" };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({ status: parsed.data })
+    .eq("id", projectId);
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "project", projectId, { status: parsed.data });
+
+  revalidateTimeline(projectId);
+  return { ok: true };
 }
 
 export async function updateProjectAction(
@@ -207,7 +231,11 @@ const taskSchema = z.object({
   title: z.string().min(1, "عنوان المهمة مطلوب"),
   description: z.string().optional().nullable(),
   assigned_to: z.string().uuid().optional().nullable(),
-  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  due_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/, "تاريخ غير صالح")
+    .optional()
+    .nullable(),
   sort_order: z.coerce.number().default(0),
 });
 

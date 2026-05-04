@@ -5,6 +5,26 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+export async function changePasswordAction(
+  _prev: ActionState | undefined,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireUser();
+  const newPassword = (formData.get("new_password") as string) ?? "";
+  const confirmPassword = (formData.get("confirm_password") as string) ?? "";
+
+  if (newPassword.length < 6)
+    return { error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" };
+  if (newPassword !== confirmPassword)
+    return { error: "كلمتا المرور غير متطابقتين" };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { error: error.message };
+
+  return { ok: true };
+}
+
 const schema = z.object({
   full_name: z.string().min(2),
   phone: z.string().optional().nullable(),

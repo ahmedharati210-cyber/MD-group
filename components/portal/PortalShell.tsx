@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { Menu, RefreshCw } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { PwaInstallBanner } from "./PwaInstallBanner";
 import type { UserRole, AppFeature, RoleFeatures } from "@/types/db";
@@ -79,7 +79,14 @@ export function PortalShell({
             MD Group
           </span>
         </Link>
-        <div className="w-9" aria-hidden />
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          aria-label="تحديث الصفحة"
+          className="p-2 -ml-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-transform"
+        >
+          <RefreshCw className="w-5 h-5" />
+        </button>
       </header>
 
       <div className="md:mr-64 print:mr-0">

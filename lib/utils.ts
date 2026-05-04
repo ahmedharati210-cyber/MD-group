@@ -28,6 +28,24 @@ export function formatTime(value: Date | string | null | undefined): string {
   return d.toTimeString().slice(0, 5);
 }
 
+/**
+ * Format a Date (or ISO string) as a full Arabic-locale datetime string:
+ * "DD/MM/YYYY HH:MM" using 24-hour clock.
+ */
+export function formatDateTime(value: Date | string | null | undefined): string {
+  if (!value) return "";
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("ar-LY", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 export function bytesToReadable(bytes: number | null | undefined): string {
   if (!bytes || bytes <= 0) return "0 B";
   const units = ["B", "KB", "MB", "GB"];

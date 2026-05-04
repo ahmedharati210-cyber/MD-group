@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSuperAdmin } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { ALL_FEATURES } from "@/types/db";
 import type { AppFeature, RoleFeatures } from "@/types/db";
 
@@ -109,6 +109,38 @@ export async function setRoleFeaturesAction(
 
   revalidatePath("/portal/admin");
   revalidatePath("/portal");
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Auth credential update (email / password) — super admin only
+// ---------------------------------------------------------------------------
+
+export async function updateUserAuthAction(
+  _prev: ActionState | undefined,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireSuperAdmin();
+
+  const profileId = formData.get("auth_profile_id") as string;
+  const email = (formData.get("new_email") as string)?.trim().toLowerCase() || null;
+  const password = (formData.get("new_password") as string)?.trim() || null;
+
+  if (!profileId) return { error: "معرّف المستخدم مطلوب" };
+
+  const updates: { email?: string; password?: string } = {};
+  if (email) updates.email = email;
+  if (password) {
+    if (password.length < 6) return { error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" };
+    updates.password = password;
+  }
+  if (Object.keys(updates).length === 0) return { error: "لم تُدخل أي تغييرات" };
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(profileId, updates);
+  if (error) return { error: error.message };
+
+  revalidatePath("/portal/admin");
   return { ok: true };
 }
 

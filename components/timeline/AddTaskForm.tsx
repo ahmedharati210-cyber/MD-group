@@ -92,9 +92,9 @@ export function AddTaskForm({
 
       {/* Due date shared for all tasks in this batch */}
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">تاريخ الاستحقاق:</label>
+        <label className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">تاريخ ووقت الاستحقاق:</label>
         <input
-          type="date"
+          type="datetime-local"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
           className={`${inputCls} flex-1`}

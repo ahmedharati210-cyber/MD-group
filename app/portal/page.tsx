@@ -107,10 +107,12 @@ async function getTopProjects(): Promise<ProjectProgressRow[]> {
 }
 
 const statusLabels: Record<ProjectStatus, { label: string; cls: string }> = {
-  planning: { label: "تخطيط", cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
-  active: { label: "نشط", cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
-  completed: { label: "مكتمل", cls: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400" },
-  on_hold: { label: "موقوف", cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
+  planning:    { label: "تصميم",                cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+  active:      { label: "انشاء (اعمال الهيكل)", cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+  completed:   { label: "تشطيب",               cls: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+  maintenance: { label: "صيانة",               cls: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" },
+  survey:      { label: "رفع مساحي",            cls: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300" },
+  on_hold:     { label: "موقوف",               cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
 };
 
 export default async function PortalDashboard() {
