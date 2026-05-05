@@ -23,7 +23,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
     project: { name: string } | null;
   };
 
-  const canDelete = profile.role !== "employee" || r.author_id === profile.id;
+  const canDelete = profile.role !== "employee";
 
   return (
     <div className="max-w-2xl">
