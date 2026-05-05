@@ -20,18 +20,9 @@ export function ReportForm({ projects, today }: { projects: ProjectOption[]; tod
         <div className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-300">{state.error}</div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={labelCls}>نوع التقرير *</label>
-          <select name="report_type" className={inputCls}>
-            <option value="daily">يومي</option>
-            <option value="weekly">أسبوعي</option>
-          </select>
-        </div>
-        <div>
-          <label className={labelCls}>التاريخ *</label>
-          <input type="date" name="report_date" defaultValue={today} required className={inputCls} />
-        </div>
+      <div>
+        <label className={labelCls}>التاريخ *</label>
+        <input type="date" name="report_date" defaultValue={today} required className={inputCls} />
       </div>
 
       <div>
@@ -50,11 +41,6 @@ export function ReportForm({ projects, today }: { projects: ProjectOption[]; tod
       <div>
         <label className={labelCls}>المواد المستخدمة</label>
         <textarea name="materials_used" rows={3} placeholder="قائمة المواد والكميات..." className={inputCls} />
-      </div>
-
-      <div>
-        <label className={labelCls}>عدد العمال</label>
-        <input type="number" name="workers_count" min={0} placeholder="0" className={inputCls} />
       </div>
 
       <div>

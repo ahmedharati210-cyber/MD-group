@@ -1,15 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { FileBarChart2, CalendarDays, MapPin, User, Users, Package, StickyNote, ArrowRight } from "lucide-react";
+import { FileBarChart2, CalendarDays, MapPin, User, Package, StickyNote, ArrowRight } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DeleteReportButton } from "@/components/reports/DeleteReportButton";
-import type { ReportType } from "@/types/db";
-
-const typeLabels: Record<ReportType, { label: string; cls: string }> = {
-  daily: { label: "يومي", cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
-  weekly: { label: "أسبوعي", cls: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" },
-};
 
 export default async function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,7 +23,6 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
     project: { name: string } | null;
   };
 
-  const { label, cls } = typeLabels[r.report_type as ReportType];
   const canDelete = profile.role !== "employee" || r.author_id === profile.id;
 
   return (
@@ -49,9 +42,8 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-sm font-semibold px-3 py-1 rounded-full ${cls}`}>{label}</span>
-                  <span className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
-                    <CalendarDays className="w-4 h-4" /> {r.report_date}
+                  <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <CalendarDays className="w-4 h-4 text-gray-400" /> {r.report_date}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-3 mt-1">
@@ -78,9 +70,6 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
           ) : null}
           {r.materials_used ? (
             <Section icon={<Package className="w-4 h-4" />} title="المواد المستخدمة" content={r.materials_used} />
-          ) : null}
-          {r.workers_count != null ? (
-            <Section icon={<Users className="w-4 h-4" />} title="عدد العمال" content={String(r.workers_count)} />
           ) : null}
           {r.notes ? (
             <Section icon={<StickyNote className="w-4 h-4" />} title="ملاحظات" content={r.notes} />

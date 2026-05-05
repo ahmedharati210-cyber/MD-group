@@ -42,7 +42,6 @@ type ProjectRow = {
   location_notes: string | null;
   manager_name: string | null;
   manager_phone: string | null;
-  manager_email: string | null;
   default_engineer: { full_name: string } | null;
 };
 
@@ -54,7 +53,7 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
   const [{ data: rawProject }, { data: rawCategories }] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, name, description, start_date, end_date, status, location_notes, manager_name, manager_phone, manager_email, default_engineer:default_engineer_id(full_name)")
+      .select("id, name, description, start_date, end_date, status, location_notes, manager_name, manager_phone, default_engineer:default_engineer_id(full_name)")
       .eq("id", id)
       .single(),
     supabase
@@ -130,7 +129,7 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
             <div><span className="font-semibold">النهاية: </span>{project.end_date}</div>
           ) : null}
           {project.manager_name ? (
-            <div><span className="font-semibold">مسؤول الموقع: </span>{project.manager_name}</div>
+            <div><span className="font-semibold">الغفير: </span>{project.manager_name}</div>
           ) : null}
           {project.manager_phone ? (
             <div><span className="font-semibold">الهاتف: </span>{project.manager_phone}</div>

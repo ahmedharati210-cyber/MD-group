@@ -26,11 +26,9 @@ export type ActionState = { error?: string; ok?: boolean };
 
 const reportSchema = z.object({
   project_id: z.string().uuid().optional().nullable(),
-  report_type: z.enum(["daily", "weekly"]).default("daily"),
   report_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "تاريخ غير صالح"),
   work_done: z.string().optional().nullable(),
   materials_used: z.string().optional().nullable(),
-  workers_count: z.coerce.number().int().min(0).optional().nullable(),
   notes: z.string().optional().nullable(),
 });
 
@@ -41,11 +39,9 @@ export async function createReportAction(
   const { userId, profile } = await requireUser();
   const parsed = reportSchema.safeParse({
     project_id: formData.get("project_id") || null,
-    report_type: formData.get("report_type") || "daily",
     report_date: formData.get("report_date"),
     work_done: formData.get("work_done") || null,
     materials_used: formData.get("materials_used") || null,
-    workers_count: formData.get("workers_count") || null,
     notes: formData.get("notes") || null,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
@@ -56,13 +52,12 @@ export async function createReportAction(
   const supabase = await createSupabaseServerClient();
   const { data: newReport, error } = await supabase
     .from("engineer_reports")
-    .insert({ company_id, author_id: userId, ...parsed.data })
+    .insert({ company_id, author_id: userId, report_type: "daily", ...parsed.data })
     .select("id")
     .single<{ id: string }>();
   if (error) return { error: error.message };
 
   void logAudit(userId, "create", "report", newReport?.id, {
-    report_type: parsed.data.report_type,
     report_date: parsed.data.report_date,
   });
 

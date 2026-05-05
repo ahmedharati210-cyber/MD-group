@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Receipt, FileText, Banknote, AlignLeft, ExternalLink } from "lucide-react";
+import { ArrowRight, CalendarDays, Receipt, FileText, Banknote, AlignLeft, ExternalLink, MapPin } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
@@ -17,13 +17,15 @@ export default async function ClaimDetailPage({
   await requireRole(["md_admin", "company_manager"]);
   const supabase = await createSupabaseServerClient();
 
-  const { data: claim } = await supabase
+  const { data: rawClaim } = await supabase
     .from("manager_claims")
-    .select("id, title, description, amount, file_url, created_at")
+    .select("id, title, description, amount, file_url, created_at, project:project_id(id, name)")
     .eq("id", id)
     .single();
 
-  if (!claim) notFound();
+  if (!rawClaim) notFound();
+
+  const claim = rawClaim as typeof rawClaim & { project: { id: string; name: string } | null };
 
   return (
     <div className="max-w-2xl">
@@ -46,10 +48,22 @@ export default async function ClaimDetailPage({
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900 dark:text-gray-50">{claim.title}</h1>
-              <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                <CalendarDays className="w-3.5 h-3.5" />
-                {formatDate(claim.created_at)}
-              </span>
+              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+                  <CalendarDays className="w-3.5 h-3.5" />
+                  {formatDate(claim.created_at)}
+                </span>
+                {claim.project ? (
+                  <Link
+                    href={`/portal/timeline/${claim.project.id}`}
+                    className="flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MapPin className="w-3.5 h-3.5" />
+                    {claim.project.name}
+                  </Link>
+                ) : null}
+              </div>
             </div>
           </div>
           <DeleteClaimButton claimId={claim.id} />

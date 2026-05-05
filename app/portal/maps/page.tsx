@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { DeleteMapButton } from "@/components/maps/DeleteMapButton";
+import { MapsFilter } from "@/components/maps/MapsFilter";
 
 export const metadata = { title: "الخرائط" };
 
@@ -13,20 +14,38 @@ type MapRow = {
   name: string;
   description: string | null;
   drive_url: string;
+  project_id: string | null;
   project: { name: string } | null;
 };
 
-export default async function MapsPage() {
+export default async function MapsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { profile } = await requireFeature("maps");
   const supabase = await createSupabaseServerClient();
   const canManage = profile.role !== "employee";
 
-  const { data: rawMaps } = await supabase
+  const sp = await searchParams;
+  const filterProjectId = typeof sp.project_id === "string" ? sp.project_id : "";
+  const filterQuery = typeof sp.q === "string" ? sp.q.trim() : "";
+
+  let mapsQuery = supabase
     .from("map_links")
-    .select("id, name, description, drive_url, project:project_id(name)")
+    .select("id, name, description, drive_url, project_id, project:project_id(name)")
     .order("created_at", { ascending: false });
 
-  const maps = (rawMaps ?? []) as unknown as MapRow[];
+  if (filterProjectId) mapsQuery = mapsQuery.eq("project_id", filterProjectId);
+  if (filterQuery) mapsQuery = mapsQuery.ilike("name", `%${filterQuery}%`);
+
+  const [mapsResult, projectsResult] = await Promise.all([
+    mapsQuery,
+    supabase.from("projects").select("id, name").order("name"),
+  ]);
+
+  const maps = ((mapsResult.data ?? []) as unknown as MapRow[]);
+  const projects = (projectsResult.data ?? []) as { id: string; name: string }[];
 
   return (
     <div>
@@ -43,8 +62,10 @@ export default async function MapsPage() {
         }
       />
 
+      <MapsFilter projects={projects} currentProjectId={filterProjectId} currentQuery={filterQuery} />
+
       {maps.length === 0 ? (
-        <EmptyState icon={Map} title="لا توجد خرائط" description={canManage ? "أضف رابط خريطة." : "لم تُضف خرائط بعد."} />
+        <EmptyState icon={Map} title="لا توجد خرائط" description={filterProjectId || filterQuery ? "لا توجد خرائط تطابق الفلتر." : canManage ? "أضف رابط خريطة." : "لم تُضف خرائط بعد."} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {maps.map((m) => (

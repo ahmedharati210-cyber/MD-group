@@ -90,26 +90,22 @@ export function ProjectForm({
         </div>
       </div>
 
-      {/* Site contact */}
-      <div className={sectionCls}>
-        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">بيانات مسؤول الموقع</p>
-        <div className="space-y-3">
-          <div>
-            <label className={labelCls}>الاسم</label>
-            <input type="text" name="manager_name" defaultValue={project?.manager_name ?? ""} placeholder="اسم المسؤول" className={inputCls} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+      {/* Doorman — edit mode only (no doorman during initial planning) */}
+      {project ? (
+        <div className={sectionCls}>
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">بيانات الغفير</p>
+          <div className="space-y-3">
             <div>
-              <label className={labelCls}>الهاتف</label>
-              <input type="tel" name="manager_phone" defaultValue={project?.manager_phone ?? ""} placeholder="+218..." className={inputCls} />
+              <label className={labelCls}>اسم الغفير</label>
+              <input type="text" name="manager_name" defaultValue={project.manager_name ?? ""} placeholder="اسم الغفير" className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>البريد الإلكتروني</label>
-              <input type="email" name="manager_email" defaultValue={project?.manager_email ?? ""} placeholder="email@..." className={inputCls} />
+              <label className={labelCls}>هاتف الغفير</label>
+              <input type="tel" name="manager_phone" defaultValue={project.manager_phone ?? ""} placeholder="+218..." className={inputCls} />
             </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="flex gap-3 pt-2">
         <button type="submit" disabled={isPending} className="flex-1 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm hover:bg-primary-700 disabled:opacity-60 transition-colors">

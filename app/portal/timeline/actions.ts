@@ -39,7 +39,6 @@ const projectSchema = z.object({
   location_notes: z.string().optional().nullable(),
   manager_name: z.string().optional().nullable(),
   manager_phone: z.string().optional().nullable(),
-  manager_email: z.string().email("بريد إلكتروني غير صحيح").optional().or(z.literal("")).nullable(),
   default_engineer_id: z.string().uuid().optional().nullable(),
 });
 
@@ -57,7 +56,6 @@ export async function createProjectAction(
     location_notes: formData.get("location_notes") || null,
     manager_name: formData.get("manager_name") || null,
     manager_phone: formData.get("manager_phone") || null,
-    manager_email: formData.get("manager_email") || null,
     default_engineer_id: formData.get("default_engineer_id") || null,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
@@ -118,7 +116,6 @@ export async function updateProjectAction(
     location_notes: formData.get("location_notes") || null,
     manager_name: formData.get("manager_name") || null,
     manager_phone: formData.get("manager_phone") || null,
-    manager_email: formData.get("manager_email") || null,
     default_engineer_id: formData.get("default_engineer_id") || null,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
@@ -324,7 +321,12 @@ export async function deleteTaskAction(taskId: string, projectId: string): Promi
 }
 
 export async function toggleTaskAction(taskId: string, projectId: string, currentlyCompleted: boolean): Promise<ActionState> {
-  const { userId } = await requireUser();
+  const { userId, profile } = await requireUser();
+
+  // Employees may only mark tasks as complete, not uncheck them.
+  if (currentlyCompleted && profile.role === "employee") {
+    return { error: "ليس لديك صلاحية إلغاء الإتمام" };
+  }
   const supabase = await createSupabaseServerClient();
 
   const now = new Date().toISOString();

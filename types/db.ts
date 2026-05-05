@@ -440,6 +440,7 @@ type EngineerRequestInsert = {
 export interface ManagerClaim {
   id: string;
   company_id: string;
+  project_id: string | null;
   title: string;
   description: string | null;
   amount: number | null;
@@ -450,6 +451,7 @@ export interface ManagerClaim {
 type ManagerClaimInsert = {
   id?: string;
   company_id: string;
+  project_id?: string | null;
   title: string;
   description?: string | null;
   amount?: number | null;

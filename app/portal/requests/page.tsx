@@ -4,6 +4,7 @@ import { requireFeature } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
+import { RequestsFilter } from "@/components/requests/RequestsFilter";
 import type { RequestType, RequestStatus } from "@/types/db";
 
 export const metadata = { title: "الطلبات" };
@@ -32,10 +33,18 @@ type RequestRow = {
   requester: { full_name: string } | null;
 };
 
-export default async function RequestsPage() {
+export default async function RequestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { profile } = await requireFeature("requests");
   const supabase = await createSupabaseServerClient();
   const isManager = profile.role !== "employee";
+
+  const sp = await searchParams;
+  const filterStatus = typeof sp.status === "string" ? sp.status : "";
+  const filterType = typeof sp.type === "string" ? sp.type : "";
 
   let query = supabase
     .from("engineer_requests")
@@ -43,6 +52,8 @@ export default async function RequestsPage() {
     .order("created_at", { ascending: false });
 
   if (!isManager) query = query.eq("requester_id", profile.id ?? "");
+  if (filterStatus) query = query.eq("status", filterStatus);
+  if (filterType) query = query.eq("request_type", filterType);
 
   const { data: rawRequests } = await query;
   const requests = (rawRequests ?? []) as unknown as RequestRow[];
@@ -62,8 +73,10 @@ export default async function RequestsPage() {
         }
       />
 
+      <RequestsFilter isManager={isManager} currentStatus={filterStatus} currentType={filterType} />
+
       {requests.length === 0 ? (
-        <EmptyState icon={ClipboardEdit} title="لا توجد طلبات" description="لم يتم تقديم طلبات بعد." />
+        <EmptyState icon={ClipboardEdit} title="لا توجد طلبات" description={filterStatus || filterType ? "لا توجد طلبات تطابق الفلتر." : "لم يتم تقديم طلبات بعد."} />
       ) : (
         <div className="space-y-3">
           {requests.map((r) => {

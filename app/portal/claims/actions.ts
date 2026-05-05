@@ -13,6 +13,7 @@ const claimSchema = z.object({
   title: z.string().min(2, "العنوان مطلوب"),
   description: z.string().optional().nullable(),
   amount: z.coerce.number().positive("المبلغ يجب أن يكون موجباً").optional().nullable(),
+  project_id: z.string().uuid().optional().nullable(),
 });
 
 export async function createClaimAction(
@@ -24,6 +25,7 @@ export async function createClaimAction(
     title: formData.get("title"),
     description: formData.get("description") || null,
     amount: formData.get("amount") || null,
+    project_id: formData.get("project_id") || null,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
 

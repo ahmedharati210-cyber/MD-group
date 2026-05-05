@@ -13,7 +13,7 @@ export default async function NewReportPage() {
 
   return (
     <div className="max-w-xl">
-      <PageHeader title="تقرير جديد" description="أضف تقريراً يومياً أو أسبوعياً." />
+      <PageHeader title="تقرير جديد" description="أضف تقرير يومي عن الأعمال المنجزة." />
       <ReportForm projects={projects ?? []} today={today} />
     </div>
   );

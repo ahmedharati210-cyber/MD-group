@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Pencil, CalendarDays, Phone, Mail, HardHat, MapPin, Printer, AlertCircle } from "lucide-react";
+import { Pencil, CalendarDays, Phone, HardHat, MapPin, Printer, AlertCircle, ShieldCheck } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
@@ -59,7 +59,6 @@ type ProjectRow = {
   location_notes: string | null;
   manager_name: string | null;
   manager_phone: string | null;
-  manager_email: string | null;
   default_engineer: { full_name: string } | null;
 };
 
@@ -72,7 +71,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const [{ data: rawProject }, { data: rawCategories }, { data: engineers }] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, name, description, start_date, end_date, status, location_notes, manager_name, manager_phone, manager_email, default_engineer:default_engineer_id(full_name)")
+      .select("id, name, description, start_date, end_date, status, location_notes, manager_name, manager_phone, default_engineer:default_engineer_id(full_name)")
       .eq("id", id)
       .single(),
     supabase
@@ -177,30 +176,38 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         ) : null}
       </div>
 
-      {/* Location + contact */}
-      {(project.location_notes || project.manager_name || project.manager_phone || project.manager_email) ? (
-        <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-5 flex flex-col gap-2">
+      {/* Location + doorman — single subtle card */}
+      {(project.location_notes || project.manager_name || project.manager_phone) ? (
+        <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 mb-5 flex flex-col gap-2">
           {project.location_notes ? (
             <div className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
               <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
               <span>{project.location_notes}</span>
             </div>
           ) : null}
-          {project.manager_name ? (
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{project.manager_name}</div>
+          {(project.manager_name || project.manager_phone) ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
+                <ShieldCheck className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <span className="text-xs text-gray-500 dark:text-gray-500">الغفير:</span>
+                {project.manager_name ? (
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{project.manager_name}</span>
+                ) : null}
+                {project.manager_phone ? (
+                  <span className="text-gray-400 dark:text-gray-500 tabular-nums text-xs">{project.manager_phone}</span>
+                ) : null}
+              </div>
+              {project.manager_phone ? (
+                <a
+                  href={`tel:${project.manager_phone}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors flex-shrink-0"
+                >
+                  <Phone className="w-3 h-3" />
+                  اتصل
+                </a>
+              ) : null}
+            </div>
           ) : null}
-          <div className="flex flex-wrap gap-3">
-            {project.manager_phone ? (
-              <a href={`tel:${project.manager_phone}`} className="flex items-center gap-1.5 text-xs text-primary-600 dark:text-primary-400 hover:underline">
-                <Phone className="w-3.5 h-3.5" /> {project.manager_phone}
-              </a>
-            ) : null}
-            {project.manager_email ? (
-              <a href={`mailto:${project.manager_email}`} className="flex items-center gap-1.5 text-xs text-primary-600 dark:text-primary-400 hover:underline">
-                <Mail className="w-3.5 h-3.5" /> {project.manager_email}
-              </a>
-            ) : null}
-          </div>
         </div>
       ) : null}
 
@@ -289,6 +296,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                           projectId={id}
                           isCompleted={task.is_completed}
                           title={task.title}
+                          canUncheck={canManage}
                         />
                       </div>
                       <div className="flex-1 min-w-0">

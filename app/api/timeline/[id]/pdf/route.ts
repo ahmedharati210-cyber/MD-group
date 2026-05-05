@@ -264,7 +264,7 @@ function buildHtml(
       ${project.default_engineer ? `<div><strong>المهندس: </strong><span>${escapeHtml(project.default_engineer.full_name)}</span></div>` : ""}
       ${project.start_date ? `<div><strong>البداية: </strong><span>${escapeHtml(project.start_date)}</span></div>` : ""}
       ${project.end_date ? `<div><strong>النهاية: </strong><span>${escapeHtml(project.end_date)}</span></div>` : ""}
-      ${project.manager_name ? `<div><strong>مسؤول الموقع: </strong><span>${escapeHtml(project.manager_name)}</span></div>` : ""}
+      ${project.manager_name ? `<div><strong>الغفير: </strong><span>${escapeHtml(project.manager_name)}</span></div>` : ""}
       ${project.manager_phone ? `<div><strong>الهاتف: </strong><span>${escapeHtml(project.manager_phone)}</span></div>` : ""}
     </div>
   </div>
