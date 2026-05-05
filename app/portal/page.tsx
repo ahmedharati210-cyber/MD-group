@@ -27,7 +27,7 @@ type Counts = {
   papers: number;
   mail: number;
   contacts: number;
-  activeProjects: number;
+  projects: number;
   pendingRequests: number;
   overdueTasks: number;
   warnings: number;
@@ -70,7 +70,7 @@ async function getCounts(profileId: string, isEmployee: boolean): Promise<Counts
       supabase.from("documents").select("id", { count: "exact", head: true }),
       supabase.from("mail").select("id", { count: "exact", head: true }),
       supabase.from("contacts").select("id", { count: "exact", head: true }),
-      supabase.from("projects").select("id", { count: "exact", head: true }).eq("status", "active"),
+      supabase.from("projects").select("id", { count: "exact", head: true }),
       requestsQuery,
       supabase
         .from("project_tasks")
@@ -88,7 +88,7 @@ async function getCounts(profileId: string, isEmployee: boolean): Promise<Counts
     papers: papers.count ?? 0,
     mail: mail.count ?? 0,
     contacts: contacts.count ?? 0,
-    activeProjects: projects.count ?? 0,
+    projects: projects.count ?? 0,
     pendingRequests: requests.count ?? 0,
     overdueTasks: overdue.count ?? 0,
     warnings: warnings.count ?? 0,
@@ -183,7 +183,7 @@ export default async function PortalDashboard() {
           <StatCard label="جهات الاتصال" value={counts.contacts} icon={Contact} tone="primary" href="/portal/contacts" />
         ) : null}
         {hasFeature("timeline") ? (
-          <StatCard label="مشاريع نشطة" value={counts.activeProjects} icon={FolderKanban} tone="success" href="/portal/timeline" />
+          <StatCard label="إجمالي المشاريع" value={counts.projects} icon={FolderKanban} tone="success" href="/portal/timeline" />
         ) : null}
         {hasFeature("requests") ? (
           <StatCard

@@ -10,7 +10,6 @@ export type ActionState = { error?: string; ok?: boolean };
 
 const warningSchema = z.object({
   message: z.string().min(5, "الرسالة مطلوبة (5 أحرف على الأقل)"),
-  target_profile_id: z.string().uuid().optional().nullable(),
 });
 
 export async function sendWarningAction(
@@ -26,55 +25,63 @@ export async function sendWarningAction(
     profile.role === "company_manager";
   if (!canManage) return { error: "غير مصرح بإرسال الإنذارات" };
 
-  const parsed = warningSchema.safeParse({
-    message: formData.get("message"),
-    target_profile_id: formData.get("target_profile_id") || null,
-  });
+  const parsed = warningSchema.safeParse({ message: formData.get("message") });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
 
-  const { target_profile_id, message } = parsed.data;
-
-  // Broadcast (null target) is restricted to super admins only
-  if (!target_profile_id && !profile.is_super_admin) {
-    return { error: "البث العام للجميع متاح للمشرف العام فقط" };
-  }
-
+  const { message } = parsed.data;
   const supabase = await createSupabaseServerClient();
-  let company_id: string | null = null;
 
-  if (target_profile_id) {
-    // Resolve the target employee's company
-    const { data: targetProfile } = await supabase
-      .from("profiles")
-      .select("company_id")
-      .eq("id", target_profile_id)
-      .single<{ company_id: string | null }>();
-
-    if (!targetProfile?.company_id) {
-      return { error: "لم يتم العثور على شركة الموظف" };
-    }
-    company_id = targetProfile.company_id;
-
-    // company_manager may only warn employees in their own company
-    if (profile.role === "company_manager" && company_id !== profile.company_id) {
-      return { error: "لا يمكنك إرسال إنذارات لموظفين خارج شركتك" };
-    }
-  } else {
-    // Broadcast: super admin must choose which company receives the broadcast
-    const broadcastCompanyId = formData.get("warning_company_id") as string | null;
-    if (!broadcastCompanyId) return { error: "يرجى تحديد الشركة للبث العام" };
-    company_id = broadcastCompanyId;
+  // Super-admin broadcast to a whole company
+  const broadcastCompanyId = formData.get("warning_company_id") as string | null;
+  if (broadcastCompanyId && profile.is_super_admin) {
+    const { error } = await supabase.from("warnings").insert({
+      company_id: broadcastCompanyId,
+      sender_id: userId,
+      target_profile_id: null,
+      message,
+    });
+    if (error) return { error: error.message };
+    void logAudit(userId, "create", "warning", null, { broadcast_company: broadcastCompanyId });
+    revalidatePath("/portal/warnings");
+    return { ok: true };
   }
 
-  const { data: newWarning, error } = await supabase
-    .from("warnings")
-    .insert({ company_id, sender_id: userId, target_profile_id: target_profile_id ?? null, message })
-    .select("id")
-    .single<{ id: string }>();
+  // Multi-recipient: one or more employees selected via checkboxes
+  const targetIds = formData.getAll("target_profile_ids").map(String).filter(Boolean);
+  if (targetIds.length === 0) return { error: "يرجى تحديد موظف واحد على الأقل" };
+
+  // Validate: company_manager can only warn employees in their own company
+  if (profile.role === "company_manager") {
+    const { data: targetProfiles } = await supabase
+      .from("profiles")
+      .select("id, company_id")
+      .in("id", targetIds);
+    const outsider = (targetProfiles ?? []).find((p) => p.company_id !== profile.company_id);
+    if (outsider) return { error: "لا يمكنك إرسال إنذارات لموظفين خارج شركتك" };
+  }
+
+  // Resolve company_id from the first target (all should belong to same company for a manager)
+  const { data: firstTarget } = await supabase
+    .from("profiles")
+    .select("company_id")
+    .eq("id", targetIds[0])
+    .single<{ company_id: string | null }>();
+  const company_id = firstTarget?.company_id ?? profile.company_id;
+  if (!company_id) return { error: "لم يتم العثور على شركة الموظف" };
+
+  // Insert one warning row per recipient
+  const rows = targetIds.map((target_profile_id) => ({
+    company_id,
+    sender_id: userId,
+    target_profile_id,
+    message,
+  }));
+
+  const { error } = await supabase.from("warnings").insert(rows);
   if (error) return { error: error.message };
 
-  void logAudit(userId, "create", "warning", newWarning?.id, {
-    target_profile_id: target_profile_id ?? "broadcast",
+  void logAudit(userId, "create", "warning", null, {
+    recipients: targetIds.length,
     company_id,
   });
 
