@@ -39,8 +39,8 @@ export async function createClaimAction(
     const path = `claims/${userId}/${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage.from("documents").upload(path, file, { contentType: file.type });
     if (uploadError) return { error: `فشل رفع الملف: ${uploadError.message}` };
-    const { data: urlData } = supabase.storage.from("documents").getPublicUrl(path);
-    file_url = urlData.publicUrl;
+    // Store the storage path; signed URLs are generated on demand in the detail page.
+    file_url = path;
   }
 
   const company_id = profile.company_id;

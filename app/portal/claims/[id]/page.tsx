@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Receipt, FileText, Banknote, AlignLeft, ExternalLink, MapPin } from "lucide-react";
+import { ArrowRight, CalendarDays, Receipt, FileText, Banknote, AlignLeft, Download, MapPin } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
@@ -26,6 +26,19 @@ export default async function ClaimDetailPage({
   if (!rawClaim) notFound();
 
   const claim = rawClaim as typeof rawClaim & { project: { id: string; name: string } | null };
+
+  // Generate a short-lived signed download URL (bucket is private, no public URLs).
+  // New records store the bare storage path; old records may store a full URL — extract path from those.
+  let signedFileUrl: string | null = null;
+  if (claim.file_url) {
+    const storagePath = claim.file_url.startsWith("http")
+      ? claim.file_url.split("/documents/")[1] ?? claim.file_url
+      : claim.file_url;
+    const { data: signed } = await supabase.storage
+      .from("documents")
+      .createSignedUrl(storagePath, 60 * 60); // 1 hour
+    signedFileUrl = signed?.signedUrl ?? null;
+  }
 
   return (
     <div className="max-w-2xl">
@@ -57,7 +70,6 @@ export default async function ClaimDetailPage({
                   <Link
                     href={`/portal/timeline/${claim.project.id}`}
                     className="flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline"
-                    onClick={(e) => e.stopPropagation()}
                   >
                     <MapPin className="w-3.5 h-3.5" />
                     {claim.project.name}
@@ -97,31 +109,23 @@ export default async function ClaimDetailPage({
             </div>
           ) : null}
 
-          {/* PDF */}
+          {/* PDF download */}
           {claim.file_url ? (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <FileText className="w-4 h-4 text-gray-400" />
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">المستند المرفق</span>
-              </div>
-              {/* Inline PDF preview */}
-              <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <iframe
-                  src={claim.file_url}
-                  title="مستند المطالبة"
-                  className="w-full"
-                  style={{ height: "520px" }}
-                />
-              </div>
-              <a
-                href={claim.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 mt-3 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
-              >
-                <ExternalLink className="w-4 h-4" />
-                فتح في تبويب جديد
-              </a>
+            <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+              <FileText className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300">المستند المرفق</span>
+              {signedFileUrl ? (
+                <a
+                  href={signedFileUrl}
+                  download
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  تحميل
+                </a>
+              ) : (
+                <span className="text-xs text-gray-400">تعذّر توليد رابط التحميل</span>
+              )}
             </div>
           ) : (
             <p className="text-sm text-gray-400 dark:text-gray-500 italic">لا يوجد ملف مرفق.</p>
