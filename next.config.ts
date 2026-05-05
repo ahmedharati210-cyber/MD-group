@@ -24,6 +24,11 @@ const nextConfig: NextConfig = {
   },
   serverExternalPackages: ["pdf-parse"],
   allowedDevOrigins: getLanOrigins(),
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
   // Empty turbopack config acknowledges that Turbopack is used for `next dev`
   // while `next build --webpack` is used for production (required by @serwist/next).
   turbopack: {},
