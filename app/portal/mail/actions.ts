@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
@@ -57,6 +57,8 @@ export async function createMailAction(
   if (error) return { error: error.message };
 
   revalidatePath("/portal/mail");
+  revalidateTag("mail", "default");
+  revalidateTag("dashboard", "default");
   redirect("/portal/mail");
 }
 
@@ -89,6 +91,8 @@ export async function updateMailAction(
 
   revalidatePath("/portal/mail");
   revalidatePath(`/portal/mail/${id}`);
+  revalidateTag("mail", "default");
+  revalidateTag("dashboard", "default");
   redirect(`/portal/mail/${id}`);
 }
 
@@ -104,5 +108,7 @@ export async function deleteMailAction(formData: FormData) {
   }
 
   revalidatePath("/portal/mail");
+  revalidateTag("mail", "default");
+  revalidateTag("dashboard", "default");
   redirect("/portal/mail");
 }

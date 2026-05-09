@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarCheck, Download, Clock, Plus } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getEmployeeAttendance, getManagerAttendanceData } from "@/lib/data/attendance";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { formatDate, formatTime } from "@/lib/utils";
@@ -22,17 +22,9 @@ export default async function AttendancePage({
   const today = new Date().toISOString().slice(0, 10);
   const selectedDate = params.date ?? today;
 
-  const supabase = await createSupabaseServerClient();
-
   if (profile.role === "employee") {
-    const { data: mine } = await supabase
-      .from("attendance")
-      .select("*")
-      .eq("profile_id", userId)
-      .order("date", { ascending: false })
-      .limit(30);
-
-    const todays = mine?.find((r) => r.date === today) ?? null;
+    const mine = await getEmployeeAttendance(userId);
+    const todays = mine.find((r) => r.date === today) ?? null;
 
     return (
       <div>
@@ -49,7 +41,7 @@ export default async function AttendancePage({
         <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 mb-3 mt-6 sm:mt-8">
           آخر 30 سجل
         </h2>
-        {!mine || mine.length === 0 ? (
+        {mine.length === 0 ? (
           <EmptyState
             icon={CalendarCheck}
             title="لا يوجد سجل بعد"
@@ -117,26 +109,10 @@ export default async function AttendancePage({
   }
 
   // Manager / admin view — daily grid
-  let companyQuery = supabase
-    .from("profiles")
-    .select("id, full_name, company_id, companies(name_ar)")
-    .eq("role", "employee")
-    .eq("is_active", true)
-    .order("full_name");
-
-  if (params.companyId) companyQuery = companyQuery.eq("company_id", params.companyId);
-
-  const { data: employees } = await companyQuery;
-
-  const { data: companies } = await supabase
-    .from("companies")
-    .select("id, name_ar")
-    .order("name_ar");
-
-  const { data: rows } = await supabase
-    .from("attendance")
-    .select("*")
-    .eq("date", selectedDate);
+  const { employees, companies, rows } = await getManagerAttendanceData(
+    selectedDate,
+    params.companyId,
+  );
 
   return (
     <div>
@@ -179,7 +155,7 @@ export default async function AttendancePage({
             className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none"
           >
             <option value="">كل الشركات</option>
-            {(companies ?? []).map((c) => (
+            {companies.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name_ar}
               </option>
@@ -194,7 +170,7 @@ export default async function AttendancePage({
         </button>
       </form>
 
-      {!employees || employees.length === 0 ? (
+      {employees.length === 0 ? (
         <EmptyState
           icon={CalendarCheck}
           title="لا يوجد موظفون"
@@ -203,15 +179,8 @@ export default async function AttendancePage({
       ) : (
         <DailyGrid
           date={selectedDate}
-          employees={employees.map((e) => ({
-            id: e.id,
-            full_name: e.full_name,
-            company_id: e.company_id!,
-            company_name:
-              (e as typeof e & { companies?: { name_ar: string } | null })
-                .companies?.name_ar ?? null,
-          }))}
-          records={(rows ?? []).map((r) => ({
+          employees={employees}
+          records={rows.map((r) => ({
             id: r.id,
             profile_id: r.profile_id,
             status: r.status,

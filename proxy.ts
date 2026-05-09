@@ -7,7 +7,16 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match every request except static assets and internal Next endpoints.
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    /*
+     * Only run on routes that need session refresh or auth gating.
+     * Public pages (/, /about, /contact) are intentionally excluded —
+     * they don't use auth and running getUser() on them adds ~200ms of
+     * unnecessary Supabase round-trip latency on every public page load.
+     */
+    "/portal/:path*",
+    "/login",
+    "/forgot-password",
+    "/reset-password",
+    "/auth/:path*",
   ],
 };

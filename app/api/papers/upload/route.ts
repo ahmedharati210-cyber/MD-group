@@ -5,9 +5,6 @@ import {
   createSupabaseServerClient,
 } from "@/lib/supabase/server";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 const ALLOWED_MIME = new Set([
   "application/pdf",
   "image/png",

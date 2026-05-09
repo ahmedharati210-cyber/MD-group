@@ -3,9 +3,6 @@ import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ProjectStatus } from "@/types/db";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 const statusLabels: Record<ProjectStatus, string> = {
   planning:    "تصميم",
   active:      "انشاء (اعمال الهيكل)",

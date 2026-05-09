@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus, ClipboardEdit, CalendarDays, User } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getRequestsData } from "@/lib/data/requests";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { RequestsFilter } from "@/components/requests/RequestsFilter";
@@ -39,24 +39,18 @@ export default async function RequestsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { profile } = await requireFeature("requests");
-  const supabase = await createSupabaseServerClient();
   const isManager = profile.role !== "employee";
 
   const sp = await searchParams;
   const filterStatus = typeof sp.status === "string" ? sp.status : "";
   const filterType = typeof sp.type === "string" ? sp.type : "";
 
-  let query = supabase
-    .from("engineer_requests")
-    .select("id, request_type, description, requested_date, status, created_at, requester:requester_id(full_name)")
-    .order("created_at", { ascending: false });
-
-  if (!isManager) query = query.eq("requester_id", profile.id ?? "");
-  if (filterStatus) query = query.eq("status", filterStatus);
-  if (filterType) query = query.eq("request_type", filterType);
-
-  const { data: rawRequests } = await query;
-  const requests = (rawRequests ?? []) as unknown as RequestRow[];
+  const requests = await getRequestsData({
+    profileId: profile.id ?? "",
+    isManager,
+    filterStatus: filterStatus || undefined,
+    filterType: filterType || undefined,
+  });
 
   return (
     <div>

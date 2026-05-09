@@ -10,7 +10,7 @@ import {
   LayoutList,
 } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getMailData } from "@/lib/data/mail";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
@@ -36,45 +36,18 @@ export default async function MailPage({
   const { profile } = await requireFeature("mail", ["md_admin", "company_manager"]);
   const { direction, companyId, q, page: pageStr } = await searchParams;
   const page = Math.max(1, parseInt(pageStr ?? "1", 10));
-  const offset = (page - 1) * PAGE_SIZE;
 
   const tab: "all" | "inbound" | "outbound" =
     direction === "inbound" || direction === "outbound" ? direction : "all";
 
-  const supabase = await createSupabaseServerClient();
-
-  // Tab counts (respect companyId filter).
-  const buildCount = async (dir?: "inbound" | "outbound") => {
-    let q2 = supabase
-      .from("mail")
-      .select("id", { count: "exact", head: true });
-    if (dir) q2 = q2.eq("direction", dir);
-    if (companyId) q2 = q2.eq("company_id", companyId);
-    const { count } = await q2;
-    return count ?? 0;
-  };
-  const [total, inboundCount, outboundCount] = await Promise.all([
-    buildCount(),
-    buildCount("inbound"),
-    buildCount("outbound"),
-  ]);
-
-  let query = supabase
-    .from("mail")
-    .select("*, companies(name_ar)", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range(offset, offset + PAGE_SIZE - 1);
-  if (tab !== "all") query = query.eq("direction", tab);
-  if (companyId) query = query.eq("company_id", companyId);
-  if (q) query = query.ilike("subject", `%${q}%`);
-
-  const { data: mails, count } = await query;
-  const totalCount = count ?? 0;
-
-  const { data: companies } = await supabase
-    .from("companies")
-    .select("id, name_ar")
-    .order("name_ar");
+  const { mails, totalCount, total, inboundCount, outboundCount, companies } =
+    await getMailData({
+      tab,
+      filterCompanyId: companyId || undefined,
+      q: q || undefined,
+      page,
+      pageSize: PAGE_SIZE,
+    });
 
   const baseParams = new URLSearchParams();
   if (companyId) baseParams.set("companyId", companyId);
@@ -169,7 +142,7 @@ export default async function MailPage({
             className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none"
           >
             <option value="">كل الشركات</option>
-            {(companies ?? []).map((c) => (
+            {companies.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name_ar}
               </option>
@@ -184,7 +157,7 @@ export default async function MailPage({
         </button>
       </form>
 
-      {!mails || mails.length === 0 ? (
+      {mails.length === 0 ? (
         <EmptyState
           icon={Mail}
           title={
@@ -200,10 +173,8 @@ export default async function MailPage({
         <>
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
           <ul className="divide-y divide-gray-100 dark:divide-gray-800">
-            {mails.map((m) => {
-              const company = (
-                m as typeof m & { companies?: { name_ar: string } | null }
-              ).companies;
+            {(mails as (Record<string, unknown> & { companies?: { name_ar: string } | null; direction: string; subject: string; from_name: string | null; to_name: string | null; body: string | null; created_at: string; id: string })[]).map((m) => {
+              const company = m.companies;
               const inbound = m.direction === "inbound";
               return (
                 <li key={m.id}>

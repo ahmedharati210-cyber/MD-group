@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
@@ -50,6 +50,7 @@ export async function createMapAction(
   void logAudit(userId, "create", "map", newMap?.id, { name: parsed.data.name });
 
   revalidatePath("/portal/maps");
+  revalidateTag("maps", "default");
   redirect("/portal/maps");
 }
 
@@ -74,6 +75,7 @@ export async function updateMapAction(
   void logAudit(userId, "update", "map", id, { name: parsed.data.name });
 
   revalidatePath("/portal/maps");
+  revalidateTag("maps", "default");
   redirect("/portal/maps");
 }
 
@@ -86,5 +88,6 @@ export async function deleteMapAction(id: string): Promise<ActionState> {
   void logAudit(userId, "delete", "map", id);
 
   revalidatePath("/portal/maps");
+  revalidateTag("maps", "default");
   return { ok: true };
 }

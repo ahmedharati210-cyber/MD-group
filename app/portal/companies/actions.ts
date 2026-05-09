@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
@@ -53,6 +53,9 @@ export async function createCompanyAction(
 
   revalidatePath("/portal/companies");
   revalidatePath("/");
+  revalidateTag("companies", "default");
+  revalidateTag("dashboard", "default");
+  revalidateTag("public-companies", "default");
   redirect(`/portal/companies/${data.id}`);
 }
 
@@ -93,6 +96,10 @@ export async function updateCompanyAction(
   revalidatePath("/portal/companies");
   revalidatePath(`/portal/companies/${id}`);
   revalidatePath("/");
+  revalidateTag("companies", "default");
+  revalidateTag("dashboard", "default");
+  revalidateTag("public-companies", "default");
+  revalidateTag(`company:${id}`, "default");
   redirect(`/portal/companies/${id}`);
 }
 
@@ -126,5 +133,9 @@ export async function deleteCompanyAction(formData: FormData) {
 
   revalidatePath("/portal/companies");
   revalidatePath("/");
+  revalidateTag("companies", "default");
+  revalidateTag("dashboard", "default");
+  revalidateTag("public-companies", "default");
+  revalidateTag(`company:${id}`, "default");
   redirect("/portal/companies");
 }

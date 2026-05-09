@@ -1,6 +1,6 @@
 import { AlertTriangle, Plus, User } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getWarningsData } from "@/lib/data/warnings";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
@@ -27,46 +27,17 @@ type WarningRow = {
 export default async function WarningsPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const { profile } = await requireFeature("warnings");
-  const supabase = await createSupabaseServerClient();
   const isManager = profile.role !== "employee";
   const page = Math.max(1, parseInt(sp.page ?? "1", 10));
-  const offset = (page - 1) * PAGE_SIZE;
 
-  const { data: rawWarnings, count } = await supabase
-    .from("warnings")
-    .select("id, message, is_read, created_at, target:target_profile_id(full_name), sender:sender_id(full_name)", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range(offset, offset + PAGE_SIZE - 1);
-
-  const warnings = (rawWarnings ?? []) as unknown as WarningRow[];
-  const totalCount = count ?? 0;
-
-  // Scope employees: company_manager → own company only; md_admin/super_admin → all
-  let engineers: { id: string; full_name: string }[] | null = null;
-  let companies: { id: string; name_ar: string }[] | null = null;
-
-  if (isManager) {
-    let engQuery = supabase
-      .from("profiles")
-      .select("id, full_name")
-      .eq("role", "employee")
-      .eq("is_active", true)
-      .order("full_name");
-    if (profile.role === "company_manager") {
-      engQuery = engQuery.eq("company_id", profile.company_id ?? "");
-    }
-    const { data: engData } = await engQuery;
-    engineers = engData;
-
-    // Super admin broadcast: also load the company list for the company picker
-    if (profile.is_super_admin) {
-      const { data: companyData } = await supabase
-        .from("companies")
-        .select("id, name_ar")
-        .order("name_ar");
-      companies = companyData;
-    }
-  }
+  const { warnings, totalCount, engineers, companies } = await getWarningsData({
+    profileId: profile.id ?? "",
+    companyId: profile.company_id,
+    role: profile.role,
+    isSuperAdmin: profile.is_super_admin ?? false,
+    page,
+    pageSize: PAGE_SIZE,
+  });
 
   return (
     <div>

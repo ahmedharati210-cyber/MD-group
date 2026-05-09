@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus, FileBarChart2, CalendarDays, MapPin, User } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getReportsData } from "@/lib/data/reports";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
@@ -24,33 +24,19 @@ type ReportRow = {
 export default async function ReportsPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const { profile } = await requireFeature("reports");
-  const supabase = await createSupabaseServerClient();
   const isManager = profile.role !== "employee";
   const page = Math.max(1, parseInt(sp.page ?? "1", 10));
-  const offset = (page - 1) * PAGE_SIZE;
 
-  let query = supabase
-    .from("engineer_reports")
-    .select("id, report_date, work_done, created_at, author:author_id(full_name), project:project_id(name)", { count: "exact" })
-    .order("report_date", { ascending: false })
-    .range(offset, offset + PAGE_SIZE - 1);
-
-  if (!isManager) query = query.eq("author_id", profile.id ?? "");
-  if (sp.projectId) query = query.eq("project_id", sp.projectId);
-  if (sp.authorId) query = query.eq("author_id", sp.authorId);
-  if (sp.from) query = query.gte("report_date", sp.from);
-  if (sp.to) query = query.lte("report_date", sp.to);
-
-  const { data: rawReports, count } = await query;
-  const reports = (rawReports ?? []) as unknown as ReportRow[];
-  const totalCount = count ?? 0;
-
-  const [{ data: projects }, { data: engineers }] = await Promise.all([
-    supabase.from("projects").select("id, name").order("name"),
-    isManager
-      ? supabase.from("profiles").select("id, full_name").eq("role", "employee").eq("is_active", true).order("full_name")
-      : Promise.resolve({ data: null }),
-  ]);
+  const { reports, totalCount, projects, engineers } = await getReportsData({
+    profileId: profile.id ?? "",
+    isManager,
+    page,
+    pageSize: PAGE_SIZE,
+    projectId: sp.projectId,
+    authorId: sp.authorId,
+    from: sp.from,
+    to: sp.to,
+  });
 
   return (
     <div>
@@ -68,7 +54,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
         <form method="get" className="flex flex-wrap gap-3">
-          {projects && projects.length > 0 ? (
+          {projects.length > 0 ? (
             <select name="projectId" defaultValue={sp.projectId ?? ""} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-none">
               <option value="">كل المشاريع</option>
               {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}

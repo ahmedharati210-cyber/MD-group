@@ -9,18 +9,27 @@ import {
   Handshake,
   Sparkles,
 } from "lucide-react";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { cacheTag, cacheLife } from "next/cache";
+import { createClient } from "@supabase/supabase-js";
 import type { Company } from "@/types/db";
 
+// Uses the anon Supabase client (no cookies) so 'use cache' creates a single
+// shared entry across all visitors rather than per-session.
 async function getCompanies(): Promise<Company[]> {
+  "use cache";
+  cacheTag("public-companies");
+  cacheLife("minutes");
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
     const { data } = await supabase
       .from("companies")
       .select("*")
       .eq("active", true)
       .order("name_ar");
-    return data ?? [];
+    return (data ?? []) as unknown as Company[];
   } catch {
     return [];
   }

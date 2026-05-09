@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus, Map, MapPin, ExternalLink, Pencil } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getMapsData } from "@/lib/data/maps";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { DeleteMapButton } from "@/components/maps/DeleteMapButton";
@@ -24,28 +24,16 @@ export default async function MapsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { profile } = await requireFeature("maps");
-  const supabase = await createSupabaseServerClient();
   const canManage = profile.role !== "employee";
 
   const sp = await searchParams;
   const filterProjectId = typeof sp.project_id === "string" ? sp.project_id : "";
   const filterQuery = typeof sp.q === "string" ? sp.q.trim() : "";
 
-  let mapsQuery = supabase
-    .from("map_links")
-    .select("id, name, description, drive_url, project_id, project:project_id(name)")
-    .order("created_at", { ascending: false });
-
-  if (filterProjectId) mapsQuery = mapsQuery.eq("project_id", filterProjectId);
-  if (filterQuery) mapsQuery = mapsQuery.ilike("name", `%${filterQuery}%`);
-
-  const [mapsResult, projectsResult] = await Promise.all([
-    mapsQuery,
-    supabase.from("projects").select("id, name").order("name"),
-  ]);
-
-  const maps = ((mapsResult.data ?? []) as unknown as MapRow[]);
-  const projects = (projectsResult.data ?? []) as { id: string; name: string }[];
+  const { maps, projects } = await getMapsData({
+    filterProjectId: filterProjectId || undefined,
+    filterQuery: filterQuery || undefined,
+  });
 
   return (
     <div>

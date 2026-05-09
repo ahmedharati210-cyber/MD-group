@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
@@ -62,6 +62,8 @@ export async function createReportAction(
   });
 
   revalidatePath("/portal/reports");
+  revalidateTag("reports", "default");
+  revalidateTag("dashboard", "default");
   redirect("/portal/reports");
 }
 
@@ -73,5 +75,7 @@ export async function deleteReportAction(id: string): Promise<ActionState> {
 
   void logAudit(userId, "delete", "report", id);
 
+  revalidateTag("reports", "default");
+  revalidateTag("dashboard", "default");
   redirect("/portal/reports");
 }

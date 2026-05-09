@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole, requireUser } from "@/lib/auth";
@@ -12,6 +12,8 @@ export type ActionState = { error?: string; ok?: boolean };
 function revalidateTimeline(projectId?: string) {
   revalidatePath("/portal/timeline");
   if (projectId) revalidatePath(`/portal/timeline/${projectId}`);
+  revalidateTag("projects", "default");
+  revalidateTag("dashboard", "default");
 }
 
 /** Resolves the company that owns timeline features (Emaar Al Youm). */

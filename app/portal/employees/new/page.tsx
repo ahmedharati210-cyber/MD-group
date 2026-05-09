@@ -17,7 +17,7 @@ export default async function NewEmployeePage() {
     .order("name_ar");
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl">
       <Link
         href="/portal/employees"
         className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mb-3"
@@ -29,14 +29,11 @@ export default async function NewEmployeePage() {
         title="إضافة موظف جديد"
         description="سيتم إنشاء حساب تسجيل دخول للموظف وإرساله للمدير."
       />
-
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
-        <NewEmployeeForm
-          companies={companies ?? []}
-          currentRole={profile.role}
-          currentCompanyId={profile.company_id}
-        />
-      </div>
+      <NewEmployeeForm
+        companies={companies ?? []}
+        currentRole={profile.role}
+        currentCompanyId={profile.company_id}
+      />
     </div>
   );
 }

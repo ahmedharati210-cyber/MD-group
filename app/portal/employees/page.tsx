@@ -4,11 +4,14 @@ import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
+import { Pagination } from "@/components/portal/Pagination";
 import { formatDate } from "@/lib/utils";
 
 export const metadata = { title: "الموظفون" };
 
-type SearchParams = Promise<{ companyId?: string; q?: string }>;
+const PAGE_SIZE = 50;
+
+type SearchParams = Promise<{ companyId?: string; q?: string; page?: string }>;
 
 export default async function EmployeesPage({
   searchParams,
@@ -16,25 +19,28 @@ export default async function EmployeesPage({
   searchParams: SearchParams;
 }) {
   await requireRole(["md_admin", "company_manager"]);
-  const { companyId, q } = await searchParams;
+  const { companyId, q, page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam ?? 1));
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
 
   const supabase = await createSupabaseServerClient();
 
-  let query = supabase
+  let employeesQuery = supabase
     .from("profiles")
-    .select("*, companies(id, name_ar)")
+    .select("*, companies(id, name_ar)", { count: "exact" })
     .in("role", ["employee", "company_manager"])
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
-  if (companyId) query = query.eq("company_id", companyId);
-  if (q) query = query.ilike("full_name", `%${q}%`);
+  if (companyId) employeesQuery = employeesQuery.eq("company_id", companyId);
+  if (q) employeesQuery = employeesQuery.ilike("full_name", `%${q}%`);
 
-  const { data: employees } = await query;
-
-  const { data: companies } = await supabase
-    .from("companies")
-    .select("id, name_ar")
-    .order("name_ar");
+  const [{ data: employees, count: totalCount }, { data: companies }] =
+    await Promise.all([
+      employeesQuery,
+      supabase.from("companies").select("id, name_ar").order("name_ar"),
+    ]);
 
   return (
     <div>
@@ -213,6 +219,19 @@ export default async function EmployeesPage({
             </div>
           </div>
         </>
+      )}
+
+      {(totalCount ?? 0) > PAGE_SIZE && (
+        <Pagination
+          page={page}
+          totalCount={totalCount ?? 0}
+          pageSize={PAGE_SIZE}
+          baseUrl="/portal/employees"
+          extraParams={{
+            ...(q ? { q } : {}),
+            ...(companyId ? { companyId } : {}),
+          }}
+        />
       )}
     </div>
   );

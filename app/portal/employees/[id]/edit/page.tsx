@@ -43,12 +43,13 @@ export default async function EditEmployeePage({
         العودة إلى الملف
       </Link>
       <PageHeader title="تعديل المستخدم" description={profile.full_name} />
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm max-w-3xl">
+      <div className="max-w-3xl">
         <EditEmployeeForm
           profile={profile}
           companies={companies ?? []}
           canChangeRole={isAdmin}
           canChangeCompany={isAdmin}
+          canSeeHrNotes={me.role === "md_admin" || me.role === "company_manager"}
         />
       </div>
     </div>

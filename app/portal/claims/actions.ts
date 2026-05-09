@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
@@ -69,6 +69,8 @@ export async function createClaimAction(
   void logAudit(userId, "create", "claim", newClaim?.id, { title: parsed.data.title });
 
   revalidatePath("/portal/claims");
+  revalidateTag("claims", "default");
+  revalidateTag("dashboard", "default");
   redirect("/portal/claims");
 }
 
@@ -80,5 +82,7 @@ export async function deleteClaimAction(id: string): Promise<ActionState> {
 
   void logAudit(userId, "delete", "claim", id);
 
+  revalidateTag("claims", "default");
+  revalidateTag("dashboard", "default");
   redirect("/portal/claims");
 }

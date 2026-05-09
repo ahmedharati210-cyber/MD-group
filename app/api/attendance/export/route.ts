@@ -2,9 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 function csvEscape(value: unknown): string {
   if (value === null || value === undefined) return "";
   const str = String(value);

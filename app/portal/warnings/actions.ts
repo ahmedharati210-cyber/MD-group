@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -43,6 +43,9 @@ export async function sendWarningAction(
     if (error) return { error: error.message };
     void logAudit(userId, "create", "warning", null, { broadcast_company: broadcastCompanyId });
     revalidatePath("/portal/warnings");
+    revalidateTag("warnings", "default");
+    revalidateTag("badges", "default");
+    revalidateTag("dashboard", "default");
     return { ok: true };
   }
 
@@ -86,6 +89,9 @@ export async function sendWarningAction(
   });
 
   revalidatePath("/portal/warnings");
+  revalidateTag("warnings", "default");
+  revalidateTag("badges", "default");
+  revalidateTag("dashboard", "default");
   return { ok: true };
 }
 
@@ -95,6 +101,7 @@ export async function markWarningReadAction(id: string): Promise<ActionState> {
   const { error } = await supabase.from("warnings").update({ is_read: true }).eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/portal/warnings");
+  revalidateTag("badges", "default");
   return { ok: true };
 }
 
@@ -107,5 +114,8 @@ export async function deleteWarningAction(id: string): Promise<ActionState> {
   void logAudit(userId, "delete", "warning", id);
 
   revalidatePath("/portal/warnings");
+  revalidateTag("warnings", "default");
+  revalidateTag("badges", "default");
+  revalidateTag("dashboard", "default");
   return { ok: true };
 }

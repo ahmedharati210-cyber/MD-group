@@ -1,11 +1,20 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Menu, RefreshCw } from "lucide-react";
 import { Sidebar } from "./Sidebar";
-import { PwaInstallBanner } from "./PwaInstallBanner";
 import type { UserRole, AppFeature, RoleFeatures } from "@/types/db";
+
+// Dynamically imported so framer-motion is excluded from the main portal
+// bundle and only fetched in the browser when the banner becomes relevant.
+const PwaInstallBanner = dynamic(
+  () => import("./PwaInstallBanner").then((m) => m.PwaInstallBanner),
+  { ssr: false },
+);
 
 type Props = {
   role: UserRole;
@@ -32,6 +41,7 @@ export function PortalShell({
   unreadWarningsCount,
   children,
 }: Props) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const handleClose = useCallback(() => setIsOpen(false), []);
   const handleOpen = useCallback(() => setIsOpen(true), []);
@@ -67,13 +77,14 @@ export function PortalShell({
         </button>
         <Link href="/portal" className="flex items-center gap-2">
           <span className="inline-flex rounded-lg bg-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-0.5">
-            <img
-              src="/Icon-MD.png"
-              alt="MD Group"
-              className="w-7 h-7 object-contain"
-              width={28}
-              height={28}
-            />
+              <Image
+                src="/Icon-MD.png"
+                alt="MD Group"
+                className="w-7 h-7 object-contain"
+                width={28}
+                height={28}
+                priority
+              />
           </span>
           <span className="font-bold text-gray-900 dark:text-gray-100">
             MD Group
@@ -81,7 +92,7 @@ export function PortalShell({
         </Link>
         <button
           type="button"
-          onClick={() => window.location.reload()}
+          onClick={() => router.refresh()}
           aria-label="تحديث الصفحة"
           className="p-2 -ml-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-transform"
         >

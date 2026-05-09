@@ -18,9 +18,27 @@ function getLanOrigins(): string[] {
   return [...origins];
 }
 
+// Extract the Supabase storage hostname for next/image remote pattern.
+// Falls back gracefully if the env var isn't available at build time.
+const supabaseHostname = (() => {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return url ? new URL(url).hostname : "*.supabase.co";
+  } catch {
+    return "*.supabase.co";
+  }
+})();
+
 const nextConfig: NextConfig = {
+  cacheComponents: true,
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: supabaseHostname,
+        pathname: "/storage/v1/object/**",
+      },
+    ],
   },
   serverExternalPackages: ["pdf-parse"],
   allowedDevOrigins: getLanOrigins(),

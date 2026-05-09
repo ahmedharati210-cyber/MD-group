@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole, requireUser } from "@/lib/auth";
@@ -51,6 +51,8 @@ export async function checkInAction(): Promise<ActionState> {
   }
 
   revalidatePath("/portal/attendance");
+  revalidateTag("attendance", "default");
+  revalidateTag("dashboard", "default");
   return { ok: true };
 }
 
@@ -81,6 +83,8 @@ export async function checkOutAction(): Promise<ActionState> {
   if (error) return { error: error.message };
 
   revalidatePath("/portal/attendance");
+  revalidateTag("attendance", "default");
+  revalidateTag("dashboard", "default");
   return { ok: true };
 }
 
@@ -124,6 +128,8 @@ export async function markAttendanceAction(formData: FormData) {
   }
 
   revalidatePath("/portal/attendance");
+  revalidateTag("attendance", "default");
+  revalidateTag("dashboard", "default");
 }
 
 /**
@@ -231,6 +237,8 @@ export async function createAttendanceAction(
 
   revalidatePath("/portal/attendance");
   revalidatePath(`/portal/employees/${parsed.data.profile_id}`);
+  revalidateTag("attendance", "default");
+  revalidateTag("dashboard", "default");
   redirect(`/portal/attendance?date=${parsed.data.date}`);
 }
 
@@ -257,5 +265,7 @@ export async function deleteAttendanceAction(formData: FormData) {
 
   await supabase.from("attendance").delete().eq("id", id);
   revalidatePath("/portal/attendance");
+  revalidateTag("attendance", "default");
+  revalidateTag("dashboard", "default");
   redirect(`/portal/attendance?date=${row.date}`);
 }

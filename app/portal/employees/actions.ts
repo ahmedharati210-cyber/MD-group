@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
@@ -19,6 +19,21 @@ const createSchema = z.object({
   hired_at: z.string().optional().nullable(),
   company_id: z.string().uuid(),
   role: z.enum(["employee", "company_manager"]).default("employee"),
+  // Extended HR fields
+  date_of_birth: z.string().optional().nullable(),
+  gender: z.enum(["male", "female"]).optional().nullable(),
+  nationality: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  department: z.string().optional().nullable(),
+  contract_type: z.enum(["full_time", "part_time", "contract", "intern"]).optional().nullable(),
+  contract_end_date: z.string().optional().nullable(),
+  passport_number: z.string().optional().nullable(),
+  blood_type: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional().nullable(),
+  education_level: z.enum(["high_school", "diploma", "bachelor", "master", "phd", "other"]).optional().nullable(),
+  emergency_contact_name: z.string().optional().nullable(),
+  emergency_contact_phone: z.string().optional().nullable(),
+  emergency_contact_relationship: z.string().optional().nullable(),
+  hr_notes: z.string().optional().nullable(),
 });
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -39,6 +54,20 @@ export async function createEmployeeAction(
     hired_at: formData.get("hired_at") || null,
     company_id: formData.get("company_id"),
     role: formData.get("role") || "employee",
+    date_of_birth: formData.get("date_of_birth") || null,
+    gender: formData.get("gender") || null,
+    nationality: formData.get("nationality") || null,
+    address: formData.get("address") || null,
+    department: formData.get("department") || null,
+    contract_type: formData.get("contract_type") || null,
+    contract_end_date: formData.get("contract_end_date") || null,
+    passport_number: formData.get("passport_number") || null,
+    blood_type: formData.get("blood_type") || null,
+    education_level: formData.get("education_level") || null,
+    emergency_contact_name: formData.get("emergency_contact_name") || null,
+    emergency_contact_phone: formData.get("emergency_contact_phone") || null,
+    emergency_contact_relationship: formData.get("emergency_contact_relationship") || null,
+    hr_notes: formData.get("hr_notes") || null,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
@@ -81,6 +110,20 @@ export async function createEmployeeAction(
       job_title: parsed.data.job_title,
       national_id: parsed.data.national_id,
       hired_at: parsed.data.hired_at,
+      date_of_birth: parsed.data.date_of_birth,
+      gender: parsed.data.gender,
+      nationality: parsed.data.nationality,
+      address: parsed.data.address,
+      department: parsed.data.department,
+      contract_type: parsed.data.contract_type,
+      contract_end_date: parsed.data.contract_end_date,
+      passport_number: parsed.data.passport_number,
+      blood_type: parsed.data.blood_type,
+      education_level: parsed.data.education_level,
+      emergency_contact_name: parsed.data.emergency_contact_name,
+      emergency_contact_phone: parsed.data.emergency_contact_phone,
+      emergency_contact_relationship: parsed.data.emergency_contact_relationship,
+      hr_notes: parsed.data.hr_notes,
     })
     .eq("id", userData.user.id);
 
@@ -95,6 +138,8 @@ export async function createEmployeeAction(
   });
 
   revalidatePath("/portal/employees");
+  revalidateTag("employees", "default");
+  revalidateTag("dashboard", "default");
   redirect("/portal/employees");
 }
 
@@ -108,6 +153,21 @@ const updateSchema = z.object({
   company_id: z.string().uuid().optional().nullable(),
   role: z.enum(["employee", "company_manager", "md_admin"]).optional(),
   is_active: z.coerce.boolean().optional(),
+  // Extended HR fields
+  date_of_birth: z.string().optional().nullable(),
+  gender: z.enum(["male", "female"]).optional().nullable(),
+  nationality: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  department: z.string().optional().nullable(),
+  contract_type: z.enum(["full_time", "part_time", "contract", "intern"]).optional().nullable(),
+  contract_end_date: z.string().optional().nullable(),
+  passport_number: z.string().optional().nullable(),
+  blood_type: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional().nullable(),
+  education_level: z.enum(["high_school", "diploma", "bachelor", "master", "phd", "other"]).optional().nullable(),
+  emergency_contact_name: z.string().optional().nullable(),
+  emergency_contact_phone: z.string().optional().nullable(),
+  emergency_contact_relationship: z.string().optional().nullable(),
+  hr_notes: z.string().optional().nullable(),
 });
 
 export async function updateEmployeeAction(
@@ -126,12 +186,26 @@ export async function updateEmployeeAction(
     company_id: formData.get("company_id") || null,
     role: formData.get("role") || undefined,
     is_active: formData.get("is_active") === "on",
+    date_of_birth: formData.get("date_of_birth") || null,
+    gender: formData.get("gender") || null,
+    nationality: formData.get("nationality") || null,
+    address: formData.get("address") || null,
+    department: formData.get("department") || null,
+    contract_type: formData.get("contract_type") || null,
+    contract_end_date: formData.get("contract_end_date") || null,
+    passport_number: formData.get("passport_number") || null,
+    blood_type: formData.get("blood_type") || null,
+    education_level: formData.get("education_level") || null,
+    emergency_contact_name: formData.get("emergency_contact_name") || null,
+    emergency_contact_phone: formData.get("emergency_contact_phone") || null,
+    emergency_contact_relationship: formData.get("emergency_contact_relationship") || null,
+    hr_notes: formData.get("hr_notes") || null,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
   }
 
-  const { id, role, company_id, ...rest } = parsed.data;
+  const { id, role, company_id, hr_notes, ...rest } = parsed.data;
   const admin = createSupabaseAdminClient();
 
   // Fetch the target to enforce scoping rules.
@@ -167,12 +241,18 @@ export async function updateEmployeeAction(
     if (role) payload.role = role;
     if (company_id !== undefined) payload.company_id = company_id || null;
   }
+  // hr_notes is only writable by managers/admins
+  if (current.profile.role !== "employee") {
+    payload.hr_notes = hr_notes ?? null;
+  }
 
   const { error } = await admin.from("profiles").update(payload).eq("id", id);
   if (error) return { error: error.message };
 
   revalidatePath(`/portal/employees/${id}`);
   revalidatePath("/portal/employees");
+  revalidateTag("employees", "default");
+  revalidateTag("dashboard", "default");
   redirect(`/portal/employees/${id}`);
 }
 
@@ -184,6 +264,8 @@ export async function deactivateEmployeeAction(formData: FormData) {
   await supabase.from("profiles").update({ is_active: false }).eq("id", id);
   revalidatePath("/portal/employees");
   revalidatePath(`/portal/employees/${id}`);
+  revalidateTag("employees", "default");
+  revalidateTag("dashboard", "default");
 }
 
 export async function deleteEmployeeAction(formData: FormData) {
@@ -240,5 +322,7 @@ export async function deleteEmployeeAction(formData: FormData) {
   });
 
   revalidatePath("/portal/employees");
+  revalidateTag("employees", "default");
+  revalidateTag("dashboard", "default");
   redirect("/portal/employees");
 }

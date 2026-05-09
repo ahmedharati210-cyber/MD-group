@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FileText, Plus, Building2 } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getPapersData, type PaperDoc } from "@/lib/data/papers";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { bytesToReadable, formatDate } from "@/lib/utils";
@@ -31,28 +31,11 @@ export default async function PapersPage({
 
   const canUpload = profile.role !== "employee";
 
-  const supabase = await createSupabaseServerClient();
-
-  let query = supabase
-    .from("documents")
-    .select("*, companies(name_ar)")
-    .order("created_at", { ascending: false })
-    .limit(100);
-
-  if (q && q.trim()) {
-    query = query.or(`title.ilike.%${q}%,content_text.ilike.%${q}%`);
-  }
-  if (category && category !== "all") {
-    query = query.eq("category", category);
-  }
-  if (companyId) query = query.eq("company_id", companyId);
-
-  const { data: docs } = await query;
-
-  const { data: companies } = await supabase
-    .from("companies")
-    .select("id, name_ar")
-    .order("name_ar");
+  const { docs, companies } = await getPapersData({
+    q: q || undefined,
+    category: category || undefined,
+    companyId: companyId || undefined,
+  });
 
   const selectClasses =
     "px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none";
@@ -102,7 +85,7 @@ export default async function PapersPage({
             className={selectClasses}
           >
             <option value="">كل الشركات</option>
-            {(companies ?? []).map((c) => (
+            {companies.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name_ar}
               </option>
@@ -117,7 +100,7 @@ export default async function PapersPage({
         </button>
       </form>
 
-      {!docs || docs.length === 0 ? (
+      {docs.length === 0 ? (
         <EmptyState
           icon={FileText}
           title="لا توجد أوراق"
@@ -131,10 +114,8 @@ export default async function PapersPage({
         <>
           {/* Mobile list */}
           <div className="md:hidden space-y-3">
-            {docs.map((d) => {
-              const company = (
-                d as typeof d & { companies?: { name_ar: string } | null }
-              ).companies;
+            {(docs as PaperDoc[]).map((d) => {
+              const company = d.companies;
               return (
                 <Link
                   key={d.id}
@@ -192,10 +173,8 @@ export default async function PapersPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {docs.map((d) => {
-                    const company = (
-                      d as typeof d & { companies?: { name_ar: string } | null }
-                    ).companies;
+                  {(docs as PaperDoc[]).map((d) => {
+                    const company = d.companies;
                     return (
                       <tr
                         key={d.id}

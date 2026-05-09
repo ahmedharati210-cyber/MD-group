@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
@@ -41,6 +41,9 @@ export async function createRequestAction(
   });
 
   revalidatePath("/portal/requests");
+  revalidateTag("requests", "default");
+  revalidateTag("badges", "default");
+  revalidateTag("dashboard", "default");
   redirect("/portal/requests");
 }
 
@@ -73,6 +76,9 @@ export async function respondToRequestAction(
 
   revalidatePath(`/portal/requests/${requestId}`);
   revalidatePath("/portal/requests");
+  revalidateTag("requests", "default");
+  revalidateTag("badges", "default");
+  revalidateTag("dashboard", "default");
   return { ok: true };
 }
 
@@ -84,5 +90,8 @@ export async function deleteRequestAction(id: string): Promise<ActionState> {
 
   void logAudit(userId, "delete", "request", id);
 
+  revalidateTag("requests", "default");
+  revalidateTag("badges", "default");
+  revalidateTag("dashboard", "default");
   redirect("/portal/requests");
 }

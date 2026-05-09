@@ -5,9 +5,6 @@ import {
   createSupabaseServerClient,
 } from "@/lib/supabase/server";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 /**
  * Returns a short-lived signed URL for the requested document, but only if
  * the caller's RLS-scoped view of the `documents` table can see that row.

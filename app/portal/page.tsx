@@ -14,97 +14,13 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getVisibleFeatures } from "@/lib/features";
+import { getCompanyData } from "@/lib/company";
+import { getDashboardData } from "@/lib/data/dashboard";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { StatCard } from "@/components/portal/StatCard";
 import type { AppFeature, ProjectStatus, RoleFeatures } from "@/types/db";
-
-type Counts = {
-  companies: number;
-  employees: number;
-  attendanceToday: number;
-  papers: number;
-  mail: number;
-  contacts: number;
-  projects: number;
-  pendingRequests: number;
-  overdueTasks: number;
-  warnings: number;
-};
-
-type ProjectProgressRow = {
-  id: string;
-  name: string;
-  status: ProjectStatus;
-  categories: { tasks: { is_completed: boolean }[] }[];
-};
-
-async function getCounts(profileId: string, isEmployee: boolean): Promise<Counts> {
-  const supabase = await createSupabaseServerClient();
-  const today = new Date().toISOString().slice(0, 10);
-
-  // Employees see only their own pending requests; managers see all.
-  const requestsBase = supabase
-    .from("engineer_requests")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "pending");
-  const requestsQuery = isEmployee
-    ? requestsBase.eq("requester_id", profileId)
-    : requestsBase;
-
-  // Employees see their own unread warnings; managers see total warnings sent.
-  const warningsQuery = isEmployee
-    ? supabase
-        .from("warnings")
-        .select("id", { count: "exact", head: true })
-        .eq("is_read", false)
-        .or(`target_profile_id.eq.${profileId},target_profile_id.is.null`)
-    : supabase.from("warnings").select("id", { count: "exact", head: true });
-
-  const [companies, employees, attendance, papers, mail, contacts, projects, requests, overdue, warnings] =
-    await Promise.all([
-      supabase.from("companies").select("id", { count: "exact", head: true }),
-      supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "employee"),
-      supabase.from("attendance").select("id", { count: "exact", head: true }).eq("date", today),
-      supabase.from("documents").select("id", { count: "exact", head: true }),
-      supabase.from("mail").select("id", { count: "exact", head: true }),
-      supabase.from("contacts").select("id", { count: "exact", head: true }),
-      supabase.from("projects").select("id", { count: "exact", head: true }),
-      requestsQuery,
-      supabase
-        .from("project_tasks")
-        .select("id", { count: "exact", head: true })
-        .eq("is_completed", false)
-        .not("due_date", "is", null)
-        .lt("due_date", today),
-      warningsQuery,
-    ]);
-
-  return {
-    companies: companies.count ?? 0,
-    employees: employees.count ?? 0,
-    attendanceToday: attendance.count ?? 0,
-    papers: papers.count ?? 0,
-    mail: mail.count ?? 0,
-    contacts: contacts.count ?? 0,
-    projects: projects.count ?? 0,
-    pendingRequests: requests.count ?? 0,
-    overdueTasks: overdue.count ?? 0,
-    warnings: warnings.count ?? 0,
-  };
-}
-
-async function getTopProjects(): Promise<ProjectProgressRow[]> {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from("projects")
-    .select("id, name, status, categories:project_categories(tasks:project_tasks(is_completed))")
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(3);
-  return (data ?? []) as unknown as ProjectProgressRow[];
-}
+import type { ProjectProgressRow } from "@/lib/data/dashboard";
 
 const statusLabels: Record<ProjectStatus, { label: string; cls: string }> = {
   planning:    { label: "تصميم",                cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
@@ -117,20 +33,14 @@ const statusLabels: Record<ProjectStatus, { label: string; cls: string }> = {
 
 export default async function PortalDashboard() {
   const { profile } = await requireUser();
-  const supabase = await createSupabaseServerClient();
 
-  // Load company feature flags so the dashboard can hide disabled modules
-  let enabledFeatures: AppFeature[] | null = null;
-  let roleFeatures: RoleFeatures | null = null;
-  if (profile.company_id) {
-    const { data } = await supabase
-      .from("companies")
-      .select("enabled_features, role_features")
-      .eq("id", profile.company_id)
-      .single<{ enabled_features: AppFeature[] | null; role_features: RoleFeatures | null }>();
-    enabledFeatures = data?.enabled_features ?? null;
-    roleFeatures = data?.role_features ?? null;
-  }
+  // Both calls below are cached: getCompanyData via 'use cache: private',
+  // getDashboardData via 'use cache: private' with a 5-min revalidation.
+  const companyRow = profile.company_id
+    ? await getCompanyData(profile.company_id)
+    : null;
+  const enabledFeatures: AppFeature[] | null = companyRow?.enabled_features ?? null;
+  const roleFeatures: RoleFeatures | null = companyRow?.role_features ?? null;
 
   const visibleFeatures = getVisibleFeatures(
     profile.role,
@@ -139,17 +49,16 @@ export default async function PortalDashboard() {
     profile.is_super_admin ?? false,
   );
 
-  // null = no restrictions (md_admin / super admin)
   const hasFeature = (f: AppFeature) =>
     visibleFeatures === null || visibleFeatures.includes(f);
 
   const isAdmin = profile.role === "md_admin";
   const isEmployee = profile.role === "employee";
 
-  const [counts, topProjects] = await Promise.all([
-    getCounts(profile.id ?? "", isEmployee),
-    getTopProjects(),
-  ]);
+  const { counts, topProjects } = await getDashboardData({
+    profileId: profile.id ?? "",
+    isEmployee,
+  });
 
   return (
     <div>

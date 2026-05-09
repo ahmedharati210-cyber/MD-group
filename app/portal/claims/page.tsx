@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus, Receipt, CalendarDays, FileText, MapPin } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getClaimsData } from "@/lib/data/claims";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { DeleteClaimButton } from "@/components/claims/DeleteClaimButton";
@@ -26,27 +26,15 @@ export default async function ClaimsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   await requireFeature("claims", ["md_admin", "company_manager"]);
-  const supabase = await createSupabaseServerClient();
 
   const sp = await searchParams;
   const filterQuery = typeof sp.q === "string" ? sp.q.trim() : "";
   const filterProjectId = typeof sp.project_id === "string" ? sp.project_id : "";
 
-  let dbQuery = supabase
-    .from("manager_claims")
-    .select("id, title, description, amount, file_url, created_at, project:project_id(name)")
-    .order("created_at", { ascending: false });
-
-  if (filterQuery) dbQuery = dbQuery.ilike("title", `%${filterQuery}%`);
-  if (filterProjectId) dbQuery = dbQuery.eq("project_id", filterProjectId);
-
-  const [claimsResult, projectsResult] = await Promise.all([
-    dbQuery,
-    supabase.from("projects").select("id, name").order("name"),
-  ]);
-
-  const claims = (claimsResult.data ?? []) as unknown as ClaimRow[];
-  const projects = (projectsResult.data ?? []) as { id: string; name: string }[];
+  const { claims, projects } = await getClaimsData({
+    filterQuery: filterQuery || undefined,
+    filterProjectId: filterProjectId || undefined,
+  });
 
   const hasFilter = !!filterQuery || !!filterProjectId;
 

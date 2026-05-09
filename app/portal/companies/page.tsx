@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Building2, Users, ArrowLeft, Plus } from "lucide-react";
 import { requireRole } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCompaniesWithCounts } from "@/lib/data/companies";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 
@@ -22,26 +22,7 @@ export default async function CompaniesPage() {
 
   const isAdmin = profile.role === "md_admin";
 
-  const supabase = await createSupabaseServerClient();
-  const { data: companies } = await supabase
-    .from("companies")
-    .select("*")
-    .order("name_ar");
-
-  const rows = companies ?? [];
-
-  const employeeCounts = new Map<string, number>();
-  if (rows.length > 0) {
-    const { data: emp } = await supabase
-      .from("profiles")
-      .select("company_id")
-      .eq("role", "employee");
-    for (const r of emp ?? []) {
-      if (r.company_id) {
-        employeeCounts.set(r.company_id, (employeeCounts.get(r.company_id) ?? 0) + 1);
-      }
-    }
-  }
+  const rows = await getCompaniesWithCounts();
 
   return (
     <div>
@@ -100,7 +81,7 @@ export default async function CompaniesPage() {
               ) : null}
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-gray-800">
                 <Users className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                {employeeCounts.get(c.id) ?? 0} موظف
+                {c.employeeCount} موظف
               </div>
             </Link>
           ))}

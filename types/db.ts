@@ -78,6 +78,11 @@ type CompanyInsert = {
   created_at?: string;
 };
 
+export type Gender = "male" | "female";
+export type ContractType = "full_time" | "part_time" | "contract" | "intern";
+export type BloodType = "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-";
+export type EducationLevel = "high_school" | "diploma" | "bachelor" | "master" | "phd" | "other";
+
 export interface Profile {
   id: string;
   full_name: string;
@@ -91,6 +96,21 @@ export interface Profile {
   avatar_url: string | null;
   is_super_admin: boolean;
   created_at: string;
+  // Extended HR fields
+  date_of_birth: string | null;
+  gender: Gender | null;
+  nationality: string | null;
+  address: string | null;
+  department: string | null;
+  contract_type: ContractType | null;
+  contract_end_date: string | null;
+  passport_number: string | null;
+  blood_type: BloodType | null;
+  education_level: EducationLevel | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  emergency_contact_relationship: string | null;
+  hr_notes: string | null;
 }
 type ProfileInsert = {
   id: string;
@@ -105,6 +125,20 @@ type ProfileInsert = {
   avatar_url?: string | null;
   is_super_admin?: boolean;
   created_at?: string;
+  date_of_birth?: string | null;
+  gender?: Gender | null;
+  nationality?: string | null;
+  address?: string | null;
+  department?: string | null;
+  contract_type?: ContractType | null;
+  contract_end_date?: string | null;
+  passport_number?: string | null;
+  blood_type?: BloodType | null;
+  education_level?: EducationLevel | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  emergency_contact_relationship?: string | null;
+  hr_notes?: string | null;
 };
 
 export interface Attendance {

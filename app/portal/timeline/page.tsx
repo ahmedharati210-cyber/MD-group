@@ -4,25 +4,39 @@ import { requireFeature } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
+import { Pagination } from "@/components/portal/Pagination";
 import { ProjectsGrid, type ProjectCardData } from "@/components/timeline/ProjectsGrid";
 
 export const metadata = { title: " المشاريع" };
 
-export default async function TimelinePage() {
+const PAGE_SIZE = 30;
+
+type SearchParams = Promise<{ page?: string }>;
+
+export default async function TimelinePage({ searchParams }: { searchParams: SearchParams }) {
   const { profile } = await requireFeature("timeline");
+  const sp = await searchParams;
+  const page = Math.max(1, Number(sp.page ?? 1));
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
   const supabase = await createSupabaseServerClient();
   const canManage = profile.role !== "employee";
 
-  const { data: rawProjects } = await supabase
+  const { data: rawProjects, count: totalCount } = await supabase
     .from("projects")
-    .select(`
+    .select(
+      `
       id, name, description, start_date, end_date, status, location_notes,
       default_engineer:default_engineer_id(full_name),
       categories:project_categories(
         tasks:project_tasks(is_completed, due_date)
       )
-    `)
-    .order("created_at", { ascending: false });
+    `,
+      { count: "exact" },
+    )
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   const projects = (rawProjects ?? []) as unknown as ProjectCardData[];
 
@@ -51,7 +65,17 @@ export default async function TimelinePage() {
           description={canManage ? "أضف أول مشروع هندسي." : "لم تُضف مشاريع بعد."}
         />
       ) : (
-        <ProjectsGrid projects={projects} canManage={canManage} />
+        <>
+          <ProjectsGrid projects={projects} canManage={canManage} />
+          {(totalCount ?? 0) > PAGE_SIZE && (
+            <Pagination
+              page={page}
+              totalCount={totalCount ?? 0}
+              pageSize={PAGE_SIZE}
+              baseUrl="/portal/timeline"
+            />
+          )}
+        </>
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import {
@@ -249,12 +250,13 @@ export function Sidebar({
         <div className="px-5 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <Link href="/portal" className="flex items-center gap-3 group">
             <span className="flex-shrink-0 inline-flex rounded-xl bg-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-1 transition-transform group-hover:scale-105">
-              <img
+              <Image
                 src="/Icon-MD.png"
                 alt="MD Group"
                 className="w-8 h-8 object-contain"
                 width={32}
                 height={32}
+                priority
               />
             </span>
             <div>

@@ -6,21 +6,30 @@ import {
   Mail as MailIcon,
   Building2,
   Pencil,
-  HardHat,
 } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getContactsData } from "@/lib/data/contacts";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
 import { DeleteButton } from "@/components/portal/DeleteButton";
 import { deleteContactAction } from "./actions";
-import { isConstructionCompany } from "@/lib/features";
 import type { TradeCategory } from "@/types/db";
 
 export const metadata = { title: "جهات الاتصال" };
 
 const PAGE_SIZE = 30;
+
+type ContactItem = {
+  id: string;
+  full_name: string;
+  title: string | null;
+  organization: string | null;
+  trade_category: string | null;
+  phone: string | null;
+  email: string | null;
+  companies?: { name_ar: string } | null;
+};
 
 type SearchParams = Promise<{ q?: string; companyId?: string; trade?: string; page?: string }>;
 
@@ -45,26 +54,16 @@ export default async function ContactsPage({ searchParams }: { searchParams: Sea
   const canEdit = profile.role !== "employee";
   const { q, companyId, trade, page: pageStr } = await searchParams;
   const page = Math.max(1, parseInt(pageStr ?? "1", 10));
-  const offset = (page - 1) * PAGE_SIZE;
 
-  const supabase = await createSupabaseServerClient();
-
-  // md_admin sees all companies so always show trade filter; others only if construction company
-  const showTradeFilter = profile.role === "md_admin"
-    || await isConstructionCompany(supabase, profile.company_id);
-
-  let query = supabase
-    .from("contacts")
-    .select("*, companies(name_ar)", { count: "exact" })
-    .order("full_name")
-    .range(offset, offset + PAGE_SIZE - 1);
-  if (q) query = query.ilike("full_name", `%${q}%`);
-  if (companyId) query = query.eq("company_id", companyId);
-  if (trade) query = query.eq("trade_category", trade);
-
-  const { data: contacts, count } = await query;
-  const totalCount = count ?? 0;
-  const { data: companies } = await supabase.from("companies").select("id, name_ar").order("name_ar");
+  const { contacts, totalCount, companies, showTradeFilter } = await getContactsData({
+    role: profile.role,
+    companyId: profile.company_id,
+    q,
+    filterCompanyId: companyId,
+    trade,
+    page,
+    pageSize: PAGE_SIZE,
+  });
   const showTradeBadge = showTradeFilter;
 
   return (
@@ -109,7 +108,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Sea
             className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none"
           >
             <option value="">الكل</option>
-            {(companies ?? []).map((c) => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
+            {companies.map((c) => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
           </select>
         ) : null}
         <button type="submit" className="px-5 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-semibold text-sm hover:bg-gray-800 dark:hover:bg-white">
@@ -117,14 +116,14 @@ export default async function ContactsPage({ searchParams }: { searchParams: Sea
         </button>
       </form>
 
-      {!contacts || contacts.length === 0 ? (
+      {contacts.length === 0 ? (
         <EmptyState icon={ContactIcon} title="لا توجد جهات" description={canEdit ? "أضف جهة اتصال جديدة للبدء." : "لا توجد جهات معتمدة بعد."} />
       ) : (
         <>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {contacts.map((c) => {
-            const company = (c as typeof c & { companies?: { name_ar: string } | null }).companies;
-            const tradeKey = c.trade_category as TradeCategory | null;
+          {(contacts as ContactItem[]).map((c) => {
+            const company = c.companies;
+            const tradeKey = (c.trade_category as TradeCategory | null);
             return (
               <div key={c.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-start gap-3 mb-3">

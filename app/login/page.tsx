@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { LogIn } from "lucide-react";
 import { LoginForm } from "./login-form";
@@ -9,9 +10,12 @@ export const metadata = {
 
 type SearchParams = Promise<{ redirectTo?: string }>;
 
-export default async function LoginPage(props: { searchParams: SearchParams }) {
-  const { redirectTo } = await props.searchParams;
-
+/**
+ * Sync outer component — static shell (background, logo, heading).
+ * LoginContent (which reads searchParams) is wrapped in Suspense
+ * so it can stream without blocking the static shell.
+ */
+export default function LoginPage(props: { searchParams: SearchParams }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-primary-50 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900 px-4 py-10 sm:py-12">
       <div className="absolute top-4 left-4">
@@ -45,7 +49,9 @@ export default async function LoginPage(props: { searchParams: SearchParams }) {
         </div>
 
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-black/40 border border-gray-100 dark:border-gray-800 p-6 sm:p-8">
-          <LoginForm redirectTo={redirectTo} />
+          <Suspense>
+            <LoginContent searchParams={props.searchParams} />
+          </Suspense>
         </div>
 
         <p className="text-center text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-5 md:mt-6 flex items-center justify-center gap-2">
@@ -55,4 +61,14 @@ export default async function LoginPage(props: { searchParams: SearchParams }) {
       </div>
     </div>
   );
+}
+
+/** Async inner component — reads searchParams (dynamic per-request data). */
+async function LoginContent({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const { redirectTo } = await searchParams;
+  return <LoginForm redirectTo={redirectTo} />;
 }

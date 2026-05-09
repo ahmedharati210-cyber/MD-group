@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { FolderKanban, CalendarDays, HardHat, MapPin, AlertCircle } from "lucide-react";
 import type { ProjectStatus } from "@/types/db";
 import { ProjectStatusSelect } from "./ProjectStatusSelect";
@@ -44,7 +44,6 @@ interface Props {
 }
 
 export function ProjectsGrid({ projects, canManage }: Props) {
-  const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -59,13 +58,10 @@ export function ProjectsGrid({ projects, canManage }: Props) {
         const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
         return (
-          <div
+          <Link
             key={p.id}
-            role="link"
-            tabIndex={0}
-            onClick={() => router.push(`/portal/timeline/${p.id}`)}
-            onKeyDown={(e) => e.key === "Enter" && router.push(`/portal/timeline/${p.id}`)}
-            className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all flex flex-col gap-3 cursor-pointer"
+            href={`/portal/timeline/${p.id}`}
+            className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all flex flex-col gap-3"
           >
             {/* Title + status */}
             <div className="flex items-start justify-between gap-2">
@@ -83,12 +79,9 @@ export function ProjectsGrid({ projects, canManage }: Props) {
                   </span>
                 ) : null}
 
-                {/* Managers get an editable dropdown; stop propagation so the card click doesn't fire */}
+                {/* Managers get an editable dropdown; prevent the Link from activating when interacting with the dropdown */}
                 {canManage ? (
-                  <span
-                    onClick={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
-                  >
+                  <span onClick={(e) => e.preventDefault()}>
                     <ProjectStatusSelect projectId={p.id} currentStatus={p.status} />
                   </span>
                 ) : (
@@ -139,7 +132,7 @@ export function ProjectsGrid({ projects, canManage }: Props) {
                 />
               </div>
             </div>
-          </div>
+          </Link>
         );
       })}
     </div>

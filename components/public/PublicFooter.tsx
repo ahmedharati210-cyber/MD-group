@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { cacheLife } from "next/cache";
 
-export function PublicFooter() {
+export async function PublicFooter() {
+  "use cache";
+  cacheLife("max");
   return (
     <footer className="bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white border-t border-gray-800">
       <div className="container-custom">
