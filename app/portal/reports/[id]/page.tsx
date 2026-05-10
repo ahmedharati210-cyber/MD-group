@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { FileBarChart2, CalendarDays, MapPin, User, Package, StickyNote, ArrowRight } from "lucide-react";
+import { FileBarChart2, CalendarDays, MapPin, User, Package, StickyNote, ArrowRight, Clock } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatTime } from "@/lib/utils";
 import { DeleteReportButton } from "@/components/reports/DeleteReportButton";
 
 export default async function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -45,6 +46,11 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                   <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300">
                     <CalendarDays className="w-4 h-4 text-gray-400" /> {r.report_date}
                   </span>
+                  {r.created_at ? (
+                    <span className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                      <Clock className="w-4 h-4 text-gray-400" /> {formatTime(r.created_at)}
+                    </span>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap gap-3 mt-1">
                   {r.project ? (

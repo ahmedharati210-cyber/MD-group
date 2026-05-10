@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Plus, FileBarChart2, CalendarDays, MapPin, User } from "lucide-react";
+import { Plus, FileBarChart2, CalendarDays, MapPin, User, StickyNote, Clock } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
 import { getReportsData } from "@/lib/data/reports";
+import { formatTime } from "@/lib/utils";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
@@ -11,15 +12,6 @@ export const metadata = { title: "التقارير" };
 const PAGE_SIZE = 20;
 
 type SearchParams = Promise<{ projectId?: string; authorId?: string; from?: string; to?: string; page?: string }>;
-
-type ReportRow = {
-  id: string;
-  report_date: string;
-  work_done: string | null;
-  created_at: string;
-  author: { full_name: string } | null;
-  project: { name: string } | null;
-};
 
 export default async function ReportsPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
@@ -94,6 +86,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
                     <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                       <CalendarDays className="w-3.5 h-3.5" /> {r.report_date}
                     </span>
+                    {r.created_at ? (
+                      <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                        <Clock className="w-3.5 h-3.5" /> {formatTime(r.created_at)}
+                      </span>
+                    ) : null}
                     {r.project ? (
                       <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                         <MapPin className="w-3.5 h-3.5" />{r.project.name}
@@ -105,7 +102,15 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
                       </span>
                     ) : null}
                   </div>
-                  {r.work_done ? <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{r.work_done}</p> : null}
+                  {r.work_done ? (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{r.work_done}</p>
+                  ) : null}
+                  {r.notes?.trim() ? (
+                    <p className="flex items-start gap-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">
+                      <StickyNote className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                      {r.notes}
+                    </p>
+                  ) : null}
                 </div>
               </Link>
             ))}

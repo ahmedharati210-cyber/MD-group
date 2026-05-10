@@ -6,6 +6,7 @@ export type ReportRow = {
   id: string;
   report_date: string;
   work_done: string | null;
+  notes: string | null;
   created_at: string;
   author: { full_name: string } | null;
   project: { name: string } | null;
@@ -39,10 +40,11 @@ export async function getReportsData(params: {
   let query = supabase
     .from("engineer_reports")
     .select(
-      "id, report_date, work_done, created_at, author:author_id(full_name), project:project_id(name)",
+      "id, report_date, work_done, notes, created_at, author:author_id(full_name), project:project_id(name)",
       { count: "exact" },
     )
     .order("report_date", { ascending: false })
+    .order("created_at", { ascending: false })
     .range(offset, offset + params.pageSize - 1);
 
   if (!params.isManager) query = query.eq("author_id", params.profileId);
