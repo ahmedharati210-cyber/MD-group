@@ -60,7 +60,7 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
             type="email"
             required
             autoComplete="email"
-            placeholder="name@mdgroup.ly"
+            placeholder="name@md-group.ly"
             className="w-full pr-12 pl-4 py-3 border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition"
           />
         </div>

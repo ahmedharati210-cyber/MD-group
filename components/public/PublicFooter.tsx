@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { cacheLife } from "next/cache";
+import {
+  PUBLIC_ADDRESS,
+  PUBLIC_EMAIL,
+  PUBLIC_PHONE_DISPLAY,
+  PUBLIC_PHONE_TEL,
+} from "@/lib/public-contact";
 
 export async function PublicFooter() {
   "use cache";
@@ -70,13 +76,22 @@ export async function PublicFooter() {
               <ul className="space-y-3 text-sm text-gray-400">
                 <li>
                   <a
-                    href="mailto:info@mdgroup.ly"
+                    href={`tel:${PUBLIC_PHONE_TEL}`}
                     className="hover:text-white transition-colors"
+                    dir="ltr"
                   >
-                    info@mdgroup.ly
+                    {PUBLIC_PHONE_DISPLAY}
                   </a>
                 </li>
-                <li>طرابلس – ليبيا</li>
+                <li>
+                  <a
+                    href={`mailto:${PUBLIC_EMAIL}`}
+                    className="hover:text-white transition-colors"
+                  >
+                    {PUBLIC_EMAIL}
+                  </a>
+                </li>
+                <li>{PUBLIC_ADDRESS}</li>
               </ul>
             </div>
           </div>
