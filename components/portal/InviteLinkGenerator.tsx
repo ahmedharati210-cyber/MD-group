@@ -2,12 +2,17 @@
 
 import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Link2, Loader2 } from "lucide-react";
 import {
   generateInviteTokenAction,
   type InviteTokenState,
 } from "@/app/portal/employees/actions";
+import {
+  DOLCE_SIGNUP_INVITE_MAX_USES,
+  DOLCE_SIGNUP_INVITE_VALIDITY_DAYS,
+} from "@/lib/dolce-signup-invite-config";
 
 function SubmitInviteButton() {
   const { pending } = useFormStatus();
@@ -38,6 +43,7 @@ export function InviteLinkGenerator({
   /** Usually «الطريق الصحيح» — Dolce signup is fixed to this company server-side */
   companyNameAr: string;
 }) {
+  const router = useRouter();
   const [state, formAction] = useActionState<
     InviteTokenState,
     FormData
@@ -46,8 +52,9 @@ export function InviteLinkGenerator({
   useEffect(() => {
     if (state?.ok && state.inviteUrl) {
       toast.success("تم إنشاء رابط الدعوة.", { id: "invite-created" });
+      router.refresh();
     }
-  }, [state?.ok, state?.inviteUrl]);
+  }, [state?.ok, state?.inviteUrl, router]);
 
   const handleCopy = async () => {
     const url = state?.inviteUrl;
@@ -70,8 +77,9 @@ export function InviteLinkGenerator({
         <span className="font-semibold text-gray-800 dark:text-gray-200">
           {companyNameAr}
         </span>
-        . أنشئ رابطاً آمناً صالحاً لمدة 7 أيام لمرة واحدة، وأرسله للموظف لملء
-        بياناته قبل الموافقة.
+        . أنشئ رابطاً آمناً صالحاً لمدة {DOLCE_SIGNUP_INVITE_VALIDITY_DAYS} أيام، يصلح
+        لما يصل إلى {DOLCE_SIGNUP_INVITE_MAX_USES} تسجيلاً، وأرسله للموظفين لملء
+        بياناتهم قبل الموافقة.
       </p>
 
       <form action={formAction} className="flex flex-col sm:flex-row gap-3 sm:items-end">

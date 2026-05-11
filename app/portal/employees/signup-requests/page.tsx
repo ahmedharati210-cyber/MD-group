@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { InviteLinkGenerator } from "@/components/portal/InviteLinkGenerator";
+import { DolceSignupInvitesSection } from "@/components/portal/DolceSignupInvitesSection";
 import {
   canAccessDolceEmployeeSignup,
   getDolceSignupCompanyDisplay,
@@ -10,9 +10,10 @@ import {
 } from "@/lib/dolce-signup-company";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
-import { UserPlus } from "lucide-react";
+import { ImageIcon, UserPlus } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { SignupRequestActions } from "./signup-request-actions";
+import { PassportArchiveToolbar } from "./passport-archive-toolbar";
 
 export const metadata = { title: "طلبات التوظيف" };
 
@@ -24,6 +25,7 @@ type Row = {
   national_id: string | null;
   job_title: string | null;
   department: string | null;
+  passport_image_path: string | null;
   created_at: string;
   company_id: string;
   companies: { name_ar: string } | null;
@@ -56,6 +58,7 @@ export default async function SignupRequestsPage() {
       national_id,
       job_title,
       department,
+      passport_image_path,
       created_at,
       company_id,
       companies ( name_ar )
@@ -79,7 +82,7 @@ export default async function SignupRequestsPage() {
     <div>
       <PageHeader
         title="طلبات التوظيف"
-        description="مراجعة طلبات الانضمام من موظفي Dolce ضمن شركة الطريق الصحيح فقط. أنشئ رابط دعوة جديداً من القسم أدناه."
+        description="مراجعة طلبات الانضمام من موظفي Dolce ضمن شركة الطريق الصحيح فقط. أدِر روابط الدعوة أو أنشئ رابطاً جديداً من القسم أدناه."
         action={
           <div className="flex flex-wrap gap-2 justify-end">
             <Link
@@ -93,8 +96,10 @@ export default async function SignupRequestsPage() {
       />
 
       {dolceDisplay ? (
-        <InviteLinkGenerator companyNameAr={dolceDisplay.name_ar} />
+        <DolceSignupInvitesSection companyNameAr={dolceDisplay.name_ar} />
       ) : null}
+
+      <PassportArchiveToolbar />
 
       {list.length === 0 ? (
         <EmptyState
@@ -138,6 +143,22 @@ export default async function SignupRequestsPage() {
                     <span className="text-gray-400">التاريخ: </span>
                     {formatDate(r.created_at)}
                   </div>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-gray-400">صورة الجواز: </span>
+                    {r.passport_image_path ? (
+                      <Link
+                        href={`/api/portal/employee-signup/passports/${r.id}/view`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium underline-offset-2 hover:underline"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                        عرض الصورة
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
+                  </div>
                 </dl>
                 <SignupRequestActions requestId={r.id} />
               </div>
@@ -155,6 +176,7 @@ export default async function SignupRequestsPage() {
                     <th className="px-5 py-3 font-semibold">الجوال</th>
                     <th className="px-5 py-3 font-semibold">الوظيفة / الفرع</th>
                     <th className="px-5 py-3 font-semibold">التاريخ</th>
+                    <th className="px-5 py-3 font-semibold text-center">صورة</th>
                     <th className="px-5 py-3 font-semibold w-[220px]">إجراءات</th>
                   </tr>
                 </thead>
@@ -183,6 +205,22 @@ export default async function SignupRequestsPage() {
                       </td>
                       <td className="px-5 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">
                         {formatDate(r.created_at)}
+                      </td>
+                      <td className="px-5 py-3 text-center">
+                        {r.passport_image_path ? (
+                          <Link
+                            href={`/api/portal/employee-signup/passports/${r.id}/view`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center rounded-lg p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                            title="عرض صورة الجواز"
+                            aria-label="عرض صورة الجواز"
+                          >
+                            <ImageIcon className="w-5 h-5" aria-hidden />
+                          </Link>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="px-5 py-3 align-top">
                         <SignupRequestActions requestId={r.id} />

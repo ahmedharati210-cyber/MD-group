@@ -210,9 +210,14 @@ export async function rejectSignupRequestAction(
   const admin = createSupabaseAdminClient();
   const { data: row } = await admin
     .from("employee_signup_requests")
-    .select("id, company_id, status")
+    .select("id, company_id, status, passport_image_path")
     .eq("id", parsed.data.request_id)
-    .maybeSingle();
+    .maybeSingle<{
+      id: string;
+      company_id: string;
+      status: string;
+      passport_image_path: string | null;
+    }>();
 
   if (!row || row.status !== "pending") {
     return { error: "الطلب غير موجود أو تمت معالجته." };
@@ -230,6 +235,10 @@ export async function rejectSignupRequestAction(
     return { error: "صلاحيات غير كافية." };
   }
 
+  if (row.passport_image_path) {
+    await admin.storage.from("documents").remove([row.passport_image_path]);
+  }
+
   const { error } = await admin
     .from("employee_signup_requests")
     .update({
@@ -237,6 +246,7 @@ export async function rejectSignupRequestAction(
       rejection_reason: parsed.data.rejection_reason?.trim() || null,
       reviewed_by: current.userId,
       reviewed_at: new Date().toISOString(),
+      passport_image_path: null,
     })
     .eq("id", parsed.data.request_id);
 

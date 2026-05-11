@@ -8,6 +8,10 @@ import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
 } from "@/lib/supabase/server";
+import {
+  DOLCE_SIGNUP_INVITE_MAX_USES,
+  DOLCE_SIGNUP_INVITE_VALIDITY_DAYS,
+} from "@/lib/dolce-signup-invite-config";
 import { getDolceSignupCompanyId } from "@/lib/dolce-signup-company";
 
 const createSchema = z.object({
@@ -276,8 +280,8 @@ export type InviteTokenState = {
 };
 
 /**
- * Creates a single-use signup invite for Dolce employees under «الطريق الصحيح» only
- * (seed company slug `company-two`).
+ * Creates a reusable signup invite for Dolce employees under «الطريق الصحيح» only
+ * (seed company slug `company-two`). Cap and validity are defined on the invite row.
  */
 export async function generateInviteTokenAction(
   _prev: InviteTokenState | undefined,
@@ -308,15 +312,17 @@ export async function generateInviteTokenAction(
   const company_id = dolceCompanyId;
 
   const token = crypto.randomUUID();
-  const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const expires = new Date(
+    Date.now() + DOLCE_SIGNUP_INVITE_VALIDITY_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
 
   const admin = createSupabaseAdminClient();
-  const { error } = await admin.from("employee_signup_requests").insert({
+  const { error } = await admin.from("employee_signup_invites").insert({
     company_id,
     invite_token: token,
     token_expires_at: expires,
-    token_used: false,
-    status: "draft",
+    max_uses: DOLCE_SIGNUP_INVITE_MAX_USES,
+    use_count: 0,
     created_by: current.userId,
   });
 
@@ -329,7 +335,84 @@ export async function generateInviteTokenAction(
     "http://localhost:3000";
   const inviteUrl = `${base}/signup/${token}`;
 
+  revalidatePath("/portal/employees");
+  revalidatePath("/portal/employees/signup-requests");
+
   return { ok: true, inviteUrl };
+}
+
+export type DeleteSignupInviteState = {
+  error?: string;
+  ok?: boolean;
+};
+
+/**
+ * Removes an invite campaign row; the URL stops working. Linked signup rows keep
+ * `invite_id` null (on delete set null). Dolce company access only.
+ */
+export async function deleteSignupInviteAction(
+  _prev: DeleteSignupInviteState | undefined,
+  formData: FormData,
+): Promise<DeleteSignupInviteState> {
+  const current = await requireRole(["md_admin", "company_manager"]);
+
+  const rawId = formData.get("invite_id");
+  if (typeof rawId !== "string" || !rawId) {
+    return { error: "معرف الرابط غير صالح." };
+  }
+
+  const dolceCompanyId = await getDolceSignupCompanyId();
+  if (!dolceCompanyId) {
+    return {
+      error:
+        "لم يتم العثور على شركة الطريق الصحيح في النظام. اتصل بالدعم الفني.",
+    };
+  }
+
+  if (current.profile.role === "company_manager") {
+    if (!current.profile.company_id) {
+      return { error: "لم يتم ربط حسابك بشركة." };
+    }
+    if (current.profile.company_id !== dolceCompanyId) {
+      return {
+        error:
+          "روابط تسجيل Dolce متاحة لمديري شركة الطريق الصحيح فقط.",
+      };
+    }
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { data: row } = await admin
+    .from("employee_signup_invites")
+    .select("id, company_id")
+    .eq("id", rawId)
+    .maybeSingle<{ id: string; company_id: string }>();
+
+  if (!row || row.company_id !== dolceCompanyId) {
+    return { error: "الرابط غير موجود أو غير مصرّح بحذفه." };
+  }
+
+  const { error } = await admin
+    .from("employee_signup_invites")
+    .delete()
+    .eq("id", rawId);
+
+  if (error) {
+    return { error: error.message ?? "تعذّر حذف الرابط." };
+  }
+
+  await admin.from("audit_log").insert({
+    actor_id: current.userId,
+    action: "employee_signup_invite.delete",
+    entity: "employee_signup_invites",
+    entity_id: rawId,
+    payload: null,
+  });
+
+  revalidatePath("/portal/employees");
+  revalidatePath("/portal/employees/signup-requests");
+
+  return { ok: true };
 }
 
 export async function deleteEmployeeAction(formData: FormData) {

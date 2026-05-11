@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { passportStorageFileName } from "@/lib/passport-archive-name";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getDolceSignupCompanyId } from "@/lib/dolce-signup-company";
 
@@ -24,6 +25,13 @@ const lyMobile10 = z
         "رقم الجوال يجب أن يكون 10 أرقام بالشكل 09xxxxxxxx",
       ),
   );
+
+const ALLOWED_PASSPORT_IMAGE = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const MAX_PASSPORT_BYTES = 8 * 1024 * 1024;
 
 const submitSchema = z.object({
   token: z.string().min(8),
@@ -52,6 +60,13 @@ const submitSchema = z.object({
 });
 
 export type SignupSubmitState = { error?: string; ok?: boolean };
+
+function extFromMime(mime: string): string {
+  if (mime === "image/jpeg") return "jpg";
+  if (mime === "image/png") return "png";
+  if (mime === "image/webp") return "webp";
+  return "img";
+}
 
 /**
  * Public signup submit: validates invite token server-side and stores the
@@ -94,23 +109,125 @@ export async function submitEmployeeSignupAction(
     };
   }
 
+  const passportFile = formData.get("passport_image");
+  if (!(passportFile instanceof File) || passportFile.size === 0) {
+    return { error: "صورة جواز السفر مطلوبة." };
+  }
+  if (passportFile.size > MAX_PASSPORT_BYTES) {
+    return { error: "صورة الجواز يجب ألا تتجاوز 8 ميجابايت." };
+  }
+  const mime = passportFile.type || "application/octet-stream";
+  if (!ALLOWED_PASSPORT_IMAGE.has(mime)) {
+    return {
+      error: "نوع الصورة غير مدعوم. استخدم JPG أو PNG أو WebP.",
+    };
+  }
+
+  const fileBuffer = Buffer.from(await passportFile.arrayBuffer());
+  const genderStored = normalizeGenderStored(parsed.data.gender);
+  const ext = extFromMime(mime);
+
   const admin = createSupabaseAdminClient();
   const dolceCompanyId = await getDolceSignupCompanyId();
 
-  const { data: row, error: fetchErr } = await admin
+  type InviteSlotRow = {
+    invite_id: string;
+    company_id: string;
+    token_expires_at: string;
+  };
+
+  const { data: rpcData, error: rpcErr } = await admin.rpc(
+    "reserve_invite_slot",
+    { p_token: parsed.data.token },
+  );
+
+  if (rpcErr) {
+    return {
+      error: rpcErr.message ?? "تعذّر التحقق من الرابط.",
+    };
+  }
+
+  const slotArr = rpcData as InviteSlotRow[] | null | undefined;
+  const slot =
+    Array.isArray(slotArr) && slotArr.length > 0 ? slotArr[0]! : null;
+
+  if (slot) {
+    if (dolceCompanyId && slot.company_id !== dolceCompanyId) {
+      await admin.rpc("release_invite_slot", { p_invite_id: slot.invite_id });
+      return { error: "رابط الدعوة غير صالح." };
+    }
+
+    const newId = crypto.randomUUID();
+    const storagePath = `employee-signup/${slot.company_id}/${newId}/${passportStorageFileName(parsed.data.full_name, parsed.data.phone, newId, ext)}`;
+
+    const { error: uploadErr } = await admin.storage
+      .from("documents")
+      .upload(storagePath, fileBuffer, {
+        contentType: mime,
+        upsert: false,
+      });
+
+    if (uploadErr) {
+      await admin.rpc("release_invite_slot", { p_invite_id: slot.invite_id });
+      return {
+        error:
+          uploadErr.message ?? "تعذّر رفع صورة الجواز. حاول مرة أخرى لاحقاً.",
+      };
+    }
+
+    const { error: insErr } = await admin.from("employee_signup_requests").insert({
+      id: newId,
+      company_id: slot.company_id,
+      invite_id: slot.invite_id,
+      invite_token: parsed.data.token,
+      token_expires_at: slot.token_expires_at,
+      token_used: true,
+      status: "pending",
+      created_by: null,
+      full_name: parsed.data.full_name,
+      phone: parsed.data.phone,
+      passport_number: parsed.data.passport_number.trim(),
+      email: null,
+      national_id: parsed.data.national_id?.trim() || null,
+      job_title: parsed.data.job_title?.trim() || null,
+      department: parsed.data.branch.trim(),
+      date_of_birth: parsed.data.date_of_birth.trim(),
+      gender: genderStored,
+      nationality: parsed.data.nationality?.trim() || null,
+      address: parsed.data.address?.trim() || null,
+      blood_type: parsed.data.blood_type?.trim() || null,
+      external_employee_number: parsed.data.external_employee_number,
+      passport_image_path: storagePath,
+      emergency_contact_name: parsed.data.emergency_contact_name.trim(),
+      emergency_contact_phone: parsed.data.emergency_contact_phone,
+      emergency_contact_relationship:
+        parsed.data.emergency_contact_relationship.trim(),
+    });
+
+    if (insErr) {
+      await admin.storage.from("documents").remove([storagePath]);
+      await admin.rpc("release_invite_slot", { p_invite_id: slot.invite_id });
+      return { error: insErr.message ?? "تعذّر حفظ الطلب." };
+    }
+
+    return { ok: true };
+  }
+
+  const { data: legacyRows, error: fetchErr } = await admin
     .from("employee_signup_requests")
     .select("id, company_id, token_used, status, token_expires_at")
     .eq("invite_token", parsed.data.token)
-    .maybeSingle<{
-      id: string;
-      company_id: string;
-      token_used: boolean;
-      status: string;
-      token_expires_at: string;
-    }>();
+    .eq("status", "draft")
+    .eq("token_used", false)
+    .limit(1);
+
+  const row = legacyRows?.[0];
 
   if (fetchErr || !row) {
-    return { error: "رابط الدعوة غير صالح أو منتهي." };
+    return {
+      error:
+        "رابط الدعوة غير صالح أو منتهي أو وصل للحد الأقصى للتسجيلات.",
+    };
   }
 
   if (dolceCompanyId && row.company_id !== dolceCompanyId) {
@@ -126,7 +243,21 @@ export async function submitEmployeeSignupAction(
     return { error: "تم استخدام هذا الرابط مسبقاً." };
   }
 
-  const genderStored = normalizeGenderStored(parsed.data.gender);
+  const storagePath = `employee-signup/${row.company_id}/${row.id}/${passportStorageFileName(parsed.data.full_name, parsed.data.phone, row.id, ext)}`;
+
+  const { error: uploadErr } = await admin.storage
+    .from("documents")
+    .upload(storagePath, fileBuffer, {
+      contentType: mime,
+      upsert: false,
+    });
+
+  if (uploadErr) {
+    return {
+      error:
+        uploadErr.message ?? "تعذّر رفع صورة الجواز. حاول مرة أخرى لاحقاً.",
+    };
+  }
 
   const { error: updErr } = await admin
     .from("employee_signup_requests")
@@ -144,6 +275,7 @@ export async function submitEmployeeSignupAction(
       address: parsed.data.address?.trim() || null,
       blood_type: parsed.data.blood_type?.trim() || null,
       external_employee_number: parsed.data.external_employee_number,
+      passport_image_path: storagePath,
       emergency_contact_name: parsed.data.emergency_contact_name.trim(),
       emergency_contact_phone: parsed.data.emergency_contact_phone,
       emergency_contact_relationship:
@@ -156,6 +288,7 @@ export async function submitEmployeeSignupAction(
     .eq("token_used", false);
 
   if (updErr) {
+    await admin.storage.from("documents").remove([storagePath]);
     return { error: updErr.message ?? "تعذّر حفظ الطلب." };
   }
 

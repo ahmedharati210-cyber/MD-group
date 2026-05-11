@@ -6,7 +6,7 @@
     "dev": "next dev -H 0.0.0.0",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@serwist/next": "^9.5.11",
@@ -14,6 +14,7 @@
     "@supabase/supabase-js": "^2.104.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.556.0",
     "next": "16.0.7",
     "pdf-parse": "^2.4.5",

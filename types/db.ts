@@ -577,12 +577,35 @@ type AuditLogInsert = {
 // ---------------------------------------------------------------------------
 export type EmployeeSignupStatus = "draft" | "pending" | "approved" | "rejected";
 
+export interface EmployeeSignupInvite {
+  id: string;
+  company_id: string;
+  invite_token: string;
+  token_expires_at: string;
+  max_uses: number;
+  use_count: number;
+  created_by: string | null;
+  created_at: string;
+}
+
+type EmployeeSignupInviteInsert = {
+  id?: string;
+  company_id: string;
+  invite_token: string;
+  token_expires_at: string;
+  max_uses?: number;
+  use_count?: number;
+  created_by?: string | null;
+  created_at?: string;
+};
+
 export interface EmployeeSignupRequest {
   id: string;
   company_id: string;
   invite_token: string;
   token_expires_at: string;
   token_used: boolean;
+  invite_id: string | null;
   created_by: string | null;
   full_name: string | null;
   email: string | null;
@@ -600,6 +623,7 @@ export interface EmployeeSignupRequest {
   emergency_contact_phone: string | null;
   emergency_contact_relationship: string | null;
   external_employee_number: string | null;
+  passport_image_path: string | null;
   status: EmployeeSignupStatus;
   rejection_reason: string | null;
   reviewed_by: string | null;
@@ -613,6 +637,7 @@ type EmployeeSignupRequestInsert = {
   invite_token: string;
   token_expires_at: string;
   token_used?: boolean;
+  invite_id?: string | null;
   created_by?: string | null;
   full_name?: string | null;
   email?: string | null;
@@ -630,6 +655,7 @@ type EmployeeSignupRequestInsert = {
   emergency_contact_phone?: string | null;
   emergency_contact_relationship?: string | null;
   external_employee_number?: string | null;
+  passport_image_path?: string | null;
   status?: EmployeeSignupStatus;
   rejection_reason?: string | null;
   reviewed_by?: string | null;
@@ -663,13 +689,30 @@ export interface Database {
       manager_claims: TableDef<ManagerClaim, ManagerClaimInsert>;
       map_links: TableDef<MapLink, MapLinkInsert>;
       warnings: TableDef<Warning, WarningInsert>;
+      employee_signup_invites: TableDef<
+        EmployeeSignupInvite,
+        EmployeeSignupInviteInsert
+      >;
       employee_signup_requests: TableDef<
         EmployeeSignupRequest,
         EmployeeSignupRequestInsert
       >;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      reserve_invite_slot: {
+        Args: { p_token: string };
+        Returns: {
+          invite_id: string;
+          company_id: string;
+          token_expires_at: string;
+        }[];
+      };
+      release_invite_slot: {
+        Args: { p_invite_id: string };
+        Returns: undefined;
+      };
+    };
     Enums: {
       user_role: UserRole;
       attendance_status: AttendanceStatus;

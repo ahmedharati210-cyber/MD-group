@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Users, Plus, Building2 } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { InviteLinkGenerator } from "@/components/portal/InviteLinkGenerator";
+import { DolceSignupInvitesSection } from "@/components/portal/DolceSignupInvitesSection";
 import {
   canAccessDolceEmployeeSignup,
   getDolceSignupCompanyDisplay,
@@ -69,7 +69,7 @@ export default async function EmployeesPage({
       />
 
       {showDolceInvite ? (
-        <InviteLinkGenerator companyNameAr={dolceCo.name_ar} />
+        <DolceSignupInvitesSection companyNameAr={dolceCo.name_ar} />
       ) : null}
 
       <form className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-5">

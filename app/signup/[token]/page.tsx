@@ -47,36 +47,61 @@ async function SignupInviteInner({
   const admin = createSupabaseAdminClient();
   const dolceCompanyId = await getDolceSignupCompanyId();
 
-  const { data: req } = await admin
-    .from("employee_signup_requests")
-    .select("id, token_expires_at, token_used, status, company_id")
+  const { data: inv } = await admin
+    .from("employee_signup_invites")
+    .select("id, token_expires_at, max_uses, use_count, company_id")
     .eq("invite_token", token)
     .maybeSingle<{
       id: string;
       token_expires_at: string;
-      token_used: boolean;
-      status: string;
+      max_uses: number;
+      use_count: number;
       company_id: string;
     }>();
 
-  if (!req) {
-    notFound();
-  }
+  let companyId: string;
+  let invalid: boolean;
+  let expired: boolean;
+  let wrongCompany: boolean;
+  let exhausted: boolean;
 
-  const expires = new Date(req.token_expires_at).getTime();
-  const expired = Number.isFinite(expires) && expires < Date.now();
-  const wrongCompany =
-    !!dolceCompanyId && req.company_id !== dolceCompanyId;
-  const invalid =
-    expired ||
-    req.token_used ||
-    req.status !== "draft" ||
-    wrongCompany;
+  if (inv) {
+    companyId = inv.company_id;
+    const expiresMs = new Date(inv.token_expires_at).getTime();
+    expired = Number.isFinite(expiresMs) && expiresMs < Date.now();
+    exhausted = inv.use_count >= inv.max_uses;
+    wrongCompany = !!dolceCompanyId && inv.company_id !== dolceCompanyId;
+    invalid = expired || exhausted || wrongCompany;
+  } else {
+    const { data: legacyRows } = await admin
+      .from("employee_signup_requests")
+      .select("id, token_expires_at, token_used, status, company_id")
+      .eq("invite_token", token)
+      .eq("status", "draft")
+      .eq("token_used", false)
+      .limit(1);
+
+    const req = legacyRows?.[0];
+    if (!req) {
+      notFound();
+    }
+
+    companyId = req.company_id;
+    const expiresMs = new Date(req.token_expires_at).getTime();
+    expired = Number.isFinite(expiresMs) && expiresMs < Date.now();
+    exhausted = false;
+    wrongCompany = !!dolceCompanyId && req.company_id !== dolceCompanyId;
+    invalid =
+      expired ||
+      req.token_used ||
+      req.status !== "draft" ||
+      wrongCompany;
+  }
 
   const { data: company } = await admin
     .from("companies")
     .select("name_ar")
-    .eq("id", req.company_id)
+    .eq("id", companyId)
     .maybeSingle<{ name_ar: string }>();
 
   const companyNameAr = company?.name_ar ?? "الشركة";
@@ -88,6 +113,7 @@ async function SignupInviteInner({
       invalid={invalid}
       expired={expired}
       wrongCompany={wrongCompany}
+      exhausted={inv ? exhausted : false}
     />
   );
 }

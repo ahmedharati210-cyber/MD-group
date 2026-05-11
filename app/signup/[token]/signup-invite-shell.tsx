@@ -15,12 +15,15 @@ export function SignupInviteShell({
   invalid,
   expired,
   wrongCompany,
+  exhausted,
 }: {
   token: string;
   companyNameAr: string;
   invalid: boolean;
   expired: boolean;
   wrongCompany: boolean;
+  /** Invite campaign reached max_uses (multi-use links only). */
+  exhausted: boolean;
 }) {
   const [appearance, setAppearance] = useState<SignupAppearance>("dark");
 
@@ -154,7 +157,9 @@ export function SignupInviteShell({
                     ? "انتهت صلاحية هذا الرابط."
                     : wrongCompany
                       ? "هذا الرابط غير صالح."
-                      : "هذا الرابط غير صالح أو تم استخدامه مسبقاً."}
+                      : exhausted
+                        ? "وصل هذا الرابط إلى الحد الأقصى لعدد التسجيلات المسموح بها."
+                        : "هذا الرابط غير صالح أو تم استخدامه مسبقاً."}
                 </p>
                 <p
                   className={cn(

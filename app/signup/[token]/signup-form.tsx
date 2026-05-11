@@ -253,13 +253,13 @@ export function EmployeeSignupForm({
             required
             autoComplete="name"
             className={inputClasses(appearance, true)}
-            placeholder="الاسم كما في الهوية"
+            placeholder="الاسم الثلاثي"
           />
         </div>
       </Field>
 
       <Field
-        label="رقم الموظف (رقم البصمة الخارجي)"
+        label="رقم الوظيفي (رقم البصمة)"
         required
         appearance={appearance}
       >
@@ -289,7 +289,7 @@ export function EmployeeSignupForm({
       </Field>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="رقم الجوال" required appearance={appearance}>
+        <Field label="رقم الهاتف" required appearance={appearance}>
           <div className="relative">
             <Phone
               className={cn(
@@ -313,7 +313,7 @@ export function EmployeeSignupForm({
           </div>
         </Field>
 
-        <Field label="رقم الجواز" required appearance={appearance}>
+        <Field label="رقم الجواز أو الرخصة" required appearance={appearance}>
           <div className="relative">
             <BookOpen
               className={cn(
@@ -330,6 +330,30 @@ export function EmployeeSignupForm({
           </div>
         </Field>
       </div>
+
+      <SectionTitle title="صورة جواز السفر أو الرخصة " appearance={appearance} />
+
+      <Field label="رفع صورة الجواز أو الرخصة" required appearance={appearance}>
+        <p
+          className={cn(
+            "text-xs mb-2 leading-relaxed",
+            dark ? "text-neutral-500" : "text-gray-500",
+          )}
+        >
+          صورة واضحة للجواز أو الرخصة — JPG أو PNG أو WebP،
+          بحد أقصى 8 ميجابايت.
+        </p>
+        <input
+          type="file"
+          name="passport_image"
+          required
+          accept="image/jpeg,image/png,image/webp"
+          className={cn(
+            inputClasses(appearance),
+            "file:rounded-lg file:border-0 file:py-2 file:px-3 file:mr-3 file:bg-amber-600 file:text-black file:text-sm file:font-semibold cursor-pointer",
+          )}
+        />
+      </Field>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="الرقم الوطني" appearance={appearance}>
@@ -493,7 +517,7 @@ export function EmployeeSignupForm({
           </div>
         </Field>
 
-        <Field label="الفرع (المتجر)" required appearance={appearance}>
+        <Field label="الفرع (المحل التابع له)" required appearance={appearance}>
           <div className="relative">
             <Store
               className={cn(
@@ -505,7 +529,7 @@ export function EmployeeSignupForm({
               name="branch"
               required
               className={inputClasses(appearance, true)}
-              placeholder="اسم فرع المتجر"
+              placeholder=" فرع المحل"
             />
           </div>
         </Field>
@@ -513,14 +537,7 @@ export function EmployeeSignupForm({
 
       <SubmitButton appearance={appearance} />
 
-      <p
-        className={cn(
-          "text-xs text-center leading-relaxed",
-          dark ? "text-neutral-500" : "text-gray-500",
-        )}
-      >
-        لن يُنشأ حساب في المنصة قبل موافقة الإدارة على طلبك.
-      </p>
+
     </form>
   );
 }
