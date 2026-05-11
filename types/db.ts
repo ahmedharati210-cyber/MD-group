@@ -60,6 +60,8 @@ export interface Company {
   slug: string;
   logo_url: string | null;
   active: boolean;
+  /** Lower value = earlier in company grids (admin + public). */
+  display_order: number;
   /** null = all features enabled; array = only listed features enabled */
   enabled_features: AppFeature[] | null;
   /** null = each role sees all enabled_features; object = per-role overrides */
@@ -73,6 +75,7 @@ type CompanyInsert = {
   slug: string;
   logo_url?: string | null;
   active?: boolean;
+  display_order?: number;
   enabled_features?: AppFeature[] | null;
   role_features?: RoleFeatures | null;
   created_at?: string;
@@ -111,6 +114,8 @@ export interface Profile {
   emergency_contact_phone: string | null;
   emergency_contact_relationship: string | null;
   hr_notes: string | null;
+  /** Payroll / external attendance card ID (not portal internal ids). */
+  external_employee_number: string | null;
 }
 type ProfileInsert = {
   id: string;
@@ -139,6 +144,7 @@ type ProfileInsert = {
   emergency_contact_phone?: string | null;
   emergency_contact_relationship?: string | null;
   hr_notes?: string | null;
+  external_employee_number?: string | null;
 };
 
 export interface Attendance {
@@ -566,6 +572,71 @@ type AuditLogInsert = {
   created_at?: string;
 };
 
+// ---------------------------------------------------------------------------
+// Employee self-signup (invite link → manager approval)
+// ---------------------------------------------------------------------------
+export type EmployeeSignupStatus = "draft" | "pending" | "approved" | "rejected";
+
+export interface EmployeeSignupRequest {
+  id: string;
+  company_id: string;
+  invite_token: string;
+  token_expires_at: string;
+  token_used: boolean;
+  created_by: string | null;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  national_id: string | null;
+  job_title: string | null;
+  department: string | null;
+  date_of_birth: string | null;
+  gender: string | null;
+  nationality: string | null;
+  address: string | null;
+  blood_type: string | null;
+  passport_number: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  emergency_contact_relationship: string | null;
+  external_employee_number: string | null;
+  status: EmployeeSignupStatus;
+  rejection_reason: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+type EmployeeSignupRequestInsert = {
+  id?: string;
+  company_id: string;
+  invite_token: string;
+  token_expires_at: string;
+  token_used?: boolean;
+  created_by?: string | null;
+  full_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  national_id?: string | null;
+  job_title?: string | null;
+  department?: string | null;
+  date_of_birth?: string | null;
+  gender?: string | null;
+  nationality?: string | null;
+  address?: string | null;
+  blood_type?: string | null;
+  passport_number?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  emergency_contact_relationship?: string | null;
+  external_employee_number?: string | null;
+  status?: EmployeeSignupStatus;
+  rejection_reason?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  created_at?: string;
+};
+
 type TableDef<R, I> = {
   Row: R;
   Insert: I;
@@ -592,6 +663,10 @@ export interface Database {
       manager_claims: TableDef<ManagerClaim, ManagerClaimInsert>;
       map_links: TableDef<MapLink, MapLinkInsert>;
       warnings: TableDef<Warning, WarningInsert>;
+      employee_signup_requests: TableDef<
+        EmployeeSignupRequest,
+        EmployeeSignupRequestInsert
+      >;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

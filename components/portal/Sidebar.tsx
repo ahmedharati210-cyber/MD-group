@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Building2,
   Users,
+  UserPlus,
   CalendarCheck,
   FileText,
   Mail,
@@ -56,6 +57,12 @@ const items: Item[] = [
     href: "/portal/employees",
     label: "الموظفون",
     icon: Users,
+    roles: ["md_admin", "company_manager"],
+  },
+  {
+    href: "/portal/employees/signup-requests",
+    label: "طلبات التوظيف",
+    icon: UserPlus,
     roles: ["md_admin", "company_manager"],
   },
   {
@@ -146,6 +153,8 @@ type Props = {
   roleFeatures: RoleFeatures | null;
   pendingRequestsCount: number;
   unreadWarningsCount: number;
+  pendingSignupRequestsCount: number;
+  showDolceSignupNav: boolean;
   isOpen: boolean;
   onClose: () => void;
 };
@@ -160,6 +169,8 @@ export function Sidebar({
   roleFeatures,
   pendingRequestsCount,
   unreadWarningsCount,
+  pendingSignupRequestsCount,
+  showDolceSignupNav,
   isOpen,
   onClose,
 }: Props) {
@@ -192,6 +203,12 @@ export function Sidebar({
 
   const visibleItems = items.filter((item) => {
     if (!item.roles.includes(role)) return false;
+    if (
+      item.href === "/portal/employees/signup-requests" &&
+      !showDolceSignupNav
+    ) {
+      return false;
+    }
     if (!item.feature) return true;
     // Super admins and md_admin see everything
     if (isSuperAdmin || role === "md_admin") return true;
@@ -199,8 +216,22 @@ export function Sidebar({
     return visibleFeatures.includes(item.feature);
   });
 
-  const isActive = (href: string) =>
-    href === "/portal" ? pathname === "/portal" : pathname.startsWith(href);
+  const isActive = (href: string) => {
+    if (href === "/portal") return pathname === "/portal";
+    if (href === "/portal/employees/signup-requests") {
+      return pathname.startsWith("/portal/employees/signup-requests");
+    }
+    if (href === "/portal/employees") {
+      if (pathname.startsWith("/portal/employees/signup-requests")) {
+        return false;
+      }
+      return (
+        pathname === "/portal/employees" ||
+        pathname.startsWith("/portal/employees/")
+      );
+    }
+    return pathname.startsWith(href);
+  };
 
   const roleLabel: Record<UserRole, string> = {
     md_admin: "مدير مجموعة MD",
@@ -310,7 +341,13 @@ export function Sidebar({
                   ? { count: pendingRequestsCount, cls: "bg-amber-500" }
                   : item.href === "/portal/warnings" && unreadWarningsCount > 0
                     ? { count: unreadWarningsCount, cls: "bg-red-500" }
-                    : null;
+                    : item.href === "/portal/employees/signup-requests" &&
+                        pendingSignupRequestsCount > 0
+                      ? {
+                          count: pendingSignupRequestsCount,
+                          cls: "bg-amber-500",
+                        }
+                      : null;
               return (
                 <li key={item.href}>
                   <Link

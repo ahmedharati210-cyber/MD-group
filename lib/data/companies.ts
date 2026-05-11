@@ -21,7 +21,11 @@ export async function getCompaniesWithCounts(): Promise<CompanyWithCount[]> {
   const supabase = createSupabaseAdminClient();
 
   const [{ data: companies }, { data: employees }] = await Promise.all([
-    supabase.from("companies").select("*").order("name_ar"),
+    supabase
+      .from("companies")
+      .select("*")
+      .order("display_order", { ascending: true })
+      .order("name_ar", { ascending: true }),
     supabase.from("profiles").select("company_id").eq("role", "employee"),
   ]);
 

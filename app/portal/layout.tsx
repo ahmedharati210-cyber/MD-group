@@ -3,6 +3,10 @@ import { connection } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { getCompanyData } from "@/lib/company";
 import { getBadgeCounts } from "@/lib/data/badges";
+import {
+  canAccessDolceEmployeeSignup,
+  getDolceSignupCompanyId,
+} from "@/lib/dolce-signup-company";
 import { PortalShell } from "@/components/portal/PortalShell";
 import type { AppFeature, RoleFeatures } from "@/types/db";
 
@@ -50,13 +54,26 @@ async function AuthenticatedPortal({
   const isSuperAdmin = profile.is_super_admin ?? false;
   const isEmployee = profile.role === "employee";
 
+  const dolceSignupCompanyId = await getDolceSignupCompanyId();
+  const showDolceSignupNav = canAccessDolceEmployeeSignup(
+    profile,
+    dolceSignupCompanyId,
+  );
+
   // Both calls only need profile.id / profile.company_id — run them in
   // parallel so the layout doesn't wait for company data before starting
   // the badge queries.
-  const [companyRow, { pendingRequests: pendingRequestsCount, unreadWarnings: unreadWarningsCount }] =
+  const [companyRow, { pendingRequests: pendingRequestsCount, unreadWarnings: unreadWarningsCount, pendingSignupRequests: pendingSignupRequestsCount }] =
     await Promise.all([
       profile.company_id ? getCompanyData(profile.company_id) : Promise.resolve(null),
-      getBadgeCounts({ userId: profile.id ?? "", isEmployee }),
+      getBadgeCounts({
+        userId: profile.id ?? "",
+        isEmployee,
+        role: profile.role,
+        companyId: profile.company_id,
+        isSuperAdmin: profile.is_super_admin ?? false,
+        dolceSignupCompanyId,
+      }),
     ]);
 
   const companyName = companyRow?.name_ar ?? null;
@@ -74,6 +91,8 @@ async function AuthenticatedPortal({
       roleFeatures={roleFeatures}
       pendingRequestsCount={pendingRequestsCount}
       unreadWarningsCount={unreadWarningsCount}
+      pendingSignupRequestsCount={pendingSignupRequestsCount}
+      showDolceSignupNav={showDolceSignupNav}
     >
       {children}
     </PortalShell>

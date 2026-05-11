@@ -2,6 +2,11 @@ import Link from "next/link";
 import { Users, Plus, Building2 } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { InviteLinkGenerator } from "@/components/portal/InviteLinkGenerator";
+import {
+  canAccessDolceEmployeeSignup,
+  getDolceSignupCompanyDisplay,
+} from "@/lib/dolce-signup-company";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
@@ -18,7 +23,7 @@ export default async function EmployeesPage({
 }: {
   searchParams: SearchParams;
 }) {
-  await requireRole(["md_admin", "company_manager"]);
+  const current = await requireRole(["md_admin", "company_manager"]);
   const { companyId, q, page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam ?? 1));
   const from = (page - 1) * PAGE_SIZE;
@@ -36,11 +41,16 @@ export default async function EmployeesPage({
   if (companyId) employeesQuery = employeesQuery.eq("company_id", companyId);
   if (q) employeesQuery = employeesQuery.ilike("full_name", `%${q}%`);
 
-  const [{ data: employees, count: totalCount }, { data: companies }] =
+  const [{ data: employees, count: totalCount }, { data: companies }, dolceCo] =
     await Promise.all([
       employeesQuery,
       supabase.from("companies").select("id, name_ar").order("name_ar"),
+      getDolceSignupCompanyDisplay(),
     ]);
+
+  const showDolceInvite =
+    dolceCo &&
+    canAccessDolceEmployeeSignup(current.profile, dolceCo.id);
 
   return (
     <div>
@@ -57,6 +67,10 @@ export default async function EmployeesPage({
           </Link>
         }
       />
+
+      {showDolceInvite ? (
+        <InviteLinkGenerator companyNameAr={dolceCo.name_ar} />
+      ) : null}
 
       <form className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-5">
         <input

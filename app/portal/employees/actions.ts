@@ -8,6 +8,7 @@ import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
 } from "@/lib/supabase/server";
+import { getDolceSignupCompanyId } from "@/lib/dolce-signup-company";
 
 const createSchema = z.object({
   email: z.string().email(),
@@ -266,6 +267,69 @@ export async function deactivateEmployeeAction(formData: FormData) {
   revalidatePath(`/portal/employees/${id}`);
   revalidateTag("employees", "default");
   revalidateTag("dashboard", "default");
+}
+
+export type InviteTokenState = {
+  error?: string;
+  ok?: boolean;
+  inviteUrl?: string;
+};
+
+/**
+ * Creates a single-use signup invite for Dolce employees under «الطريق الصحيح» only
+ * (seed company slug `company-two`).
+ */
+export async function generateInviteTokenAction(
+  _prev: InviteTokenState | undefined,
+  _formData: FormData,
+): Promise<InviteTokenState> {
+  const current = await requireRole(["md_admin", "company_manager"]);
+
+  const dolceCompanyId = await getDolceSignupCompanyId();
+  if (!dolceCompanyId) {
+    return {
+      error:
+        "لم يتم العثور على شركة الطريق الصحيح في النظام. اتصل بالدعم الفني.",
+    };
+  }
+
+  if (current.profile.role === "company_manager") {
+    if (!current.profile.company_id) {
+      return { error: "لم يتم ربط حسابك بشركة." };
+    }
+    if (current.profile.company_id !== dolceCompanyId) {
+      return {
+        error:
+          "رابط تسجيل Dolce متاح لمديري شركة الطريق الصحيح فقط.",
+      };
+    }
+  }
+
+  const company_id = dolceCompanyId;
+
+  const token = crypto.randomUUID();
+  const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("employee_signup_requests").insert({
+    company_id,
+    invite_token: token,
+    token_expires_at: expires,
+    token_used: false,
+    status: "draft",
+    created_by: current.userId,
+  });
+
+  if (error) {
+    return { error: error.message ?? "تعذّر إنشاء الرابط." };
+  }
+
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
+    "http://localhost:3000";
+  const inviteUrl = `${base}/signup/${token}`;
+
+  return { ok: true, inviteUrl };
 }
 
 export async function deleteEmployeeAction(formData: FormData) {

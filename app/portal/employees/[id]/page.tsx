@@ -160,8 +160,9 @@ export default async function EmployeeProfilePage({
         {/* ── Employment Details ───────────────────────────── */}
         <ProfileSection title="بيانات التوظيف" icon={Briefcase}>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <InfoRow label="رقم الموظف (خارجي)" value={person.external_employee_number ?? "—"} />
             <InfoRow label="المسمى الوظيفي" value={person.job_title ?? "—"} />
-            <InfoRow label="القسم" value={person.department ?? "—"} />
+            <InfoRow label="الفرع / القسم" value={person.department ?? "—"} />
             <InfoRow label="تاريخ التوظيف" value={formatDate(person.hired_at) || "—"} />
             <InfoRow label="نوع العقد" value={contractLabel(person.contract_type)} />
             <InfoRow label="تاريخ انتهاء العقد" value={formatDate(person.contract_end_date) || "—"} />

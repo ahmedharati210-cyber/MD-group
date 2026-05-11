@@ -28,7 +28,8 @@ async function getCompanies(): Promise<Company[]> {
       .from("companies")
       .select("*")
       .eq("active", true)
-      .order("name_ar");
+      .order("display_order", { ascending: true })
+      .order("name_ar", { ascending: true });
     return (data ?? []) as unknown as Company[];
   } catch {
     return [];

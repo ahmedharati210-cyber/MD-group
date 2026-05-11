@@ -26,6 +26,8 @@ type Props = {
   roleFeatures: RoleFeatures | null;
   pendingRequestsCount: number;
   unreadWarningsCount: number;
+  pendingSignupRequestsCount: number;
+  showDolceSignupNav: boolean;
   children: React.ReactNode;
 };
 
@@ -39,6 +41,8 @@ export function PortalShell({
   roleFeatures,
   pendingRequestsCount,
   unreadWarningsCount,
+  pendingSignupRequestsCount,
+  showDolceSignupNav,
   children,
 }: Props) {
   const router = useRouter();
@@ -60,6 +64,8 @@ export function PortalShell({
           roleFeatures={roleFeatures}
           pendingRequestsCount={pendingRequestsCount}
           unreadWarningsCount={unreadWarningsCount}
+          pendingSignupRequestsCount={pendingSignupRequestsCount}
+          showDolceSignupNav={showDolceSignupNav}
           isOpen={isOpen}
           onClose={handleClose}
         />
