@@ -13,6 +13,7 @@ import {
   DOLCE_SIGNUP_INVITE_VALIDITY_DAYS,
 } from "@/lib/dolce-signup-invite-config";
 import { getDolceSignupCompanyId } from "@/lib/dolce-signup-company";
+import { logAudit } from "@/lib/audit";
 
 const createSchema = z.object({
   email: z.string().email(),
@@ -134,12 +135,23 @@ export async function createEmployeeAction(
 
   if (profErr) return { error: profErr.message };
 
+  let company_name: string | null = null;
+  const { data: companyRow } = await admin
+    .from("companies")
+    .select("name")
+    .eq("id", parsed.data.company_id)
+    .maybeSingle<{ name: string }>();
+  if (companyRow?.name) company_name = companyRow.name;
+
   await admin.from("audit_log").insert({
     actor_id: current.userId,
     action: "employee.create",
     entity: "profiles",
     entity_id: userData.user.id,
-    payload: { email: parsed.data.email, company_id: parsed.data.company_id },
+    payload: {
+      email: parsed.data.email,
+      ...(company_name ? { company_name } : {}),
+    },
   });
 
   revalidatePath("/portal/employees");
@@ -317,18 +329,42 @@ export async function generateInviteTokenAction(
   ).toISOString();
 
   const admin = createSupabaseAdminClient();
-  const { error } = await admin.from("employee_signup_invites").insert({
-    company_id,
-    invite_token: token,
-    token_expires_at: expires,
-    max_uses: DOLCE_SIGNUP_INVITE_MAX_USES,
-    use_count: 0,
-    created_by: current.userId,
-  });
+  const { data: companyRow } = await admin
+    .from("companies")
+    .select("name")
+    .eq("id", company_id)
+    .maybeSingle<{ name: string }>();
+  const company_name = companyRow?.name ?? null;
+
+  const { data: insertedInvite, error } = await admin
+    .from("employee_signup_invites")
+    .insert({
+      company_id,
+      invite_token: token,
+      token_expires_at: expires,
+      max_uses: DOLCE_SIGNUP_INVITE_MAX_USES,
+      use_count: 0,
+      created_by: current.userId,
+    })
+    .select("id")
+    .single<{ id: string }>();
 
   if (error) {
     return { error: error.message ?? "تعذّر إنشاء الرابط." };
   }
+
+  void logAudit(current.userId, "create", "employee_signup_invite", insertedInvite?.id ?? null, {
+    ...(company_name ? { company_name } : {}),
+    max_uses: DOLCE_SIGNUP_INVITE_MAX_USES,
+    token_expires_at: new Date(expires).toLocaleString("ar-LY", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }),
+  });
 
   const base =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
@@ -392,6 +428,13 @@ export async function deleteSignupInviteAction(
     return { error: "الرابط غير موجود أو غير مصرّح بحذفه." };
   }
 
+  const { data: companyRow } = await admin
+    .from("companies")
+    .select("name")
+    .eq("id", row.company_id)
+    .maybeSingle<{ name: string }>();
+  const company_name = companyRow?.name ?? null;
+
   const { error } = await admin
     .from("employee_signup_invites")
     .delete()
@@ -406,7 +449,7 @@ export async function deleteSignupInviteAction(
     action: "employee_signup_invite.delete",
     entity: "employee_signup_invites",
     entity_id: rawId,
-    payload: null,
+    payload: company_name ? { company_name } : {},
   });
 
   revalidatePath("/portal/employees");

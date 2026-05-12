@@ -177,8 +177,7 @@ export async function approveSignupRequestAction(
     entity: "employee_signup_requests",
     entity_id: parsed.data.request_id,
     payload: {
-      auth_login_email: syntheticEmail,
-      profile_id: uid,
+      employee_name: full_name,
       external_employee_number: externalNum,
     },
   });
@@ -210,13 +209,14 @@ export async function rejectSignupRequestAction(
   const admin = createSupabaseAdminClient();
   const { data: row } = await admin
     .from("employee_signup_requests")
-    .select("id, company_id, status, passport_image_path")
+    .select("id, company_id, status, passport_image_path, full_name")
     .eq("id", parsed.data.request_id)
     .maybeSingle<{
       id: string;
       company_id: string;
       status: string;
       passport_image_path: string | null;
+      full_name: string | null;
     }>();
 
   if (!row || row.status !== "pending") {
@@ -259,7 +259,9 @@ export async function rejectSignupRequestAction(
     action: "employee_signup.reject",
     entity: "employee_signup_requests",
     entity_id: parsed.data.request_id,
-    payload: {},
+    payload: row.full_name?.trim()
+      ? { employee_name: row.full_name.trim() }
+      : {},
   });
 
   revalidatePath("/portal/employees/signup-requests");

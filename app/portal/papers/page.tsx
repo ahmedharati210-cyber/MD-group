@@ -5,6 +5,10 @@ import { getPapersData, type PaperDoc } from "@/lib/data/papers";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { bytesToReadable, formatDate } from "@/lib/utils";
+import {
+  paperExpiryVisualState,
+  type PaperExpiryVisualState,
+} from "@/lib/paper-expiry";
 export const metadata = { title: "الأوراق الرسمية" };
 
 const categoryLabel: Record<string, string> = {
@@ -14,6 +18,26 @@ const categoryLabel: Record<string, string> = {
   personal: "شخصي",
   other: "أخرى",
 };
+
+const expiryStatusLabel: Record<PaperExpiryVisualState, string> = {
+  none: "—",
+  ok: "سارية",
+  expiring: "قرب الانتهاء",
+  expired: "منتهية",
+};
+
+function expiryStatusClass(st: PaperExpiryVisualState): string {
+  if (st === "expired") {
+    return "text-red-600 dark:text-red-400 font-semibold";
+  }
+  if (st === "expiring") {
+    return "text-amber-600 dark:text-amber-400 font-semibold";
+  }
+  if (st === "ok") {
+    return "text-emerald-600 dark:text-emerald-400";
+  }
+  return "text-gray-400 dark:text-gray-500";
+}
 
 type SearchParams = Promise<{
   q?: string;
@@ -116,6 +140,7 @@ export default async function PapersPage({
           <div className="md:hidden space-y-3">
             {(docs as PaperDoc[]).map((d) => {
               const company = d.companies;
+              const expSt = paperExpiryVisualState(d.expires_on ?? null);
               return (
                 <Link
                   key={d.id}
@@ -153,6 +178,20 @@ export default async function PapersPage({
                       </span>
                       {formatDate(d.created_at)}
                     </div>
+                    <div>
+                      <span className="text-gray-400 dark:text-gray-500">
+                        انتهاء الصلاحية:{" "}
+                      </span>
+                      {formatDate(d.expires_on) || "—"}
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-400 dark:text-gray-500">
+                        الحالة:{" "}
+                      </span>
+                      <span className={expiryStatusClass(expSt)}>
+                        {expiryStatusLabel[expSt]}
+                      </span>
+                    </div>
                   </div>
                 </Link>
               );
@@ -169,12 +208,15 @@ export default async function PapersPage({
                     <th className="px-5 py-3 font-semibold">النوع</th>
                     <th className="px-5 py-3 font-semibold">الشركة</th>
                     <th className="px-5 py-3 font-semibold">الحجم</th>
-                    <th className="px-5 py-3 font-semibold">التاريخ</th>
+                    <th className="px-5 py-3 font-semibold">تاريخ الرفع</th>
+                    <th className="px-5 py-3 font-semibold">انتهاء الصلاحية</th>
+                    <th className="px-5 py-3 font-semibold">الحالة</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {(docs as PaperDoc[]).map((d) => {
                     const company = d.companies;
+                    const expSt = paperExpiryVisualState(d.expires_on ?? null);
                     return (
                       <tr
                         key={d.id}
@@ -203,6 +245,12 @@ export default async function PapersPage({
                         </td>
                         <td className="px-5 py-3 text-gray-500 dark:text-gray-400">
                           {formatDate(d.created_at)}
+                        </td>
+                        <td className="px-5 py-3 text-gray-500 dark:text-gray-400">
+                          {formatDate(d.expires_on) || "—"}
+                        </td>
+                        <td className={`px-5 py-3 ${expiryStatusClass(expSt)}`}>
+                          {expiryStatusLabel[expSt]}
                         </td>
                       </tr>
                     );

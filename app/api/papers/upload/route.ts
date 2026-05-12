@@ -17,7 +17,8 @@ const MAX_BYTES = 25 * 1024 * 1024;
 /**
  * Accepts multipart/form-data:
  *   file (File), company_id (uuid), title (string), category (enum),
- *   owner_profile_id (uuid, optional)
+ *   owner_profile_id (uuid, optional),
+ *   issued_on, expires_on (YYYY-MM-DD, optional)
  *
  * - Uploads the binary to the `documents` bucket
  * - Extracts PDF text (best-effort) and stores in `documents.content_text`
@@ -32,6 +33,23 @@ export async function POST(req: NextRequest) {
   const title = form.get("title");
   const category = form.get("category") ?? "other";
   const owner_profile_id = form.get("owner_profile_id");
+  const issued_on_raw = form.get("issued_on");
+  const expires_on_raw = form.get("expires_on");
+  const issued_on =
+    typeof issued_on_raw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(issued_on_raw.trim())
+      ? issued_on_raw.trim()
+      : null;
+  const expires_on =
+    typeof expires_on_raw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(expires_on_raw.trim())
+      ? expires_on_raw.trim()
+      : null;
+
+  if (issued_on && expires_on && issued_on > expires_on) {
+    return NextResponse.json(
+      { error: "تاريخ الإصدار يجب أن يكون قبل أو في يوم انتهاء الصلاحية" },
+      { status: 400 },
+    );
+  }
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "ملف مطلوب" }, { status: 400 });
@@ -119,6 +137,8 @@ export async function POST(req: NextRequest) {
       size_bytes: file.size,
       content_text,
       created_by: current.userId,
+      issued_on,
+      expires_on,
     })
     .select()
     .single();

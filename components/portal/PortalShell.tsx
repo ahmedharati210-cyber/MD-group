@@ -27,6 +27,7 @@ type Props = {
   pendingRequestsCount: number;
   unreadWarningsCount: number;
   pendingSignupRequestsCount: number;
+  expiringPapersCount: number;
   showDolceSignupNav: boolean;
   children: React.ReactNode;
 };
@@ -42,6 +43,7 @@ export function PortalShell({
   pendingRequestsCount,
   unreadWarningsCount,
   pendingSignupRequestsCount,
+  expiringPapersCount,
   showDolceSignupNav,
   children,
 }: Props) {
@@ -65,6 +67,7 @@ export function PortalShell({
           pendingRequestsCount={pendingRequestsCount}
           unreadWarningsCount={unreadWarningsCount}
           pendingSignupRequestsCount={pendingSignupRequestsCount}
+          expiringPapersCount={expiringPapersCount}
           showDolceSignupNav={showDolceSignupNav}
           isOpen={isOpen}
           onClose={handleClose}

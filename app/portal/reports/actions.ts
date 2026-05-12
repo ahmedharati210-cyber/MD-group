@@ -57,8 +57,19 @@ export async function createReportAction(
     .single<{ id: string }>();
   if (error) return { error: error.message };
 
+  let project_name: string | undefined;
+  if (parsed.data.project_id) {
+    const { data: proj } = await supabase
+      .from("projects")
+      .select("name")
+      .eq("id", parsed.data.project_id)
+      .maybeSingle<{ name: string }>();
+    if (proj?.name) project_name = proj.name;
+  }
+
   void logAudit(userId, "create", "report", newReport?.id, {
     report_date: parsed.data.report_date,
+    ...(project_name ? { project_name } : {}),
   });
 
   revalidatePath("/portal/reports");

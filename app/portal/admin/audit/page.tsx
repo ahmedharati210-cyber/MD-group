@@ -5,7 +5,55 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function looksLikeUuid(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  return UUID_RE.test(value.trim());
+}
+
+/** Hide ID-shaped payload keys whose values are UUIDs (legacy rows + technical fields). */
+function shouldDisplayPayloadEntry(key: string, value: unknown): boolean {
+  if (!looksLikeUuid(value)) return true;
+  if (key === "id" || key.endsWith("_id")) return false;
+  const hideUuidValueKeys = new Set([
+    "profile_id",
+    "auth_login_email",
+    "broadcast_company",
+    "broadcast_company_id",
+    "company_id",
+    "project_id",
+    "category_id",
+    "invite_id",
+    "entity_id",
+  ]);
+  return !hideUuidValueKeys.has(key);
+}
+
+const payloadKeyLabels: Record<string, string> = {
+  report_date: "تاريخ التقرير",
+  project_name: "المشروع",
+  company_name: "الشركة",
+  category_name: "المرحلة",
+  name: "الاسم",
+  status: "الحالة",
+  title: "العنوان",
+  titles: "المهام",
+  email: "البريد",
+  recipients: "عدد المستلمين",
+  removed_paths: "عدد الملفات المحذوفة",
+  external_employee_number: "رقم الموظف",
+  employee_name: "اسم المتقدّم",
+  max_uses: "الحد الأقصى للاستخدام",
+  token_expires_at: "انتهاء الصلاحية",
+  is_completed: "مكتمل",
+  full_name: "الاسم",
+  request_type: "نوع الطلب",
+  responded_at: "تاريخ الرد",
+};
 
 export const metadata = { title: "سجل التدقيق" };
 
@@ -67,6 +115,10 @@ const entityLabels: Record<string, string> = {
   documents:        "وثيقة",
   profiles:         "مستخدم",
   employee:         "موظف",
+  employee_signup_invite:   "رابط تسجيل موظف",
+  employee_signup_invites:  "رابط تسجيل موظف",
+  employee_signup:          "طلب تسجيل موظف",
+  employee_signup_requests: "طلب تسجيل موظف",
 };
 
 // All known entity keys — shown in the filter regardless of current data
@@ -84,6 +136,10 @@ const KNOWN_ENTITIES: { value: string; label: string }[] = [
   { value: "attendance",       label: "حضور" },
   { value: "profile",          label: "مستخدم" },
   { value: "document",         label: "وثيقة" },
+  { value: "employee_signup_invite",   label: "رابط تسجيل موظف" },
+  { value: "employee_signup_invites",  label: "رابط تسجيل موظف" },
+  { value: "employee_signup_requests", label: "طلب تسجيل موظف" },
+  { value: "employee_signup",          label: "طلب تسجيل موظف" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -207,6 +263,12 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Sea
                     const badgeCls = actionBadge[actionKey] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
                     const actionLabel = KNOWN_ACTIONS.find((a) => a.value === actionKey)?.label ?? actionKey;
                     const entityLabel = entityLabels[entityKey] ?? entityKey;
+                    const payloadEntries =
+                      row.payload && Object.keys(row.payload).length > 0
+                        ? Object.entries(row.payload).filter(([k, v]) =>
+                            shouldDisplayPayloadEntry(k, v),
+                          )
+                        : [];
                     return (
                       <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
                         <td className="px-4 py-3">
@@ -230,28 +292,27 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Sea
                         <td className="px-4 py-3">
                           <span className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
                             <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                            {formatDate(row.created_at)}
+                            {formatDateTime(row.created_at)}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          {row.entity_id ? (
-                            <span className="text-xs text-gray-400 dark:text-gray-500 font-mono" dir="ltr">
-                              {row.entity_id.slice(0, 8)}…
-                            </span>
-                          ) : null}
-                          {row.payload && Object.keys(row.payload).length > 0 ? (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {Object.entries(row.payload).map(([k, v]) => (
+                          {payloadEntries.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {payloadEntries.map(([k, v]) => (
                                 <span
                                   key={k}
                                   className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5"
                                 >
-                                  <span className="text-gray-400 dark:text-gray-500">{k}:</span>{" "}
+                                  <span className="text-gray-400 dark:text-gray-500">
+                                    {payloadKeyLabels[k] ?? k}:
+                                  </span>{" "}
                                   <span className="font-medium">{String(v)}</span>
                                 </span>
                               ))}
                             </div>
-                          ) : null}
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
+                          )}
                         </td>
                       </tr>
                     );

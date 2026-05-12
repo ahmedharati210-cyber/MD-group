@@ -77,7 +77,7 @@ export default async function EmployeeProfilePage({
       .limit(20),
     supabase
       .from("documents")
-      .select("id, title, category, created_at")
+      .select("id, title, category, created_at, issued_on, expires_on")
       .eq("owner_profile_id", id)
       .order("created_at", { ascending: false })
       .limit(10),
@@ -251,19 +251,33 @@ export default async function EmployeeProfilePage({
               <p className="text-sm text-gray-500 dark:text-gray-400">لا توجد ملفات شخصية.</p>
             ) : (
               <ul className="divide-y divide-gray-100 dark:divide-gray-800">
-                {docs.map((d) => (
-                  <li key={d.id} className="py-2.5">
-                    <Link
-                      href={`/portal/papers/${d.id}`}
-                      className="text-sm font-medium text-gray-800 dark:text-gray-200 hover:text-primary-700 dark:hover:text-primary-400"
-                    >
-                      {d.title}
-                    </Link>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {d.category} • {formatDate(d.created_at)}
-                    </div>
-                  </li>
-                ))}
+                {docs.map((d) => {
+                  const row = d as typeof d & {
+                    issued_on?: string | null;
+                    expires_on?: string | null;
+                  };
+                  return (
+                    <li key={d.id} className="py-2.5">
+                      <Link
+                        href={`/portal/papers/${d.id}`}
+                        className="text-sm font-medium text-gray-800 dark:text-gray-200 hover:text-primary-700 dark:hover:text-primary-400"
+                      >
+                        {d.title}
+                      </Link>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 space-y-0.5">
+                        <div>
+                          {d.category} • رفع: {formatDate(d.created_at)}
+                        </div>
+                        {row.issued_on ? (
+                          <div>إصدار: {formatDate(row.issued_on)}</div>
+                        ) : null}
+                        {row.expires_on ? (
+                          <div>انتهاء: {formatDate(row.expires_on)}</div>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </section>

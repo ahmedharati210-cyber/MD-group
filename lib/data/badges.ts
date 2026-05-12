@@ -7,6 +7,8 @@ export type BadgeCounts = {
   pendingRequests: number;
   unreadWarnings: number;
   pendingSignupRequests: number;
+  /** Papers with expires_on in the last month before expiry (not yet expired); RLS-scoped */
+  expiringPapers: number;
 };
 
 /**
@@ -49,7 +51,7 @@ export async function getBadgeCounts(params: {
     return count ?? 0;
   })();
 
-  const [pendingResult, warningsResult, pendingSignupRequests] =
+  const [pendingResult, warningsResult, pendingSignupRequests, expiringRpc] =
     await Promise.all([
       params.isEmployee
         ? supabase
@@ -71,11 +73,30 @@ export async function getBadgeCounts(params: {
             )
         : Promise.resolve({ count: 0 }),
       pendingSignupPromise,
+      supabase.rpc("count_documents_expiring_soon"),
     ]);
+
+  let expiringPapers = 0;
+  if (!expiringRpc.error && expiringRpc.data != null) {
+    const raw = expiringRpc.data;
+    const n =
+      typeof raw === "number"
+        ? raw
+        : typeof raw === "string"
+          ? parseInt(raw, 10)
+          : NaN;
+    expiringPapers = Number.isFinite(n) ? n : 0;
+  } else if (expiringRpc.error) {
+    console.warn(
+      "[badges] count_documents_expiring_soon:",
+      expiringRpc.error.message,
+    );
+  }
 
   return {
     pendingRequests: pendingResult.count ?? 0,
     unreadWarnings: (warningsResult as { count: number | null }).count ?? 0,
     pendingSignupRequests,
+    expiringPapers,
   };
 }

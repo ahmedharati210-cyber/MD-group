@@ -3,14 +3,22 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { sendWhatsAppTemplate } from "@/lib/whatsapp";
 
 export type ActionState = { error?: string; ok?: boolean };
 
 const warningSchema = z.object({
   message: z.string().min(5, "الرسالة مطلوبة (5 أحرف على الأقل)"),
 });
+
+function dispatchWarningWhatsApp(phones: string[], message: string) {
+  const unique = [...new Set(phones.map((p) => p.trim()).filter(Boolean))];
+  for (const phone of unique) {
+    void sendWhatsAppTemplate(phone, message);
+  }
+}
 
 export async function sendWarningAction(
   _prev: ActionState | undefined,
@@ -41,7 +49,32 @@ export async function sendWarningAction(
       message,
     });
     if (error) return { error: error.message };
-    void logAudit(userId, "create", "warning", null, { broadcast_company: broadcastCompanyId });
+
+    try {
+      const admin = createSupabaseAdminClient();
+      const { data: recipients } = await admin
+        .from("profiles")
+        .select("phone")
+        .eq("company_id", broadcastCompanyId)
+        .eq("role", "employee")
+        .eq("is_active", true);
+      const phones = (recipients ?? [])
+        .map((r) => r.phone)
+        .filter((p): p is string => typeof p === "string" && p.length > 0);
+      dispatchWarningWhatsApp(phones, message);
+    } catch (e) {
+      console.error("[warnings] WhatsApp dispatch (broadcast) failed", e);
+    }
+
+    const adminForName = createSupabaseAdminClient();
+    const { data: broadcastCo } = await adminForName
+      .from("companies")
+      .select("name")
+      .eq("id", broadcastCompanyId)
+      .maybeSingle<{ name: string }>();
+    void logAudit(userId, "create", "warning", null, {
+      ...(broadcastCo?.name ? { company_name: broadcastCo.name } : {}),
+    });
     revalidatePath("/portal/warnings");
     revalidateTag("warnings", "default");
     revalidateTag("badges", "default");
@@ -83,9 +116,28 @@ export async function sendWarningAction(
   const { error } = await supabase.from("warnings").insert(rows);
   if (error) return { error: error.message };
 
+  try {
+    const admin = createSupabaseAdminClient();
+    const { data: recipients } = await admin
+      .from("profiles")
+      .select("phone")
+      .in("id", targetIds);
+    const phones = (recipients ?? [])
+      .map((r) => r.phone)
+      .filter((p): p is string => typeof p === "string" && p.length > 0);
+    dispatchWarningWhatsApp(phones, message);
+  } catch (e) {
+    console.error("[warnings] WhatsApp dispatch failed", e);
+  }
+
+  const { data: targetCo } = await supabase
+    .from("companies")
+    .select("name")
+    .eq("id", company_id)
+    .maybeSingle<{ name: string }>();
   void logAudit(userId, "create", "warning", null, {
     recipients: targetIds.length,
-    company_id,
+    ...(targetCo?.name ? { company_name: targetCo.name } : {}),
   });
 
   revalidatePath("/portal/warnings");

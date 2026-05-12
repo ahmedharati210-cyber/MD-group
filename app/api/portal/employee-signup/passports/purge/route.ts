@@ -57,12 +57,21 @@ export async function POST() {
     return NextResponse.json({ error: upErr.message }, { status: 500 });
   }
 
+  const { data: dolceCo } = await admin
+    .from("companies")
+    .select("name")
+    .eq("id", dolceId)
+    .maybeSingle<{ name: string }>();
+
   await admin.from("audit_log").insert({
     actor_id: current.userId,
     action: "employee_signup.passport_purge",
     entity: "employee_signup_requests",
     entity_id: null,
-    payload: { company_id: dolceId, removed_paths: paths.length },
+    payload: {
+      ...(dolceCo?.name ? { company_name: dolceCo.name } : {}),
+      removed_paths: paths.length,
+    },
   });
 
   return NextResponse.json({ ok: true, deleted: paths.length });

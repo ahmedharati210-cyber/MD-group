@@ -29,6 +29,30 @@ async function resolveCompanyId(profile: { role: string; company_id: string | nu
   return data?.id ?? null;
 }
 
+async function projectNameById(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  projectId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("projects")
+    .select("name")
+    .eq("id", projectId)
+    .maybeSingle<{ name: string }>();
+  return data?.name ?? null;
+}
+
+async function categoryNameById(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  categoryId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("project_categories")
+    .select("name")
+    .eq("id", categoryId)
+    .maybeSingle<{ name: string }>();
+  return data?.name ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Projects
 // ---------------------------------------------------------------------------
@@ -97,7 +121,11 @@ export async function updateProjectStatusAction(
     .eq("id", projectId);
   if (error) return { error: error.message };
 
-  void logAudit(userId, "update", "project", projectId, { status: parsed.data });
+  const project_name = await projectNameById(supabase, projectId);
+  void logAudit(userId, "update", "project", projectId, {
+    status: parsed.data,
+    ...(project_name ? { project_name } : {}),
+  });
 
   revalidateTimeline(projectId);
   return { ok: true };
@@ -140,10 +168,13 @@ export async function updateProjectAction(
 export async function deleteProjectAction(id: string): Promise<ActionState> {
   const { userId } = await requireRole(["md_admin", "company_manager"]);
   const supabase = await createSupabaseServerClient();
+  const project_name = await projectNameById(supabase, id);
   const { error } = await supabase.from("projects").delete().eq("id", id);
   if (error) return { error: error.message };
 
-  void logAudit(userId, "delete", "project", id);
+  void logAudit(userId, "delete", "project", id, {
+    ...(project_name ? { project_name } : {}),
+  });
 
   redirect("/portal/timeline");
 }
@@ -176,9 +207,10 @@ export async function createCategoryAction(
     .single<{ id: string }>();
   if (error) return { error: error.message };
 
+  const project_name = await projectNameById(supabase, projectId);
   void logAudit(userId, "create", "project_category", newCat?.id, {
     name: parsed.data.name,
-    project_id: projectId,
+    ...(project_name ? { project_name } : {}),
   });
 
   revalidateTimeline(projectId);
@@ -202,9 +234,10 @@ export async function updateCategoryAction(
   const { error } = await supabase.from("project_categories").update(parsed.data).eq("id", categoryId);
   if (error) return { error: error.message };
 
+  const project_name = await projectNameById(supabase, projectId);
   void logAudit(userId, "update", "project_category", categoryId, {
     name: parsed.data.name,
-    project_id: projectId,
+    ...(project_name ? { project_name } : {}),
   });
 
   revalidateTimeline(projectId);
@@ -217,7 +250,10 @@ export async function deleteCategoryAction(categoryId: string, projectId: string
   const { error } = await supabase.from("project_categories").delete().eq("id", categoryId);
   if (error) return { error: error.message };
 
-  void logAudit(userId, "delete", "project_category", categoryId, { project_id: projectId });
+  const project_name = await projectNameById(supabase, projectId);
+  void logAudit(userId, "delete", "project_category", categoryId, {
+    ...(project_name ? { project_name } : {}),
+  });
 
   revalidateTimeline(projectId);
   return { ok: true };
@@ -271,10 +307,12 @@ export async function createTaskAction(
   const { error } = await supabase.from("project_tasks").insert(rows);
   if (error) return { error: error.message };
 
+  const project_name = await projectNameById(supabase, projectId);
+  const category_name = await categoryNameById(supabase, categoryId);
   void logAudit(userId, "create", "project_task", null, {
     titles: titles.join(", "),
-    project_id: projectId,
-    category_id: categoryId,
+    ...(project_name ? { project_name } : {}),
+    ...(category_name ? { category_name } : {}),
   });
 
   revalidateTimeline(projectId);
@@ -301,9 +339,10 @@ export async function updateTaskAction(
   const { error } = await supabase.from("project_tasks").update(parsed.data).eq("id", taskId);
   if (error) return { error: error.message };
 
+  const project_name = await projectNameById(supabase, projectId);
   void logAudit(userId, "update", "project_task", taskId, {
     title: parsed.data.title,
-    project_id: projectId,
+    ...(project_name ? { project_name } : {}),
   });
 
   revalidateTimeline(projectId);
@@ -316,7 +355,10 @@ export async function deleteTaskAction(taskId: string, projectId: string): Promi
   const { error } = await supabase.from("project_tasks").delete().eq("id", taskId);
   if (error) return { error: error.message };
 
-  void logAudit(userId, "delete", "project_task", taskId, { project_id: projectId });
+  const project_name = await projectNameById(supabase, projectId);
+  void logAudit(userId, "delete", "project_task", taskId, {
+    ...(project_name ? { project_name } : {}),
+  });
 
   revalidateTimeline(projectId);
   return { ok: true };
@@ -340,9 +382,10 @@ export async function toggleTaskAction(taskId: string, projectId: string, curren
 
   if (error) return { error: error.message };
 
+  const project_name = await projectNameById(supabase, projectId);
   void logAudit(userId, "update", "project_task", taskId, {
     is_completed: !currentlyCompleted,
-    project_id: projectId,
+    ...(project_name ? { project_name } : {}),
   });
 
   revalidateTimeline(projectId);

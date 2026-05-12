@@ -63,8 +63,7 @@ async function AuthenticatedPortal({
   // Both calls only need profile.id / profile.company_id — run them in
   // parallel so the layout doesn't wait for company data before starting
   // the badge queries.
-  const [companyRow, { pendingRequests: pendingRequestsCount, unreadWarnings: unreadWarningsCount, pendingSignupRequests: pendingSignupRequestsCount }] =
-    await Promise.all([
+  const [companyRow, badgeCounts] = await Promise.all([
       profile.company_id ? getCompanyData(profile.company_id) : Promise.resolve(null),
       getBadgeCounts({
         userId: profile.id ?? "",
@@ -75,6 +74,11 @@ async function AuthenticatedPortal({
         dolceSignupCompanyId,
       }),
     ]);
+
+  const pendingRequestsCount = badgeCounts.pendingRequests;
+  const unreadWarningsCount = badgeCounts.unreadWarnings;
+  const pendingSignupRequestsCount = badgeCounts.pendingSignupRequests;
+  const expiringPapersCount = badgeCounts.expiringPapers;
 
   const companyName = companyRow?.name_ar ?? null;
   const enabledFeatures: AppFeature[] | null = companyRow?.enabled_features ?? null;
@@ -92,6 +96,7 @@ async function AuthenticatedPortal({
       pendingRequestsCount={pendingRequestsCount}
       unreadWarningsCount={unreadWarningsCount}
       pendingSignupRequestsCount={pendingSignupRequestsCount}
+      expiringPapersCount={expiringPapersCount}
       showDolceSignupNav={showDolceSignupNav}
     >
       {children}

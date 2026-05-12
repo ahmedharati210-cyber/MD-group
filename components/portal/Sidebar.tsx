@@ -154,6 +154,8 @@ type Props = {
   pendingRequestsCount: number;
   unreadWarningsCount: number;
   pendingSignupRequestsCount: number;
+  /** Papers in the final month before expiry (not yet expired); sidebar red badge */
+  expiringPapersCount: number;
   showDolceSignupNav: boolean;
   isOpen: boolean;
   onClose: () => void;
@@ -170,6 +172,7 @@ export function Sidebar({
   pendingRequestsCount,
   unreadWarningsCount,
   pendingSignupRequestsCount,
+  expiringPapersCount,
   showDolceSignupNav,
   isOpen,
   onClose,
@@ -341,13 +344,15 @@ export function Sidebar({
                   ? { count: pendingRequestsCount, cls: "bg-amber-500" }
                   : item.href === "/portal/warnings" && unreadWarningsCount > 0
                     ? { count: unreadWarningsCount, cls: "bg-red-500" }
-                    : item.href === "/portal/employees/signup-requests" &&
-                        pendingSignupRequestsCount > 0
-                      ? {
-                          count: pendingSignupRequestsCount,
-                          cls: "bg-amber-500",
-                        }
-                      : null;
+                    : item.href === "/portal/papers" && expiringPapersCount > 0
+                      ? { count: expiringPapersCount, cls: "bg-red-600" }
+                      : item.href === "/portal/employees/signup-requests" &&
+                          pendingSignupRequestsCount > 0
+                        ? {
+                            count: pendingSignupRequestsCount,
+                            cls: "bg-amber-500",
+                          }
+                        : null;
               return (
                 <li key={item.href}>
                   <Link

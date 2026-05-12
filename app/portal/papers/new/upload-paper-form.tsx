@@ -136,6 +136,19 @@ export function UploadPaperForm({
           </p>
         </div>
 
+        <div>
+          <label className={labelClasses}>تاريخ الإصدار (اختياري)</label>
+          <input name="issued_on" type="date" className={inputClasses} />
+        </div>
+        <div>
+          <label className={labelClasses}>تاريخ انتهاء الصلاحية (اختياري)</label>
+          <input name="expires_on" type="date" className={inputClasses} />
+        </div>
+        <p className="sm:col-span-2 text-xs text-gray-500 dark:text-gray-400 -mt-2">
+          عند تحديد انتهاء الصلاحية، يُرسل تنبيه تلقائي لمديري المجموعة ومديري الشركة خلال
+          الشهر الأخير قبل تاريخ الانتهاء.
+        </p>
+
         <div className="sm:col-span-2">
           <label className={labelClasses}>
             الملف (PDF أو صورة، حتى 25MB)

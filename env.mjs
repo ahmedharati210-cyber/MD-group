@@ -9,6 +9,15 @@ import { z } from "zod";
 
 const serverSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  /** Meta WhatsApp Cloud API — server-only; used for warning notifications */
+  WHATSAPP_TOKEN: z.string().min(1),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().min(1),
+  /** e.g. hello_world (no vars) or warning_notification (one body var, ar) */
+  WHATSAPP_TEMPLATE_NAME: z.string().min(1).optional(),
+  /** e.g. en_US for hello_world, ar for custom Arabic templates */
+  WHATSAPP_TEMPLATE_LANGUAGE: z.string().min(1).optional(),
+  /** Vercel Cron: `Authorization: Bearer …` for `/api/cron/paper-expiry` */
+  CRON_SECRET: z.string().min(8).optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 
@@ -20,6 +29,11 @@ const clientSchema = z.object({
 
 const processEnv = {
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  WHATSAPP_TOKEN: process.env.WHATSAPP_TOKEN,
+  WHATSAPP_PHONE_NUMBER_ID: process.env.WHATSAPP_PHONE_NUMBER_ID,
+  WHATSAPP_TEMPLATE_NAME: process.env.WHATSAPP_TEMPLATE_NAME,
+  WHATSAPP_TEMPLATE_LANGUAGE: process.env.WHATSAPP_TEMPLATE_LANGUAGE,
+  CRON_SECRET: process.env.CRON_SECRET,
   NODE_ENV: process.env.NODE_ENV,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

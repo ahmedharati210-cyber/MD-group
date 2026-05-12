@@ -8,6 +8,7 @@ import { DeleteButton } from "@/components/portal/DeleteButton";
 import { bytesToReadable, formatDate } from "@/lib/utils";
 import { PaperViewer } from "./paper-viewer";
 import { deletePaperAction } from "../actions";
+import { PaperDatesForm } from "./paper-dates-form";
 
 const categoryLabel: Record<string, string> = {
   letter: "مراسلة",
@@ -24,7 +25,7 @@ export default async function PaperPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  const { profile } = await requireUser();
+  const { userId, profile } = await requireUser();
   const { id } = await params;
   const { error: errorMessage } = await searchParams;
 
@@ -43,9 +44,19 @@ export default async function PaperPage({
     .profiles;
 
   const canDelete =
+    profile.is_super_admin ||
     profile.role === "md_admin" ||
     (profile.role === "company_manager" &&
       doc.company_id === profile.company_id);
+
+  const canEditPaperDates =
+    canDelete ||
+    (profile.role === "employee" && doc.owner_profile_id === userId);
+
+  const issuedOn = (doc as { issued_on?: string | null }).issued_on ?? null;
+  const expiresOn = (doc as { expires_on?: string | null }).expires_on ?? null;
+  const expiryNotifiedAt =
+    (doc as { expiry_notified_at?: string | null }).expiry_notified_at ?? null;
 
   return (
     <div>
@@ -105,6 +116,20 @@ export default async function PaperPage({
             {doc.mime_type ? (
               <Meta label="النوع" value={doc.mime_type} plain />
             ) : null}
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-sm">
+            <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+              تواريخ الورقة
+            </h3>
+            <PaperDatesForm
+              key={doc.id}
+              documentId={doc.id}
+              issuedOn={issuedOn}
+              expiresOn={expiresOn}
+              expiryNotifiedAt={expiryNotifiedAt}
+              canEdit={canEditPaperDates}
+            />
           </div>
         </aside>
       </div>

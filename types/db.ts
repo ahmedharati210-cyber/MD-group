@@ -182,6 +182,12 @@ export interface DocumentRow {
   content_text: string | null;
   created_by: string | null;
   created_at: string;
+  /** Official issue date of the paper (optional). */
+  issued_on: string | null;
+  /** Expiry date; managers get in-app warning in the final month before this date. */
+  expires_on: string | null;
+  /** When automated expiry warnings were created for this document. */
+  expiry_notified_at: string | null;
 }
 type DocumentInsert = {
   id?: string;
@@ -195,6 +201,9 @@ type DocumentInsert = {
   content_text?: string | null;
   created_by?: string | null;
   created_at?: string;
+  issued_on?: string | null;
+  expires_on?: string | null;
+  expiry_notified_at?: string | null;
 };
 
 export interface Mail {

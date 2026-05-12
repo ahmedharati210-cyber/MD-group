@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Send } from "lucide-react";
+import toast from "react-hot-toast";
 import { sendWarningAction } from "@/app/portal/warnings/actions";
 
 type Engineer = { id: string; full_name: string };
@@ -22,6 +23,16 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
   const [state, formAction, isPending] = useActionState(sendWarningAction, init);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [broadcastCompany, setBroadcastCompany] = useState("");
+  /** Bump to remount textarea so defaultValue clears after each successful send */
+  const [messageFieldKey, setMessageFieldKey] = useState(0);
+
+  useEffect(() => {
+    if (!state?.ok) return;
+    setSelected(new Set());
+    setBroadcastCompany("");
+    setMessageFieldKey((k) => k + 1);
+    toast.success("تم إرسال الإنذار بنجاح.", { id: "warning-sent" });
+  }, [state]);
 
   const allIds = engineers.map((e) => e.id);
   const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
@@ -44,16 +55,14 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
     });
   }
 
-  if (state?.ok) {
-    return (
-      <div className="px-4 py-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-700 dark:text-green-300">
-        تم إرسال الإنذار بنجاح.
-      </div>
-    );
-  }
-
   return (
     <form action={formAction} className="space-y-4">
+      {state?.ok ? (
+        <div className="px-4 py-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-700 dark:text-green-300">
+          تم إرسال الإنذار بنجاح. يمكنك إرسال إنذار جديد أدناه.
+        </div>
+      ) : null}
+
       {state?.error ? (
         <div className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-300">
           {state.error}
@@ -143,6 +152,7 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
           نص الإنذار *
         </label>
         <textarea
+          key={messageFieldKey}
           name="message"
           rows={3}
           required
