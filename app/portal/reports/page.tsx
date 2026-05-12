@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Plus, FileBarChart2, CalendarDays, MapPin, User, StickyNote, Clock } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
 import { getReportsData } from "@/lib/data/reports";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatTime } from "@/lib/utils";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
@@ -11,13 +13,31 @@ export const metadata = { title: "التقارير" };
 
 const PAGE_SIZE = 20;
 
-type SearchParams = Promise<{ projectId?: string; authorId?: string; from?: string; to?: string; page?: string }>;
+type SearchParams = Promise<{
+  projectId?: string;
+  authorId?: string;
+  from?: string;
+  to?: string;
+  page?: string;
+  companyId?: string;
+}>;
 
 export default async function ReportsPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const { profile } = await requireFeature("reports");
+  const scopeId = await getShellCompanyIdForProfile(profile);
   const isManager = profile.role !== "employee";
   const page = Math.max(1, parseInt(sp.page ?? "1", 10));
+
+  const companyIdParam =
+    typeof sp.companyId === "string" && sp.companyId.trim()
+      ? sp.companyId.trim()
+      : "";
+
+  const filterCompanyId =
+    profile.role === "company_manager"
+      ? scopeId ?? undefined
+      : companyIdParam || undefined;
 
   const { reports, totalCount, projects, engineers } = await getReportsData({
     profileId: profile.id ?? "",
@@ -28,7 +48,21 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
     authorId: sp.authorId,
     from: sp.from,
     to: sp.to,
+    filterCompanyId,
   });
+
+  let companiesForFilter: { id: string; name_ar: string }[] = [];
+  if (isManager && (profile.role === "md_admin" || (profile.is_super_admin ?? false))) {
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase
+      .from("companies")
+      .select("id, name_ar")
+      .order("name_ar");
+    companiesForFilter = (data ?? []) as { id: string; name_ar: string }[];
+  }
+
+  const selectClasses =
+    "px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-none";
 
   return (
     <div>
@@ -46,6 +80,28 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
         <form method="get" className="flex flex-wrap gap-3">
+          {sp.projectId ? (
+            <input type="hidden" name="projectId" value={sp.projectId} />
+          ) : null}
+          {sp.authorId ? (
+            <input type="hidden" name="authorId" value={sp.authorId} />
+          ) : null}
+          {sp.from ? <input type="hidden" name="from" value={sp.from} /> : null}
+          {sp.to ? <input type="hidden" name="to" value={sp.to} /> : null}
+          {companiesForFilter.length > 0 ? (
+            <select
+              name="companyId"
+              defaultValue={companyIdParam}
+              className={selectClasses}
+            >
+              <option value="">كل الشركات</option>
+              {companiesForFilter.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name_ar}
+                </option>
+              ))}
+            </select>
+          ) : null}
           {projects.length > 0 ? (
             <select name="projectId" defaultValue={sp.projectId ?? ""} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-none">
               <option value="">كل المشاريع</option>
@@ -63,7 +119,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
           <button type="submit" className="px-4 py-2 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 text-sm font-semibold rounded-xl hover:bg-gray-700 dark:hover:bg-gray-300 transition-colors">
             تصفية
           </button>
-          {(sp.projectId || sp.authorId || sp.from || sp.to) ? (
+          {(sp.projectId || sp.authorId || sp.from || sp.to || companyIdParam) ? (
             <Link href="/portal/reports" className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-sm rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
               مسح
             </Link>
@@ -125,6 +181,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
               ...(sp.authorId ? { authorId: sp.authorId } : {}),
               ...(sp.from ? { from: sp.from } : {}),
               ...(sp.to ? { to: sp.to } : {}),
+              ...(companyIdParam ? { companyId: companyIdParam } : {}),
             }}
           />
         </>

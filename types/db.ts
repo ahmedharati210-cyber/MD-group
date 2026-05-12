@@ -29,7 +29,9 @@ export type AppFeature =
   | "requests"
   | "claims"
   | "maps"
-  | "warnings";
+  | "warnings"
+  /** Dolce / «الطريق الصحيح» employee signup links & signup-requests queue */
+  | "employee_signup";
 
 export const ALL_FEATURES: AppFeature[] = [
   "attendance",
@@ -42,6 +44,7 @@ export const ALL_FEATURES: AppFeature[] = [
   "claims",
   "maps",
   "warnings",
+  "employee_signup",
 ];
 
 /**
@@ -327,7 +330,8 @@ export type ProjectStatus =
   | "completed"
   | "maintenance"
   | "survey"
-  | "on_hold";
+  | "on_hold"
+  | "on_hold_claim";
 
 export interface Project {
   id: string;

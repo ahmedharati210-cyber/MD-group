@@ -2,6 +2,8 @@ import "server-only";
 
 import { cache } from "react";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { getCompanyData } from "@/lib/company";
+import { isMdManagerFeatureAllowed } from "@/lib/features";
 import type { Profile } from "@/types/db";
 
 /**
@@ -32,13 +34,29 @@ export const getDolceSignupCompanyDisplay = cache(
   },
 );
 
-/** Managers other than الطريق الصحيح cannot create invites or review Dolce signup requests. */
-export function canAccessDolceEmployeeSignup(
+/**
+ * Dolce signup UI/API: super admin; company managers of the Dolce company;
+ * MD Group managers only when their active shell is Dolce **and** the company
+ * has `employee_signup` in `enabled_features`.
+ */
+export async function canAccessDolceEmployeeSignup(
   profile: Pick<Profile, "role" | "company_id" | "is_super_admin">,
   dolceCompanyId: string | null,
-): boolean {
+  /** Active portal company (cookie for MD Group managers). */
+  shellCompanyId?: string | null,
+): Promise<boolean> {
   if (!dolceCompanyId) return false;
-  if (profile.is_super_admin || profile.role === "md_admin") return true;
+  if (profile.is_super_admin) return true;
+  if (profile.role === "md_admin") {
+    if (shellCompanyId == null || shellCompanyId !== dolceCompanyId) {
+      return false;
+    }
+    const row = await getCompanyData(shellCompanyId);
+    return isMdManagerFeatureAllowed(
+      "employee_signup",
+      row?.enabled_features ?? null,
+    );
+  }
   if (
     profile.role === "company_manager" &&
     profile.company_id === dolceCompanyId

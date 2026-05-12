@@ -23,6 +23,7 @@ export type MapsData = {
 export async function getMapsData(params: {
   filterProjectId?: string;
   filterQuery?: string;
+  filterCompanyId?: string;
 }): Promise<MapsData> {
   const supabase = await createSupabaseServerClient();
 
@@ -31,6 +32,9 @@ export async function getMapsData(params: {
     .select("id, name, description, drive_url, project_id, project:project_id(name)")
     .order("created_at", { ascending: false });
 
+  if (params.filterCompanyId) {
+    mapsQuery = mapsQuery.eq("company_id", params.filterCompanyId);
+  }
   if (params.filterProjectId) {
     mapsQuery = mapsQuery.eq("project_id", params.filterProjectId);
   }
@@ -38,9 +42,14 @@ export async function getMapsData(params: {
     mapsQuery = mapsQuery.ilike("name", `%${params.filterQuery}%`);
   }
 
+  let projectsQuery = supabase.from("projects").select("id, name").order("name");
+  if (params.filterCompanyId) {
+    projectsQuery = projectsQuery.eq("company_id", params.filterCompanyId);
+  }
+
   const [mapsResult, projectsResult] = await Promise.all([
     mapsQuery,
-    supabase.from("projects").select("id, name").order("name"),
+    projectsQuery,
   ]);
 
   return {

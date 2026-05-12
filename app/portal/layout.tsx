@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { getCompanyData } from "@/lib/company";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { getBadgeCounts } from "@/lib/data/badges";
 import {
   canAccessDolceEmployeeSignup,
@@ -54,26 +55,35 @@ async function AuthenticatedPortal({
   const isSuperAdmin = profile.is_super_admin ?? false;
   const isEmployee = profile.role === "employee";
 
+  const shellCompanyId = await getShellCompanyIdForProfile(profile);
+
   const dolceSignupCompanyId = await getDolceSignupCompanyId();
-  const showDolceSignupNav = canAccessDolceEmployeeSignup(
+  const showDolceSignupNav = await canAccessDolceEmployeeSignup(
     profile,
     dolceSignupCompanyId,
+    shellCompanyId,
   );
 
-  // Both calls only need profile.id / profile.company_id — run them in
-  // parallel so the layout doesn't wait for company data before starting
-  // the badge queries.
-  const [companyRow, badgeCounts] = await Promise.all([
-      profile.company_id ? getCompanyData(profile.company_id) : Promise.resolve(null),
-      getBadgeCounts({
-        userId: profile.id ?? "",
-        isEmployee,
-        role: profile.role,
-        companyId: profile.company_id,
-        isSuperAdmin: profile.is_super_admin ?? false,
-        dolceSignupCompanyId,
-      }),
-    ]);
+  const companyRow = shellCompanyId
+    ? await getCompanyData(shellCompanyId)
+    : null;
+
+  const badgeCompanyId =
+    profile.is_super_admin
+      ? null
+      : profile.role === "md_admin"
+        ? shellCompanyId
+        : profile.company_id;
+
+  const badgeCounts = await getBadgeCounts({
+    userId: profile.id ?? "",
+    isEmployee,
+    role: profile.role,
+    companyId: badgeCompanyId,
+    isSuperAdmin: profile.is_super_admin ?? false,
+    dolceSignupCompanyId,
+    includeDolceSignupBadges: showDolceSignupNav,
+  });
 
   const pendingRequestsCount = badgeCounts.pendingRequests;
   const unreadWarningsCount = badgeCounts.unreadWarnings;
@@ -89,6 +99,7 @@ async function AuthenticatedPortal({
       role={profile.role}
       fullName={profile.full_name}
       companyId={profile.company_id}
+      shellCompanyId={shellCompanyId}
       companyName={companyName}
       isSuperAdmin={isSuperAdmin}
       enabledFeatures={enabledFeatures}

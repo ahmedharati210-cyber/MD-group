@@ -14,8 +14,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getVisibleFeatures } from "@/lib/features";
+import { getVisibleFeatures, isMdManagerFeatureAllowed } from "@/lib/features";
 import { getCompanyData } from "@/lib/company";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { StatCard } from "@/components/portal/StatCard";
@@ -28,16 +29,21 @@ const statusLabels: Record<ProjectStatus, { label: string; cls: string }> = {
   completed:   { label: "تشطيب",               cls: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
   maintenance: { label: "صيانة",               cls: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" },
   survey:      { label: "رفع مساحي",            cls: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300" },
-  on_hold:     { label: "موقوف",               cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
+  on_hold:       { label: "متوقف",               cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
+  on_hold_claim: { label: "متوقف ( مطالبة)",    cls: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300" },
 };
 
 export default async function PortalDashboard() {
   const { profile } = await requireUser();
 
-  // Both calls below are cached: getCompanyData via 'use cache: private',
-  // getDashboardData via 'use cache: private' with a 5-min revalidation.
-  const companyRow = profile.company_id
-    ? await getCompanyData(profile.company_id)
+  const shellCompanyId =
+    profile.company_id ??
+    (profile.role === "md_admin" && !(profile.is_super_admin ?? false)
+      ? await getShellCompanyIdForProfile(profile)
+      : null);
+
+  const companyRow = shellCompanyId
+    ? await getCompanyData(shellCompanyId)
     : null;
   const enabledFeatures: AppFeature[] | null = companyRow?.enabled_features ?? null;
   const roleFeatures: RoleFeatures | null = companyRow?.role_features ?? null;
@@ -49,8 +55,15 @@ export default async function PortalDashboard() {
     profile.is_super_admin ?? false,
   );
 
-  const hasFeature = (f: AppFeature) =>
-    visibleFeatures === null || visibleFeatures.includes(f);
+  const hasFeature = (f: AppFeature) => {
+    if (profile.is_super_admin) {
+      return visibleFeatures === null || visibleFeatures.includes(f);
+    }
+    if (profile.role === "md_admin") {
+      return isMdManagerFeatureAllowed(f, enabledFeatures);
+    }
+    return visibleFeatures === null || visibleFeatures.includes(f);
+  };
 
   const isAdmin = profile.role === "md_admin";
   const isEmployee = profile.role === "employee";

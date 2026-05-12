@@ -3,7 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -23,7 +23,7 @@ export async function createCompanyAction(
   _prev: ActionState | undefined,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireRole("md_admin");
+  await requireSuperAdmin();
 
   const parsed = companySchema.safeParse({
     name_ar: formData.get("name_ar"),
@@ -63,7 +63,7 @@ export async function updateCompanyAction(
   _prev: ActionState | undefined,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireRole("md_admin");
+  await requireSuperAdmin();
 
   const id = formData.get("id");
   if (typeof id !== "string") return { error: "معرّف مفقود" };
@@ -104,7 +104,7 @@ export async function updateCompanyAction(
 }
 
 export async function deleteCompanyAction(formData: FormData) {
-  await requireRole("md_admin");
+  await requireSuperAdmin();
   const id = formData.get("id");
   if (typeof id !== "string") return;
 

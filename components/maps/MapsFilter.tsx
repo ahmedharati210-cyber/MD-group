@@ -13,10 +13,12 @@ export function MapsFilter({
   projects,
   currentProjectId,
   currentQuery,
+  currentCompanyId = "",
 }: {
   projects: ProjectOption[];
   currentProjectId: string;
   currentQuery: string;
+  currentCompanyId?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -26,6 +28,7 @@ export function MapsFilter({
     const merged: Record<string, string> = {
       project_id: currentProjectId,
       q: currentQuery,
+      companyId: currentCompanyId,
       ...overrides,
     };
     const next = new URLSearchParams();
@@ -48,7 +51,7 @@ export function MapsFilter({
     router.replace(pathname, { scroll: false });
   }
 
-  const hasFilter = !!currentProjectId || !!currentQuery;
+  const hasFilter = !!currentProjectId || !!currentQuery || !!currentCompanyId;
 
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4">

@@ -40,17 +40,25 @@ export default async function MailPage({
   const tab: "all" | "inbound" | "outbound" =
     direction === "inbound" || direction === "outbound" ? direction : "all";
 
+  const filterCo =
+    profile.role === "company_manager"
+      ? profile.company_id ?? undefined
+      : companyId && companyId.trim()
+        ? companyId.trim()
+        : undefined;
+
   const { mails, totalCount, total, inboundCount, outboundCount, companies } =
     await getMailData({
       tab,
-      filterCompanyId: companyId || undefined,
+      filterCompanyId: filterCo,
+      scopeCompaniesToId: undefined,
       q: q || undefined,
       page,
       pageSize: PAGE_SIZE,
     });
 
   const baseParams = new URLSearchParams();
-  if (companyId) baseParams.set("companyId", companyId);
+  if (filterCo) baseParams.set("companyId", filterCo);
   if (q) baseParams.set("q", q);
 
   const tabHref = (t: "all" | "inbound" | "outbound") => {

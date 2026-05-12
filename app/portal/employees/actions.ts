@@ -13,6 +13,9 @@ import {
   DOLCE_SIGNUP_INVITE_VALIDITY_DAYS,
 } from "@/lib/dolce-signup-invite-config";
 import { getDolceSignupCompanyId } from "@/lib/dolce-signup-company";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
+import { getCompanyData } from "@/lib/company";
+import { isMdManagerFeatureAllowed } from "@/lib/features";
 import { logAudit } from "@/lib/audit";
 
 const createSchema = z.object({
@@ -321,6 +324,28 @@ export async function generateInviteTokenAction(
     }
   }
 
+  if (current.profile.role === "md_admin") {
+    const shellId = await getShellCompanyIdForProfile(current.profile);
+    if (!shellId || shellId !== dolceCompanyId) {
+      return {
+        error:
+          "رابط تسجيل Dolce متاح عند اختيار شركة الطريق الصحيح كنشطة فقط.",
+      };
+    }
+    const shellCompany = await getCompanyData(shellId);
+    if (
+      !isMdManagerFeatureAllowed(
+        "employee_signup",
+        shellCompany?.enabled_features ?? null,
+      )
+    ) {
+      return {
+        error:
+          "طلبات التوظيف غير مفعّلة لشركتك النشطة. يفعّلها Super Admin من لوحة الإدارة.",
+      };
+    }
+  }
+
   const company_id = dolceCompanyId;
 
   const token = crypto.randomUUID();
@@ -413,6 +438,28 @@ export async function deleteSignupInviteAction(
       return {
         error:
           "روابط تسجيل Dolce متاحة لمديري شركة الطريق الصحيح فقط.",
+      };
+    }
+  }
+
+  if (current.profile.role === "md_admin") {
+    const shellId = await getShellCompanyIdForProfile(current.profile);
+    if (!shellId || shellId !== dolceCompanyId) {
+      return {
+        error:
+          "روابط تسجيل Dolce متاحة عند اختيار شركة الطريق الصحيح كنشطة فقط.",
+      };
+    }
+    const shellCompany = await getCompanyData(shellId);
+    if (
+      !isMdManagerFeatureAllowed(
+        "employee_signup",
+        shellCompany?.enabled_features ?? null,
+      )
+    ) {
+      return {
+        error:
+          "طلبات التوظيف غير مفعّلة لشركتك النشطة. يفعّلها Super Admin من لوحة الإدارة.",
       };
     }
   }

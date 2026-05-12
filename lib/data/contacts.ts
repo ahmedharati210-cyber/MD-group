@@ -18,6 +18,8 @@ export type ContactsData = {
 export async function getContactsData(params: {
   role: string;
   companyId: string | null;
+  /** Active shell company for MD Group managers (trade filter / construction flag). */
+  shellCompanyId?: string | null;
   q: string | undefined;
   filterCompanyId: string | undefined;
   trade: string | undefined;
@@ -27,9 +29,14 @@ export async function getContactsData(params: {
   const supabase = await createSupabaseServerClient();
   const offset = (params.page - 1) * params.pageSize;
 
+  const tradeContextCompanyId =
+    params.role === "md_admin"
+      ? (params.shellCompanyId ?? params.companyId)
+      : params.companyId;
+
   const showTradeFilter =
     params.role === "md_admin" ||
-    (await isConstructionCompany(supabase, params.companyId));
+    (await isConstructionCompany(supabase, tradeContextCompanyId));
 
   let query = supabase
     .from("contacts")

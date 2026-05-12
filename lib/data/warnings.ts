@@ -22,10 +22,13 @@ export type WarningsData = {
  * Warnings list with related engineers/companies for the send-warning form.
  * Short TTL (30s stale) so new warnings are reflected quickly.
  * Revalidated by warnings/actions.ts.
+ *
+ * `filterCompanyId`: when set, list + engineer picker are scoped to that company.
+ * Super admins and MD Group managers may pass null to list warnings across all companies.
  */
 export async function getWarningsData(params: {
   profileId: string;
-  companyId: string | null;
+  filterCompanyId: string | null;
   role: string;
   isSuperAdmin: boolean;
   page: number;
@@ -35,7 +38,7 @@ export async function getWarningsData(params: {
   const isManager = params.role !== "employee";
   const offset = (params.page - 1) * params.pageSize;
 
-  const { data: rawWarnings, count } = await supabase
+  let warningsQuery = supabase
     .from("warnings")
     .select(
       "id, message, is_read, created_at, target:target_profile_id(full_name), sender:sender_id(full_name)",
@@ -43,6 +46,12 @@ export async function getWarningsData(params: {
     )
     .order("created_at", { ascending: false })
     .range(offset, offset + params.pageSize - 1);
+
+  if (params.filterCompanyId && isManager) {
+    warningsQuery = warningsQuery.eq("company_id", params.filterCompanyId);
+  }
+
+  const { data: rawWarnings, count } = await warningsQuery;
 
   let engineers: { id: string; full_name: string }[] | null = null;
   let companies: { id: string; name_ar: string }[] | null = null;
@@ -55,19 +64,29 @@ export async function getWarningsData(params: {
       .eq("is_active", true)
       .order("full_name");
 
-    if (params.role === "company_manager") {
-      engQuery = engQuery.eq("company_id", params.companyId ?? "");
+    if (params.filterCompanyId) {
+      engQuery = engQuery.eq("company_id", params.filterCompanyId);
     }
 
-    const [{ data: engData }, companyResult] = await Promise.all([
-      engQuery,
-      params.isSuperAdmin
-        ? supabase.from("companies").select("id, name_ar").order("name_ar")
-        : Promise.resolve({ data: null }),
-    ]);
-
+    const { data: engData } = await engQuery;
     engineers = engData;
-    companies = companyResult.data as typeof companies;
+
+    if (params.isSuperAdmin || params.role === "md_admin") {
+      const { data } = await supabase
+        .from("companies")
+        .select("id, name_ar")
+        .order("name_ar");
+      companies = data as typeof companies;
+    } else if (params.filterCompanyId) {
+      const { data } = await supabase
+        .from("companies")
+        .select("id, name_ar")
+        .eq("id", params.filterCompanyId)
+        .maybeSingle();
+      companies = data ? [data] : [];
+    } else {
+      companies = [];
+    }
   }
 
   return {

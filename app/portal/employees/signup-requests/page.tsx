@@ -8,6 +8,7 @@ import {
   getDolceSignupCompanyDisplay,
   getDolceSignupCompanyId,
 } from "@/lib/dolce-signup-company";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { ImageIcon, UserPlus } from "lucide-react";
@@ -39,9 +40,11 @@ export default async function SignupRequestsPage() {
     getDolceSignupCompanyDisplay(),
   ]);
 
+  const shellId = await getShellCompanyIdForProfile(current.profile);
+
   if (
     !dolceId ||
-    !canAccessDolceEmployeeSignup(current.profile, dolceId)
+    !(await canAccessDolceEmployeeSignup(current.profile, dolceId, shellId))
   ) {
     redirect("/portal");
   }

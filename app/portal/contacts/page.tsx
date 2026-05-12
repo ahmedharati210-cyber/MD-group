@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
 import { getContactsData } from "@/lib/data/contacts";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
@@ -54,10 +55,12 @@ export default async function ContactsPage({ searchParams }: { searchParams: Sea
   const canEdit = profile.role !== "employee";
   const { q, companyId, trade, page: pageStr } = await searchParams;
   const page = Math.max(1, parseInt(pageStr ?? "1", 10));
+  const shellId = await getShellCompanyIdForProfile(profile);
 
   const { contacts, totalCount, companies, showTradeFilter } = await getContactsData({
     role: profile.role,
     companyId: profile.company_id,
+    shellCompanyId: shellId,
     q,
     filterCompanyId: companyId,
     trade,

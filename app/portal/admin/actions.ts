@@ -27,9 +27,9 @@ export async function setCompanyFeaturesAction(
     (f) => formData.get(`feature_${f}`) === "on",
   ) as AppFeature[];
 
-  // null means "all enabled" — use null when every feature is checked
+  /** Always persist an array so MD Group managers can rely on explicit toggles; `null` is legacy only. */
   const enabled_features: AppFeature[] | null =
-    selected.length === ALL_FEATURES.length ? null : selected;
+    selected.length === 0 ? [] : selected;
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase

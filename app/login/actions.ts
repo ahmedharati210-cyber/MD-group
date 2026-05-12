@@ -2,8 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { PORTAL_ACTIVE_COMPANY_COOKIE } from "@/lib/portal-active-company";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "البريد الإلكتروني غير صالح" }),
@@ -46,6 +48,13 @@ export async function loginAction(
 
 export async function logoutAction() {
   const supabase = await createSupabaseServerClient();
+  (await cookies()).set(PORTAL_ACTIVE_COMPANY_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/portal",
+    maxAge: 0,
+  });
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/login");

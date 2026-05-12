@@ -13,10 +13,13 @@ export function ClaimsFilter({
   projects = [],
   currentQuery,
   currentProjectId,
+  currentCompanyId = "",
 }: {
   projects?: ProjectOption[];
   currentQuery: string;
   currentProjectId: string;
+  /** Preserved for MD Group managers / super admin company-scoped views */
+  currentCompanyId?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -26,10 +29,13 @@ export function ClaimsFilter({
     const merged: Record<string, string> = {
       q: currentQuery,
       project_id: currentProjectId,
+      companyId: currentCompanyId,
       ...overrides,
     };
     const next = new URLSearchParams();
-    Object.entries(merged).forEach(([k, v]) => { if (v) next.set(k, v); });
+    Object.entries(merged).forEach(([k, v]) => {
+      if (v) next.set(k, v);
+    });
     return next.toString();
   }
 

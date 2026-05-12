@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireRole, requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -14,19 +15,6 @@ function revalidateTimeline(projectId?: string) {
   if (projectId) revalidatePath(`/portal/timeline/${projectId}`);
   revalidateTag("projects", "default");
   revalidateTag("dashboard", "default");
-}
-
-/** Resolves the company that owns timeline features (Emaar Al Youm). */
-async function resolveCompanyId(profile: { role: string; company_id: string | null }): Promise<string | null> {
-  if (profile.company_id) return profile.company_id;
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from("companies")
-    .select("id")
-    .contains("enabled_features", ["timeline"])
-    .limit(1)
-    .single();
-  return data?.id ?? null;
 }
 
 async function projectNameById(
@@ -61,7 +49,17 @@ const projectSchema = z.object({
   description: z.string().optional().nullable(),
   start_date: z.string().optional().nullable(),
   end_date: z.string().optional().nullable(),
-  status: z.enum(["planning", "active", "completed", "maintenance", "survey", "on_hold"]).default("planning"),
+  status: z
+    .enum([
+      "planning",
+      "active",
+      "completed",
+      "maintenance",
+      "survey",
+      "on_hold",
+      "on_hold_claim",
+    ])
+    .default("planning"),
   location_notes: z.string().optional().nullable(),
   manager_name: z.string().optional().nullable(),
   manager_phone: z.string().optional().nullable(),
@@ -86,7 +84,7 @@ export async function createProjectAction(
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
 
-  const company_id = await resolveCompanyId(profile);
+  const company_id = await getShellCompanyIdForProfile(profile);
   if (!company_id) return { error: "لم يتم العثور على الشركة" };
 
   const supabase = await createSupabaseServerClient();
@@ -110,7 +108,15 @@ export async function updateProjectStatusAction(
 ): Promise<ActionState> {
   const { userId } = await requireRole(["md_admin", "company_manager"]);
   const parsed = z
-    .enum(["planning", "active", "completed", "maintenance", "survey", "on_hold"])
+    .enum([
+      "planning",
+      "active",
+      "completed",
+      "maintenance",
+      "survey",
+      "on_hold",
+      "on_hold_claim",
+    ])
     .safeParse(status);
   if (!parsed.success) return { error: "حالة غير صالحة" };
 

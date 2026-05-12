@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus, FolderKanban } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
@@ -11,7 +12,7 @@ export const metadata = { title: " المشاريع" };
 
 const PAGE_SIZE = 30;
 
-type SearchParams = Promise<{ page?: string }>;
+type SearchParams = Promise<{ page?: string; companyId?: string }>;
 
 export default async function TimelinePage({ searchParams }: { searchParams: SearchParams }) {
   const { profile } = await requireFeature("timeline");
@@ -20,23 +21,41 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
+  const scopeId = await getShellCompanyIdForProfile(profile);
+  const companyIdParam =
+    typeof sp.companyId === "string" && sp.companyId.trim()
+      ? sp.companyId.trim()
+      : null;
+
+  const projectCompanyId =
+    profile.role === "company_manager"
+      ? scopeId
+      : profile.role === "md_admin" || (profile.is_super_admin ?? false)
+        ? companyIdParam
+        : scopeId;
+
   const supabase = await createSupabaseServerClient();
   const canManage = profile.role !== "employee";
 
-  const { data: rawProjects, count: totalCount } = await supabase
+  let projectQuery = supabase
     .from("projects")
     .select(
       `
       id, name, description, start_date, end_date, status, location_notes,
       default_engineer:default_engineer_id(full_name),
       categories:project_categories(
-        tasks:project_tasks(is_completed, due_date)
+        id, name, sort_order,
+        tasks:project_tasks(id, title, is_completed, due_date, sort_order)
       )
     `,
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
     .range(from, to);
+
+  if (projectCompanyId) projectQuery = projectQuery.eq("company_id", projectCompanyId);
+
+  const { data: rawProjects, count: totalCount } = await projectQuery;
 
   const projects = (rawProjects ?? []) as unknown as ProjectCardData[];
 
@@ -73,6 +92,9 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
               totalCount={totalCount ?? 0}
               pageSize={PAGE_SIZE}
               baseUrl="/portal/timeline"
+              extraParams={{
+                ...(companyIdParam ? { companyId: companyIdParam } : {}),
+              }}
             />
           )}
         </>

@@ -5,7 +5,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
-import { getDolceSignupCompanyId } from "@/lib/dolce-signup-company";
+import {
+  canAccessDolceEmployeeSignup,
+  getDolceSignupCompanyId,
+} from "@/lib/dolce-signup-company";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import type { BloodType, Gender } from "@/types/db";
 
 const BLOOD_VALUES: readonly BloodType[] = [
@@ -88,6 +92,20 @@ export async function approveSignupRequestAction(
     row.company_id !== current.profile.company_id
   ) {
     return { error: "صلاحيات غير كافية." };
+  }
+
+  if (current.profile.role === "md_admin") {
+    const shellId = await getShellCompanyIdForProfile(current.profile);
+    if (
+      !dolceCompanyIdApprove ||
+      !(await canAccessDolceEmployeeSignup(
+        current.profile,
+        dolceCompanyIdApprove,
+        shellId,
+      ))
+    ) {
+      return { error: "صلاحيات غير كافية." };
+    }
   }
 
   const full_name = row.full_name?.trim();
@@ -233,6 +251,20 @@ export async function rejectSignupRequestAction(
     row.company_id !== current.profile.company_id
   ) {
     return { error: "صلاحيات غير كافية." };
+  }
+
+  if (current.profile.role === "md_admin") {
+    const shellId = await getShellCompanyIdForProfile(current.profile);
+    if (
+      !dolceCompanyIdReject ||
+      !(await canAccessDolceEmployeeSignup(
+        current.profile,
+        dolceCompanyIdReject,
+        shellId,
+      ))
+    ) {
+      return { error: "صلاحيات غير كافية." };
+    }
   }
 
   if (row.passport_image_path) {

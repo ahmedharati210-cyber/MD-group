@@ -49,7 +49,44 @@ export const featureLabels: Record<AppFeature, string> = {
   claims: "المطالبات",
   maps: "الخرائط",
   warnings: "الإنذارات",
+  employee_signup: "طلبات التوظيف (Dolce)",
 };
+
+/**
+ * Modules always available to MD Group managers (`md_admin`) once an active
+ * company shell is set — not driven by `enabled_features` toggles.
+ */
+export const MD_MANAGER_CORE_FEATURES: AppFeature[] = [
+  "warnings",
+  "papers",
+  "mail",
+  "contacts",
+];
+
+/**
+ * Modules Super Admin enables per company; MD Group managers only see these
+ * when listed in `companies.enabled_features`. `null`/empty enabled_features
+ * means no optional modules for managers (strict), not "all on".
+ */
+export const MD_MANAGER_PANEL_FEATURES: AppFeature[] = [
+  "attendance",
+  "timeline",
+  "reports",
+  "requests",
+  "claims",
+  "maps",
+  "employee_signup",
+];
+
+export function isMdManagerFeatureAllowed(
+  feature: AppFeature,
+  enabledFeatures: AppFeature[] | null,
+): boolean {
+  if (MD_MANAGER_CORE_FEATURES.includes(feature)) return true;
+  if (!MD_MANAGER_PANEL_FEATURES.includes(feature)) return false;
+  if (enabledFeatures == null || enabledFeatures.length === 0) return false;
+  return enabledFeatures.includes(feature);
+}
 
 /**
  * Returns the effective set of features visible to a user given:
@@ -57,7 +94,9 @@ export const featureLabels: Record<AppFeature, string> = {
  * - Company-wide enabled_features
  * - Per-role role_features overrides
  *
- * md_admin always gets null (unrestricted).
+ * md_admin (MD Group managers): core modules always on; optional modules only
+ *   if listed in `enabled_features`. `null`/empty = no optional modules.
+ *   `role_features` does not apply. Super admins still pass isSuperAdmin=true → unrestricted.
  * For company_manager/employee:
  *   - If role_features has an entry for the role, intersect it with enabled_features.
  *   - Otherwise fall back to enabled_features.
@@ -68,7 +107,12 @@ export function getVisibleFeatures(
   roleFeatures: RoleFeatures | null,
   isSuperAdmin = false,
 ): AppFeature[] | null {
-  if (isSuperAdmin || role === "md_admin") return null;
+  if (isSuperAdmin) return null;
+
+  if (role === "md_admin") {
+    if (enabledFeatures == null || enabledFeatures.length === 0) return [];
+    return enabledFeatures.filter((f) => MD_MANAGER_PANEL_FEATURES.includes(f));
+  }
 
   const roleOverride =
     roleFeatures?.[role as "company_manager" | "employee"];

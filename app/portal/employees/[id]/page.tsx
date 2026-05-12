@@ -290,7 +290,7 @@ export default async function EmployeeProfilePage({
 // ── Shared UI helpers ────────────────────────────────────────
 
 function roleLabel(role: string) {
-  if (role === "md_admin") return "مدير مجموعة";
+  if (role === "md_admin") return "مدير MD Group";
   if (role === "company_manager") return "مدير شركة";
   return "موظف";
 }

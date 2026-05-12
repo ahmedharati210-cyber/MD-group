@@ -6,21 +6,7 @@ import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
-
-/** For md_admin (company_id = null), look up the construction company. */
-async function resolveCompanyId(
-  profile: { company_id: string | null },
-): Promise<string | null> {
-  if (profile.company_id) return profile.company_id;
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from("companies")
-    .select("id")
-    .contains("enabled_features", ["timeline"])
-    .limit(1)
-    .single();
-  return data?.id ?? null;
-}
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -46,7 +32,7 @@ export async function createReportAction(
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
 
-  const company_id = await resolveCompanyId(profile);
+  const company_id = await getShellCompanyIdForProfile(profile);
   if (!company_id) return { error: "لم يتم العثور على الشركة" };
 
   const supabase = await createSupabaseServerClient();

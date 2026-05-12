@@ -55,10 +55,13 @@ export default async function PapersPage({
 
   const canUpload = profile.role !== "employee";
 
+  const effectiveCompanyId =
+    companyId && companyId.length > 0 ? companyId : undefined;
+
   const { docs, companies } = await getPapersData({
     q: q || undefined,
     category: category || undefined,
-    companyId: companyId || undefined,
+    companyId: effectiveCompanyId || undefined,
   });
 
   const selectClasses =
@@ -102,7 +105,7 @@ export default async function PapersPage({
           <option value="personal">شخصي</option>
           <option value="other">أخرى</option>
         </select>
-        {profile.role === "md_admin" ? (
+        {(profile.role === "md_admin" || profile.is_super_admin) ? (
           <select
             name="companyId"
             defaultValue={companyId ?? ""}

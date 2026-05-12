@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -43,20 +44,9 @@ export async function createClaimAction(
     file_url = path;
   }
 
-  const company_id = profile.company_id;
-  if (!company_id) {
-    // md_admin — find the claims-enabled company
-    const supabase = await createSupabaseServerClient();
-    const { data } = await supabase.from("companies").select("id").contains("enabled_features", ["claims"]).limit(1).single();
-    if (!data?.id) return { error: "لم يتم العثور على الشركة" };
-  }
-
   const supabase = await createSupabaseServerClient();
-  const resolvedCompanyId = profile.company_id ?? (await (async () => {
-    const { data } = await supabase.from("companies").select("id").contains("enabled_features", ["claims"]).limit(1).single();
-    return data?.id;
-  })());
 
+  const resolvedCompanyId = await getShellCompanyIdForProfile(profile);
   if (!resolvedCompanyId) return { error: "لم يتم العثور على الشركة" };
 
   const { data: newClaim, error } = await supabase

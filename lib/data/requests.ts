@@ -23,6 +23,7 @@ export async function getRequestsData(params: {
   isManager: boolean;
   filterStatus?: string;
   filterType?: string;
+  filterCompanyId?: string;
 }): Promise<RequestRow[]> {
   const supabase = await createSupabaseServerClient();
 
@@ -34,6 +35,9 @@ export async function getRequestsData(params: {
     .order("created_at", { ascending: false });
 
   if (!params.isManager) query = query.eq("requester_id", params.profileId);
+  if (params.isManager && params.filterCompanyId) {
+    query = query.eq("company_id", params.filterCompanyId);
+  }
   if (params.filterStatus) query = query.eq("status", params.filterStatus);
   if (params.filterType) query = query.eq("request_type", params.filterType);
 

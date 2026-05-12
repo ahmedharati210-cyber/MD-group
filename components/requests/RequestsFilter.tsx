@@ -10,10 +10,12 @@ export function RequestsFilter({
   isManager,
   currentStatus,
   currentType,
+  currentCompanyId = "",
 }: {
   isManager: boolean;
   currentStatus: string;
   currentType: string;
+  currentCompanyId?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -23,6 +25,7 @@ export function RequestsFilter({
     const merged: Record<string, string> = {
       status: currentStatus,
       type: currentType,
+      companyId: currentCompanyId,
       [key]: value,
     };
     Object.entries(merged).forEach(([k, v]) => { if (v) next.set(k, v); });
@@ -33,7 +36,7 @@ export function RequestsFilter({
     router.replace(pathname, { scroll: false });
   }
 
-  const hasFilter = !!currentStatus || !!currentType;
+  const hasFilter = !!currentStatus || !!currentType || !!currentCompanyId;
 
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4">

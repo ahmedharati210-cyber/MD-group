@@ -4,8 +4,12 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getVisibleFeatures } from "@/lib/features";
+import {
+  getVisibleFeatures,
+  isMdManagerFeatureAllowed,
+} from "@/lib/features";
 import { getCompanyData } from "@/lib/company";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import type { AppFeature, Profile } from "@/types/db";
 
 // Fields needed by auth guards + portal shell + settings page.
@@ -76,7 +80,7 @@ export async function requireSuperAdmin() {
  *  - optional `roles` list is provided and the user's role is not in it, OR
  *  - the feature is disabled for the user's company (respects role_features overrides).
  *
- * Super admins and md_admin always bypass feature checks.
+ * Super admins bypass feature checks. MD Group managers (`md_admin`) use the active shell company.
  */
 export async function requireFeature(
   feature: AppFeature,
@@ -88,7 +92,22 @@ export async function requireFeature(
     redirect("/portal");
   }
 
-  if (current.profile.is_super_admin || current.profile.role === "md_admin") {
+  if (current.profile.is_super_admin) {
+    return current;
+  }
+
+  if (current.profile.role === "md_admin") {
+    const shellId = await getShellCompanyIdForProfile(current.profile);
+    if (!shellId) {
+      redirect("/portal/companies?needCompany=1");
+    }
+    const companyData = await getCompanyData(shellId);
+    if (
+      !companyData ||
+      !isMdManagerFeatureAllowed(feature, companyData.enabled_features ?? null)
+    ) {
+      redirect("/portal");
+    }
     return current;
   }
 

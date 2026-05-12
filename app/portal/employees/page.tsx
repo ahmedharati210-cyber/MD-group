@@ -7,6 +7,7 @@ import {
   canAccessDolceEmployeeSignup,
   getDolceSignupCompanyDisplay,
 } from "@/lib/dolce-signup-company";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
@@ -48,9 +49,11 @@ export default async function EmployeesPage({
       getDolceSignupCompanyDisplay(),
     ]);
 
+  const shellId = await getShellCompanyIdForProfile(current.profile);
+
   const showDolceInvite =
     dolceCo &&
-    canAccessDolceEmployeeSignup(current.profile, dolceCo.id);
+    (await canAccessDolceEmployeeSignup(current.profile, dolceCo.id, shellId));
 
   return (
     <div>

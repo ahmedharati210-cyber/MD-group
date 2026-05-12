@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { Plus, Map, MapPin, ExternalLink, Pencil } from "lucide-react";
+import { Plus, Map, MapPin, ExternalLink, Pencil, Building2 } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
 import { getMapsData } from "@/lib/data/maps";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { DeleteMapButton } from "@/components/maps/DeleteMapButton";
@@ -25,15 +27,42 @@ export default async function MapsPage({
 }) {
   const { profile } = await requireFeature("maps");
   const canManage = profile.role !== "employee";
+  const scopeId = await getShellCompanyIdForProfile(profile);
 
   const sp = await searchParams;
   const filterProjectId = typeof sp.project_id === "string" ? sp.project_id : "";
   const filterQuery = typeof sp.q === "string" ? sp.q.trim() : "";
+  const companyIdParam =
+    typeof sp.companyId === "string" && sp.companyId.trim()
+      ? sp.companyId.trim()
+      : "";
+
+  const filterCompanyId =
+    profile.role === "company_manager"
+      ? scopeId ?? undefined
+      : companyIdParam || undefined;
 
   const { maps, projects } = await getMapsData({
     filterProjectId: filterProjectId || undefined,
     filterQuery: filterQuery || undefined,
+    filterCompanyId,
   });
+
+  let companiesForFilter: { id: string; name_ar: string }[] = [];
+  if (
+    canManage &&
+    (profile.role === "md_admin" || (profile.is_super_admin ?? false))
+  ) {
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase
+      .from("companies")
+      .select("id, name_ar")
+      .order("name_ar");
+    companiesForFilter = (data ?? []) as { id: string; name_ar: string }[];
+  }
+
+  const selectClasses =
+    "px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none";
 
   return (
     <div>
@@ -50,7 +79,46 @@ export default async function MapsPage({
         }
       />
 
-      <MapsFilter projects={projects} currentProjectId={filterProjectId} currentQuery={filterQuery} />
+      {companiesForFilter.length > 0 ? (
+        <form
+          method="get"
+          className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 mb-4"
+        >
+          {filterProjectId ? (
+            <input type="hidden" name="project_id" value={filterProjectId} />
+          ) : null}
+          {filterQuery ? <input type="hidden" name="q" value={filterQuery} /> : null}
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <Building2 className="w-4 h-4" />
+            <span className="font-medium">الشركة</span>
+          </div>
+          <select
+            name="companyId"
+            defaultValue={companyIdParam}
+            className={`flex-1 min-w-[12rem] ${selectClasses}`}
+          >
+            <option value="">كل الشركات</option>
+            {companiesForFilter.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name_ar}
+              </option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            className="px-5 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-semibold text-sm hover:bg-gray-800 dark:hover:bg-white"
+          >
+            تصفية
+          </button>
+        </form>
+      ) : null}
+
+      <MapsFilter
+        projects={projects}
+        currentProjectId={filterProjectId}
+        currentQuery={filterQuery}
+        currentCompanyId={companyIdParam}
+      />
 
       {maps.length === 0 ? (
         <EmptyState icon={Map} title="لا توجد خرائط" description={filterProjectId || filterQuery ? "لا توجد خرائط تطابق الفلتر." : canManage ? "أضف رابط خريطة." : "لم تُضف خرائط بعد."} />

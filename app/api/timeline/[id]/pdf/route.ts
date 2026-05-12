@@ -9,7 +9,8 @@ const statusLabels: Record<ProjectStatus, string> = {
   completed:   "تشطيب",
   maintenance: "صيانة",
   survey:      "رفع مساحي",
-  on_hold:     "موقوف",
+  on_hold:       "متوقف",
+  on_hold_claim: "متوقف ( مطالبة)",
 };
 
 type TaskRow = {

@@ -28,16 +28,15 @@ export async function getBadgeCounts(params: {
   isSuperAdmin: boolean;
   /** Dolce employee signup (slug `company-two` / الطريق الصحيح); signup badges scoped to this company */
   dolceSignupCompanyId: string | null;
+  /** From layout: `canAccessDolceEmployeeSignup` (respects employee_signup for md_admin). */
+  includeDolceSignupBadges: boolean;
 }): Promise<BadgeCounts> {
   const supabase = await createSupabaseServerClient();
 
   const canSeeDolceSignupBadge =
     !!params.dolceSignupCompanyId &&
     !params.isEmployee &&
-    (params.isSuperAdmin ||
-      params.role === "md_admin" ||
-      (params.role === "company_manager" &&
-        params.companyId === params.dolceSignupCompanyId));
+    params.includeDolceSignupBadges;
 
   const pendingSignupPromise = (async (): Promise<number> => {
     if (!canSeeDolceSignupBadge || !params.dolceSignupCompanyId) return 0;
@@ -59,10 +58,19 @@ export async function getBadgeCounts(params: {
             .select("id", { count: "exact", head: true })
             .eq("status", "pending")
             .eq("requester_id", params.userId)
-        : supabase
-            .from("engineer_requests")
-            .select("id", { count: "exact", head: true })
-            .eq("status", "pending"),
+        : (async () => {
+            if (params.role === "md_admin" && !params.companyId) {
+              return { count: 0 };
+            }
+            let q = supabase
+              .from("engineer_requests")
+              .select("id", { count: "exact", head: true })
+              .eq("status", "pending");
+            if (!params.isSuperAdmin && params.companyId) {
+              q = q.eq("company_id", params.companyId);
+            }
+            return await q;
+          })(),
       params.isEmployee
         ? supabase
             .from("warnings")
@@ -71,7 +79,18 @@ export async function getBadgeCounts(params: {
             .or(
               `target_profile_id.eq.${params.userId},target_profile_id.is.null`,
             )
-        : Promise.resolve({ count: 0 }),
+        : params.isSuperAdmin
+          ? supabase
+              .from("warnings")
+              .select("id", { count: "exact", head: true })
+              .eq("is_read", false)
+          : params.companyId
+            ? supabase
+                .from("warnings")
+                .select("id", { count: "exact", head: true })
+                .eq("is_read", false)
+                .eq("company_id", params.companyId)
+            : Promise.resolve({ count: 0 }),
       pendingSignupPromise,
       supabase.rpc("count_documents_expiring_soon"),
     ]);

@@ -33,9 +33,39 @@ export async function getReportsData(params: {
   authorId?: string;
   from?: string;
   to?: string;
+  /** Scope manager lists to one company (MD Group manager / company manager). */
+  filterCompanyId?: string;
 }): Promise<ReportsData> {
   const supabase = await createSupabaseServerClient();
   const offset = (params.page - 1) * params.pageSize;
+
+  let projectIdsInCompany: string[] | null = null;
+  if (params.filterCompanyId) {
+    const { data: pidRows } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("company_id", params.filterCompanyId);
+    projectIdsInCompany = (pidRows ?? []).map((r) => r.id);
+    if (projectIdsInCompany.length === 0) {
+      let engineers: { id: string; full_name: string }[] | null = null;
+      if (params.isManager) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .eq("role", "employee")
+          .eq("is_active", true)
+          .eq("company_id", params.filterCompanyId!)
+          .order("full_name");
+        engineers = data as { id: string; full_name: string }[] | null;
+      }
+      return {
+        reports: [],
+        totalCount: 0,
+        projects: [],
+        engineers,
+      };
+    }
+  }
 
   let query = supabase
     .from("engineer_reports")
@@ -52,20 +82,31 @@ export async function getReportsData(params: {
   if (params.authorId) query = query.eq("author_id", params.authorId);
   if (params.from) query = query.gte("report_date", params.from);
   if (params.to) query = query.lte("report_date", params.to);
+  if (projectIdsInCompany) query = query.in("project_id", projectIdsInCompany);
 
-  const [{ data: rawReports, count }, { data: projects }, { data: engineers }] =
-    await Promise.all([
-      query,
-      supabase.from("projects").select("id, name").order("name"),
-      params.isManager
-        ? supabase
+  let projectsQuery = supabase.from("projects").select("id, name").order("name");
+  if (params.filterCompanyId) {
+    projectsQuery = projectsQuery.eq("company_id", params.filterCompanyId);
+  }
+
+  const engineersQuery =
+    params.isManager
+      ? (() => {
+          let q = supabase
             .from("profiles")
             .select("id, full_name")
             .eq("role", "employee")
             .eq("is_active", true)
-            .order("full_name")
-        : Promise.resolve({ data: null }),
-    ]);
+            .order("full_name");
+          if (params.filterCompanyId) {
+            q = q.eq("company_id", params.filterCompanyId);
+          }
+          return q;
+        })()
+      : Promise.resolve({ data: null });
+
+  const [{ data: rawReports, count }, { data: projects }, { data: engineers }] =
+    await Promise.all([query, projectsQuery, engineersQuery]);
 
   return {
     reports: (rawReports ?? []) as unknown as ReportRow[],

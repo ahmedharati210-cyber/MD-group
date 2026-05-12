@@ -24,7 +24,7 @@ const inputCls =
   "w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none";
 
 const roleLabels: Record<UserRole, string> = {
-  md_admin: "مدير عام (MD Admin)",
+  md_admin: "مدير MD Group",
   company_manager: "مدير شركة",
   employee: "موظف",
 };
@@ -135,7 +135,7 @@ export function UserEditForm({
             <select name="role" defaultValue={profile.role} className={inputCls}>
               <option value="employee">موظف</option>
               <option value="company_manager">مدير شركة</option>
-              <option value="md_admin">مدير عام (MD Admin)</option>
+              <option value="md_admin">مدير MD Group</option>
             </select>
           </div>
 

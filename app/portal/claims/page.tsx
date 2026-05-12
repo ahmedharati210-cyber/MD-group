@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus, Receipt, CalendarDays, FileText, MapPin } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
 import { getClaimsData } from "@/lib/data/claims";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { DeleteClaimButton } from "@/components/claims/DeleteClaimButton";
@@ -25,18 +26,29 @@ export default async function ClaimsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireFeature("claims", ["md_admin", "company_manager"]);
+  const { profile } = await requireFeature("claims", ["md_admin", "company_manager"]);
+  const scopeId = await getShellCompanyIdForProfile(profile);
 
   const sp = await searchParams;
   const filterQuery = typeof sp.q === "string" ? sp.q.trim() : "";
   const filterProjectId = typeof sp.project_id === "string" ? sp.project_id : "";
+  const companyIdParam =
+    typeof sp.companyId === "string" && sp.companyId.trim()
+      ? sp.companyId.trim()
+      : "";
+
+  const filterCompanyId =
+    profile.role === "company_manager"
+      ? scopeId ?? undefined
+      : companyIdParam || undefined;
 
   const { claims, projects } = await getClaimsData({
     filterQuery: filterQuery || undefined,
     filterProjectId: filterProjectId || undefined,
+    companyId: filterCompanyId,
   });
 
-  const hasFilter = !!filterQuery || !!filterProjectId;
+  const hasFilter = !!filterQuery || !!filterProjectId || !!companyIdParam;
 
   return (
     <div>
@@ -51,7 +63,12 @@ export default async function ClaimsPage({
         }
       />
 
-      <ClaimsFilter projects={projects} currentQuery={filterQuery} currentProjectId={filterProjectId} />
+      <ClaimsFilter
+        projects={projects}
+        currentQuery={filterQuery}
+        currentProjectId={filterProjectId}
+        currentCompanyId={companyIdParam}
+      />
 
       {claims.length === 0 ? (
         <EmptyState icon={Receipt} title="لا توجد مطالبات" description={hasFilter ? "لا توجد مطالبات تطابق الفلتر." : "لم يتم إضافة مطالبات بعد."} />

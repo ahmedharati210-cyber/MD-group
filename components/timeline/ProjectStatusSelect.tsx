@@ -6,21 +6,23 @@ import { updateProjectStatusAction } from "@/app/portal/timeline/actions";
 import type { ProjectStatus } from "@/types/db";
 
 const STATUS_OPTIONS: { value: ProjectStatus; label: string }[] = [
-  { value: "planning",    label: "تصميم" },
-  { value: "active",      label: "انشاء (اعمال الهيكل)" },
-  { value: "completed",   label: "تشطيب" },
-  { value: "maintenance", label: "صيانة" },
-  { value: "survey",      label: "رفع مساحي" },
-  { value: "on_hold",     label: "موقوف" },
+  { value: "planning",       label: "تصميم" },
+  { value: "active",         label: "انشاء (اعمال الهيكل)" },
+  { value: "completed",      label: "تشطيب" },
+  { value: "maintenance",    label: "صيانة" },
+  { value: "survey",         label: "رفع مساحي" },
+  { value: "on_hold",        label: "متوقف" },
+  { value: "on_hold_claim",  label: "متوقف ( مطالبة)" },
 ];
 
 const statusCls: Record<ProjectStatus, string> = {
-  planning:    "bg-blue-100   text-blue-700   border-blue-200   dark:bg-blue-900/30   dark:text-blue-300   dark:border-blue-800",
-  active:      "bg-green-100  text-green-700  border-green-200  dark:bg-green-900/30  dark:text-green-300  dark:border-green-800",
-  completed:   "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800",
-  maintenance: "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800",
-  survey:      "bg-cyan-100   text-cyan-700   border-cyan-200   dark:bg-cyan-900/30   dark:text-cyan-300   dark:border-cyan-800",
-  on_hold:     "bg-amber-100  text-amber-700  border-amber-200  dark:bg-amber-900/30  dark:text-amber-300  dark:border-amber-800",
+  planning:      "bg-blue-100   text-blue-700   border-blue-200   dark:bg-blue-900/30   dark:text-blue-300   dark:border-blue-800",
+  active:        "bg-green-100  text-green-700  border-green-200  dark:bg-green-900/30  dark:text-green-300  dark:border-green-800",
+  completed:     "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800",
+  maintenance:   "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800",
+  survey:        "bg-cyan-100   text-cyan-700   border-cyan-200   dark:bg-cyan-900/30   dark:text-cyan-300   dark:border-cyan-800",
+  on_hold:       "bg-amber-100  text-amber-700  border-amber-200  dark:bg-amber-900/30  dark:text-amber-300  dark:border-amber-800",
+  on_hold_claim: "bg-rose-100   text-rose-800   border-rose-200   dark:bg-rose-900/30   dark:text-rose-300   dark:border-rose-800",
 };
 
 interface Props {

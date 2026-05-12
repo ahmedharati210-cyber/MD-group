@@ -25,6 +25,8 @@ export type ClaimsData = {
 export async function getClaimsData(params: {
   filterQuery?: string;
   filterProjectId?: string;
+  /** When set, restrict claims and project list to this company. */
+  companyId?: string;
 }): Promise<ClaimsData> {
   const supabase = await createSupabaseServerClient();
 
@@ -37,10 +39,14 @@ export async function getClaimsData(params: {
 
   if (params.filterQuery) dbQuery = dbQuery.ilike("title", `%${params.filterQuery}%`);
   if (params.filterProjectId) dbQuery = dbQuery.eq("project_id", params.filterProjectId);
+  if (params.companyId) dbQuery = dbQuery.eq("company_id", params.companyId);
+
+  let projectsQuery = supabase.from("projects").select("id, name").order("name");
+  if (params.companyId) projectsQuery = projectsQuery.eq("company_id", params.companyId);
 
   const [claimsResult, projectsResult] = await Promise.all([
     dbQuery,
-    supabase.from("projects").select("id, name").order("name"),
+    projectsQuery,
   ]);
 
   return {

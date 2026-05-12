@@ -26,7 +26,7 @@ import {
   ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getVisibleFeatures } from "@/lib/features";
+import { getVisibleFeatures, MD_MANAGER_CORE_FEATURES } from "@/lib/features";
 import { logoutAction } from "@/app/login/actions";
 import type { UserRole, AppFeature, RoleFeatures } from "@/types/db";
 
@@ -64,6 +64,34 @@ const items: Item[] = [
     label: "طلبات التوظيف",
     icon: UserPlus,
     roles: ["md_admin", "company_manager"],
+  },
+  {
+    href: "/portal/papers",
+    label: "الأوراق الرسمية",
+    icon: FileText,
+    roles: ["md_admin", "company_manager", "employee"],
+    feature: "papers",
+  },
+  {
+    href: "/portal/mail",
+    label: "البريد",
+    icon: Mail,
+    roles: ["md_admin", "company_manager"],
+    feature: "mail",
+  },
+  {
+    href: "/portal/contacts",
+    label: "جهات الاتصال",
+    icon: Contact,
+    roles: ["md_admin", "company_manager", "employee"],
+    feature: "contacts",
+  },
+  {
+    href: "/portal/warnings",
+    label: "الإنذارات",
+    icon: AlertTriangle,
+    roles: ["md_admin", "company_manager", "employee"],
+    feature: "warnings",
   },
   {
     href: "/portal/attendance",
@@ -108,34 +136,6 @@ const items: Item[] = [
     feature: "maps",
   },
   {
-    href: "/portal/warnings",
-    label: "الإنذارات",
-    icon: AlertTriangle,
-    roles: ["md_admin", "company_manager", "employee"],
-    feature: "warnings",
-  },
-  {
-    href: "/portal/papers",
-    label: "الأوراق الرسمية",
-    icon: FileText,
-    roles: ["md_admin", "company_manager", "employee"],
-    feature: "papers",
-  },
-  {
-    href: "/portal/mail",
-    label: "البريد",
-    icon: Mail,
-    roles: ["md_admin", "company_manager"],
-    feature: "mail",
-  },
-  {
-    href: "/portal/contacts",
-    label: "جهات الاتصال",
-    icon: Contact,
-    roles: ["md_admin", "company_manager", "employee"],
-    feature: "contacts",
-  },
-  {
     href: "/portal/settings",
     label: "الإعدادات",
     icon: Settings,
@@ -147,6 +147,7 @@ type Props = {
   role: UserRole;
   fullName: string;
   companyId: string | null;
+  shellCompanyId: string | null;
   companyName: string | null;
   isSuperAdmin: boolean;
   enabledFeatures: AppFeature[] | null;
@@ -165,6 +166,7 @@ export function Sidebar({
   role,
   fullName,
   companyId,
+  shellCompanyId,
   companyName,
   isSuperAdmin,
   enabledFeatures,
@@ -213,8 +215,12 @@ export function Sidebar({
       return false;
     }
     if (!item.feature) return true;
-    // Super admins and md_admin see everything
-    if (isSuperAdmin || role === "md_admin") return true;
+    if (isSuperAdmin) return true;
+    if (role === "md_admin" && !isSuperAdmin) {
+      // Optional company modules (projects, reports, …) are reached from the company hub only,
+      // not the global sidebar — avoids "leaking" the active company's enabled_features here.
+      return MD_MANAGER_CORE_FEATURES.includes(item.feature);
+    }
     if (visibleFeatures === null) return true;
     return visibleFeatures.includes(item.feature);
   });
@@ -237,7 +243,7 @@ export function Sidebar({
   };
 
   const roleLabel: Record<UserRole, string> = {
-    md_admin: "مدير مجموعة MD",
+    md_admin: "مدير مجموعة MD Group",
     company_manager: "مدير شركة",
     employee: "موظف",
   };

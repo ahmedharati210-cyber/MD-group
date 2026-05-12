@@ -5,6 +5,7 @@ import {
   canAccessDolceEmployeeSignup,
   getDolceSignupCompanyId,
 } from "@/lib/dolce-signup-company";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { passportZipEntryFileName } from "@/lib/passport-archive-name";
 
@@ -25,9 +26,10 @@ function missingPassportNoteName(
 export async function GET() {
   const current = await requireRole(["md_admin", "company_manager"]);
   const dolceId = await getDolceSignupCompanyId();
+  const shellId = await getShellCompanyIdForProfile(current.profile);
   if (
     !dolceId ||
-    !canAccessDolceEmployeeSignup(current.profile, dolceId)
+    !(await canAccessDolceEmployeeSignup(current.profile, dolceId, shellId))
   ) {
     return NextResponse.json({ error: "غير مصرّح" }, { status: 403 });
   }

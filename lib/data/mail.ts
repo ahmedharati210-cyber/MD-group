@@ -19,6 +19,8 @@ export type MailData = {
 export async function getMailData(params: {
   tab: "all" | "inbound" | "outbound";
   filterCompanyId?: string;
+  /** When set, company dropdown only includes this company (MD Group manager). */
+  scopeCompaniesToId?: string;
   q?: string;
   page: number;
   pageSize: number;
@@ -56,7 +58,13 @@ export async function getMailData(params: {
     buildCount("inbound"),
     buildCount("outbound"),
     listQuery,
-    supabase.from("companies").select("id, name_ar").order("name_ar"),
+    (() => {
+      let cq = supabase.from("companies").select("id, name_ar").order("name_ar");
+      if (params.scopeCompaniesToId) {
+        cq = cq.eq("id", params.scopeCompaniesToId);
+      }
+      return cq;
+    })(),
   ]);
 
   return {

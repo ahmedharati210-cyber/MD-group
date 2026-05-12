@@ -231,7 +231,7 @@ export function EditEmployeeForm({
             >
               <option value="employee">موظف</option>
               <option value="company_manager">مدير شركة</option>
-              <option value="md_admin">مدير مجموعة</option>
+              <option value="md_admin">مدير MD Group</option>
             </select>
           </Field>
 

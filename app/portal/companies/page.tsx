@@ -8,8 +8,15 @@ import { EmptyState } from "@/components/portal/EmptyState";
 
 export const metadata = { title: "الشركات" };
 
-export default async function CompaniesPage() {
+type SearchParams = Promise<{ needCompany?: string }>;
+
+export default async function CompaniesPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const { profile } = await requireRole(["md_admin", "company_manager"]);
+  const { needCompany } = await searchParams;
 
   // Company managers only manage their own company — send them directly there.
   if (profile.role === "company_manager") {
@@ -20,18 +27,24 @@ export default async function CompaniesPage() {
     );
   }
 
-  const isAdmin = profile.role === "md_admin";
+  const isMdTeam = profile.role === "md_admin";
+  const canManageCompanies = profile.is_super_admin ?? false;
 
   const rows = await getCompaniesWithCounts();
 
   return (
     <div>
+      {needCompany === "1" && profile.role === "md_admin" && !profile.is_super_admin ? (
+        <div className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100 text-sm">
+          اختر شركة من القائمة لفتح لوحة العمل وتفعيل عناصر القائمة الجانبية.
+        </div>
+      ) : null}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <PageHeader
           title="شركات المجموعة"
           description="الشركات التابعة لمجموعة MD."
         />
-        {isAdmin ? (
+        {canManageCompanies ? (
           <Link
             href="/portal/companies/new"
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm shadow-md hover:bg-primary-700 transition-colors w-full sm:w-auto justify-center"
@@ -47,9 +60,11 @@ export default async function CompaniesPage() {
           icon={Building2}
           title="لا توجد شركات بعد"
           description={
-            isAdmin
+            canManageCompanies
               ? "ابدأ بإضافة أول شركة، أو إذا أضفت الشركات من لوحة Supabase فحدّث الصفحة وتأكد أن متغيرات البيئة تشير إلى المشروع الصحيح."
-              : "لم يتم إضافة أي شركة بعد."
+              : isMdTeam
+                ? "لم يتم إضافة أي شركة بعد. يمكن لمسؤول النظام إضافة شركات جديدة."
+                : "لم يتم إضافة أي شركة بعد."
           }
         />
       ) : (

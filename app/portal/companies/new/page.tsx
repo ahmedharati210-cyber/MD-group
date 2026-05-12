@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { requireRole } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/auth";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { createCompanyAction } from "../actions";
 import { CompanyForm } from "../company-form";
@@ -8,7 +8,7 @@ import { CompanyForm } from "../company-form";
 export const metadata = { title: "إضافة شركة" };
 
 export default async function NewCompanyPage() {
-  await requireRole("md_admin");
+  await requireSuperAdmin();
   return (
     <div>
       <Link

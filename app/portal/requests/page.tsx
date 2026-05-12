@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus, ClipboardEdit, CalendarDays, User } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
 import { getRequestsData } from "@/lib/data/requests";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { RequestsFilter } from "@/components/requests/RequestsFilter";
@@ -40,16 +41,27 @@ export default async function RequestsPage({
 }) {
   const { profile } = await requireFeature("requests");
   const isManager = profile.role !== "employee";
+  const scopeId = await getShellCompanyIdForProfile(profile);
 
   const sp = await searchParams;
   const filterStatus = typeof sp.status === "string" ? sp.status : "";
   const filterType = typeof sp.type === "string" ? sp.type : "";
+  const companyIdParam =
+    typeof sp.companyId === "string" && sp.companyId.trim()
+      ? sp.companyId.trim()
+      : "";
+
+  const filterCompanyId =
+    profile.role === "company_manager"
+      ? scopeId ?? undefined
+      : companyIdParam || undefined;
 
   const requests = await getRequestsData({
     profileId: profile.id ?? "",
     isManager,
     filterStatus: filterStatus || undefined,
     filterType: filterType || undefined,
+    filterCompanyId,
   });
 
   return (
@@ -67,7 +79,12 @@ export default async function RequestsPage({
         }
       />
 
-      <RequestsFilter isManager={isManager} currentStatus={filterStatus} currentType={filterType} />
+      <RequestsFilter
+        isManager={isManager}
+        currentStatus={filterStatus}
+        currentType={filterType}
+        currentCompanyId={companyIdParam}
+      />
 
       {requests.length === 0 ? (
         <EmptyState icon={ClipboardEdit} title="لا توجد طلبات" description={filterStatus || filterType ? "لا توجد طلبات تطابق الفلتر." : "لم يتم تقديم طلبات بعد."} />

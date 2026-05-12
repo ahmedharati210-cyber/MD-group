@@ -62,7 +62,8 @@ export function ProjectForm({
           <option value="completed">تشطيب</option>
           <option value="maintenance">صيانة</option>
           <option value="survey">رفع مساحي</option>
-          <option value="on_hold">موقوف</option>
+          <option value="on_hold">متوقف</option>
+          <option value="on_hold_claim">متوقف ( مطالبة)</option>
         </select>
       </div>
 

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -15,13 +16,6 @@ const mapSchema = z.object({
   project_id: z.string().uuid().optional().nullable(),
   drive_url: z.string().url("رابط غير صالح"),
 });
-
-async function resolveCompanyId(profile: { role: string; company_id: string | null }): Promise<string | null> {
-  if (profile.company_id) return profile.company_id;
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.from("companies").select("id").contains("enabled_features", ["maps"]).limit(1).single();
-  return data?.id ?? null;
-}
 
 export async function createMapAction(
   _prev: ActionState | undefined,
@@ -36,7 +30,7 @@ export async function createMapAction(
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
 
-  const company_id = await resolveCompanyId(profile);
+  const company_id = await getShellCompanyIdForProfile(profile);
   if (!company_id) return { error: "لم يتم العثور على الشركة" };
 
   const supabase = await createSupabaseServerClient();

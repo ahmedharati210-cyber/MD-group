@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { Menu, RefreshCw } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Building2, Menu, RefreshCw, Settings } from "lucide-react";
 import { Sidebar } from "./Sidebar";
+import { isCompanyImmersivePath } from "@/lib/portal-shell-paths";
 import type { UserRole, AppFeature, RoleFeatures } from "@/types/db";
 
 // Dynamically imported so framer-motion is excluded from the main portal
@@ -20,6 +21,8 @@ type Props = {
   role: UserRole;
   fullName: string;
   companyId: string | null;
+  /** Active company for shell (managers via cookie; else profile.company_id path in layout). */
+  shellCompanyId: string | null;
   companyName: string | null;
   isSuperAdmin: boolean;
   enabledFeatures: AppFeature[] | null;
@@ -36,6 +39,7 @@ export function PortalShell({
   role,
   fullName,
   companyId,
+  shellCompanyId,
   companyName,
   isSuperAdmin,
   enabledFeatures,
@@ -48,6 +52,11 @@ export function PortalShell({
   children,
 }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
+  const hideSidebar = useMemo(
+    () => isCompanyImmersivePath(pathname),
+    [pathname],
+  );
   const [isOpen, setIsOpen] = useState(false);
   const handleClose = useCallback(() => setIsOpen(false), []);
   const handleOpen = useCallback(() => setIsOpen(true), []);
@@ -55,37 +64,41 @@ export function PortalShell({
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <PwaInstallBanner />
-      <div className="print:hidden">
-        <Sidebar
-          role={role}
-          fullName={fullName}
-          companyId={companyId}
-          companyName={companyName}
-          isSuperAdmin={isSuperAdmin}
-          enabledFeatures={enabledFeatures}
-          roleFeatures={roleFeatures}
-          pendingRequestsCount={pendingRequestsCount}
-          unreadWarningsCount={unreadWarningsCount}
-          pendingSignupRequestsCount={pendingSignupRequestsCount}
-          expiringPapersCount={expiringPapersCount}
-          showDolceSignupNav={showDolceSignupNav}
-          isOpen={isOpen}
-          onClose={handleClose}
-        />
-      </div>
+      {!hideSidebar ? (
+        <div className="print:hidden">
+          <Sidebar
+            role={role}
+            fullName={fullName}
+            companyId={companyId}
+            shellCompanyId={shellCompanyId}
+            companyName={companyName}
+            isSuperAdmin={isSuperAdmin}
+            enabledFeatures={enabledFeatures}
+            roleFeatures={roleFeatures}
+            pendingRequestsCount={pendingRequestsCount}
+            unreadWarningsCount={unreadWarningsCount}
+            pendingSignupRequestsCount={pendingSignupRequestsCount}
+            expiringPapersCount={expiringPapersCount}
+            showDolceSignupNav={showDolceSignupNav}
+            isOpen={isOpen}
+            onClose={handleClose}
+          />
+        </div>
+      ) : null}
 
-      {/* Mobile topbar */}
-      <header className="print:hidden md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <button
-          type="button"
-          onClick={handleOpen}
-          aria-label="فتح القائمة"
-          className="p-2 -mr-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-        <Link href="/portal" className="flex items-center gap-2">
-          <span className="inline-flex rounded-lg bg-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-0.5">
+      {/* Mobile: menu + refresh only when the sidebar exists */}
+      {!hideSidebar ? (
+        <header className="print:hidden md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+          <button
+            type="button"
+            onClick={handleOpen}
+            aria-label="فتح القائمة"
+            className="p-2 -mr-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <Link href="/portal" className="flex items-center gap-2">
+            <span className="inline-flex rounded-lg bg-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-0.5">
               <Image
                 src="/Icon-MD.png"
                 alt="MD Group"
@@ -94,22 +107,72 @@ export function PortalShell({
                 height={28}
                 priority
               />
-          </span>
-          <span className="font-bold text-gray-900 dark:text-gray-100">
-            MD Group
-          </span>
-        </Link>
-        <button
-          type="button"
-          onClick={() => router.refresh()}
-          aria-label="تحديث الصفحة"
-          className="p-2 -ml-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-transform"
-        >
-          <RefreshCw className="w-5 h-5" />
-        </button>
-      </header>
+            </span>
+            <span className="font-bold text-gray-900 dark:text-gray-100">
+              MD Group
+            </span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => router.refresh()}
+            aria-label="تحديث الصفحة"
+            className="p-2 -ml-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-transform"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </button>
+        </header>
+      ) : (
+        <header className="print:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+          <Link
+            href="/portal"
+            className="flex items-center gap-2 min-w-0 text-gray-900 dark:text-gray-100"
+          >
+            <span className="inline-flex rounded-lg bg-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-0.5 flex-shrink-0">
+              <Image
+                src="/Icon-MD.png"
+                alt="MD Group"
+                className="w-7 h-7 object-contain"
+                width={28}
+                height={28}
+                priority
+              />
+            </span>
+            <span className="font-bold truncate">لوحة التحكم</span>
+          </Link>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {role === "md_admin" || isSuperAdmin ? (
+              <Link
+                href="/portal/companies"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-900/30 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+              >
+                <Building2 className="w-4 h-4" />
+                <span className="hidden sm:inline">الشركات</span>
+              </Link>
+            ) : null}
+            <Link
+              href="/portal/settings"
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              aria-label="الإعدادات"
+            >
+              <Settings className="w-5 h-5" />
+            </Link>
+            <button
+              type="button"
+              onClick={() => router.refresh()}
+              aria-label="تحديث الصفحة"
+              className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-transform"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+          </div>
+        </header>
+      )}
 
-      <div className="md:mr-64 print:mr-0">
+      <div
+        className={
+          hideSidebar ? "print:mr-0" : "md:mr-64 print:mr-0"
+        }
+      >
         <main className="p-4 sm:p-6 md:p-8 print:p-0 max-w-7xl mx-auto">{children}</main>
       </div>
     </div>

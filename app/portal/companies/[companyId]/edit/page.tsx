@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { requireRole } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { updateCompanyAction } from "../../actions";
@@ -14,7 +14,7 @@ export default async function EditCompanyPage({
 }: {
   params: Promise<{ companyId: string }>;
 }) {
-  await requireRole("md_admin");
+  await requireSuperAdmin();
   const { companyId } = await params;
 
   const supabase = await createSupabaseServerClient();
