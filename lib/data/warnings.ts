@@ -2,9 +2,12 @@ import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+import type { WarningKind } from "@/types/db";
+
 export type WarningRow = {
   id: string;
   message: string;
+  kind: WarningKind;
   is_read: boolean;
   created_at: string;
   target: { full_name: string } | null;
@@ -41,7 +44,7 @@ export async function getWarningsData(params: {
   let warningsQuery = supabase
     .from("warnings")
     .select(
-      "id, message, is_read, created_at, target:target_profile_id(full_name), sender:sender_id(full_name)",
+      "id, message, kind, is_read, created_at, target:target_profile_id(full_name), sender:sender_id(full_name)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })

@@ -121,11 +121,11 @@ export default async function PortalDashboard() {
         ) : null}
         {hasFeature("warnings") ? (
           <StatCard
-            label={isEmployee ? "إنذارات غير مقروءة" : "الإنذارات"}
+            label={isEmployee ? "إشعارات غير مقروءة" : "مركز الإشعارات"}
             value={counts.warnings}
             icon={AlertTriangle}
             tone="danger"
-            href="/portal/warnings"
+            href="/portal/notifications"
           />
         ) : null}
       </div>

@@ -542,14 +542,17 @@ type MapLinkInsert = {
 };
 
 // ---------------------------------------------------------------------------
-// Warnings module
+// Warnings / notifications center (table: warnings)
 // ---------------------------------------------------------------------------
+export type WarningKind = "warning" | "notification";
+
 export interface Warning {
   id: string;
   company_id: string;
   sender_id: string;
   target_profile_id: string | null;
   message: string;
+  kind: WarningKind;
   is_read: boolean;
   created_at: string;
 }
@@ -559,6 +562,7 @@ type WarningInsert = {
   sender_id: string;
   target_profile_id?: string | null;
   message: string;
+  kind?: WarningKind;
   is_read?: boolean;
   created_at?: string;
 };

@@ -48,7 +48,7 @@ export const featureLabels: Record<AppFeature, string> = {
   requests: "الطلبات",
   claims: "المطالبات",
   maps: "الخرائط",
-  warnings: "الإنذارات",
+  warnings: "مركز الإشعارات",
   employee_signup: "طلبات التوظيف (Dolce)",
 };
 

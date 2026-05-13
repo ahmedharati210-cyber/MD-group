@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { Send } from "lucide-react";
+import { Bell, Send, TriangleAlert } from "lucide-react";
 import toast from "react-hot-toast";
 import { sendWarningAction } from "@/app/portal/warnings/actions";
+import { cn } from "@/lib/utils";
 
 type Engineer = { id: string; full_name: string };
 type Company = { id: string; name_ar: string };
@@ -23,6 +24,7 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
   const [state, formAction, isPending] = useActionState(sendWarningAction, init);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [broadcastCompany, setBroadcastCompany] = useState("");
+  const [kind, setKind] = useState<"warning" | "notification">("warning");
   /** Bump to remount textarea so defaultValue clears after each successful send */
   const [messageFieldKey, setMessageFieldKey] = useState(0);
 
@@ -31,7 +33,7 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
     setSelected(new Set());
     setBroadcastCompany("");
     setMessageFieldKey((k) => k + 1);
-    toast.success("تم إرسال الإنذار بنجاح.", { id: "warning-sent" });
+    toast.success("تم الإرسال بنجاح.", { id: "warning-sent" });
   }, [state]);
 
   const allIds = engineers.map((e) => e.id);
@@ -55,11 +57,14 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
     });
   }
 
+  const canSubmit =
+    someChecked || (canBroadcast && broadcastCompany.trim().length > 0);
+
   return (
     <form action={formAction} className="space-y-4">
       {state?.ok ? (
         <div className="px-4 py-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-700 dark:text-green-300">
-          تم إرسال الإنذار بنجاح. يمكنك إرسال إنذار جديد أدناه.
+          تم الإرسال بنجاح. يمكنك إرسال رسالة جديدة أدناه.
         </div>
       ) : null}
 
@@ -68,6 +73,46 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
           {state.error}
         </div>
       ) : null}
+
+      <input type="hidden" name="kind" value={kind} />
+
+      <div>
+        <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          نوع الإرسال
+        </span>
+        <div
+          className="flex gap-2 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+          role="group"
+          aria-label="نوع الإرسال"
+        >
+          <button
+            type="button"
+            onClick={() => setKind("warning")}
+            className={cn(
+              "flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors",
+              kind === "warning"
+                ? "bg-white dark:bg-gray-900 text-red-700 dark:text-red-300 shadow-sm ring-1 ring-red-200 dark:ring-red-800"
+                : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/80",
+            )}
+          >
+            <TriangleAlert className="w-4 h-4 shrink-0" />
+            إنذار
+          </button>
+          <button
+            type="button"
+            onClick={() => setKind("notification")}
+            className={cn(
+              "flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors",
+              kind === "notification"
+                ? "bg-white dark:bg-gray-900 text-orange-700 dark:text-orange-300 shadow-sm ring-1 ring-orange-200 dark:ring-orange-800"
+                : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/80",
+            )}
+          >
+            <Bell className="w-4 h-4 shrink-0" />
+            إشعار
+          </button>
+        </div>
+      </div>
 
       {/* Hidden inputs — one per selected employee */}
       {[...selected].map((id) => (
@@ -141,7 +186,7 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
             ))}
           </select>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            إذا اخترت شركة هنا سيُرسل الإنذار لجميع موظفيها بغض النظر عن التحديد أعلاه.
+            إذا اخترت شركة هنا سيُرسل الإشعار لجميع موظفيها بغض النظر عن التحديد أعلاه.
           </p>
         </div>
       ) : null}
@@ -149,25 +194,30 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
       {/* Message */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          نص الإنذار *
+          نص الرسالة *
         </label>
         <textarea
           key={messageFieldKey}
           name="message"
           rows={3}
           required
-          placeholder="اكتب رسالة الإنذار..."
+          placeholder="اكتب نص الإنذار أو الإشعار..."
           className={inputCls}
         />
       </div>
 
       <button
         type="submit"
-        disabled={isPending || (!someChecked && !canBroadcast)}
-        className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-xl font-semibold text-sm hover:bg-amber-700 disabled:opacity-50 transition-colors"
+        disabled={isPending || !canSubmit}
+        className={cn(
+          "inline-flex items-center gap-2 px-4 py-2.5 text-white rounded-xl font-semibold text-sm disabled:opacity-50 transition-colors",
+          kind === "warning"
+            ? "bg-red-600 hover:bg-red-700"
+            : "bg-orange-600 hover:bg-orange-700",
+        )}
       >
         <Send className="w-4 h-4" />
-        {isPending ? "جارٍ الإرسال..." : "إرسال الإنذار"}
+        {isPending ? "جارٍ الإرسال..." : "إرسال"}
       </button>
     </form>
   );

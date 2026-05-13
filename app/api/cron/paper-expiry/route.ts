@@ -128,6 +128,7 @@ async function runPaperExpiryCron(req: Request) {
       sender_id: senderId,
       target_profile_id: r.id,
       message,
+      kind: "warning" as const,
     }));
 
     const { error: insErr } = await admin.from("warnings").insert(rows);

@@ -84,74 +84,82 @@ export function ProjectsGrid({ projects, canManage }: Props) {
         return (
           <div
             key={p.id}
-            className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all flex flex-col h-full min-h-0 overflow-hidden"
+            className="relative bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all flex flex-col h-full min-h-0 overflow-hidden focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-inset"
           >
             <Link
               href={`/portal/timeline/${p.id}`}
-              className="flex flex-col gap-3 p-5 flex-1 min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset rounded-t-2xl"
+              className="absolute inset-0 z-0 rounded-2xl outline-none"
+              aria-label={`فتح مشروع ${p.name}`}
             >
-              {/* Title + status */}
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-9 h-9 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <FolderKanban className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 dark:text-gray-50 truncate">{p.name}</h3>
-                </div>
-
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {overdueTasks > 0 ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                      <AlertCircle className="w-3 h-3" /> {overdueTasks} متأخرة
-                    </span>
-                  ) : null}
-
-                  {canManage ? (
-                    <span onClick={(e) => e.preventDefault()}>
-                      <ProjectStatusSelect projectId={p.id} currentStatus={p.status} />
-                    </span>
-                  ) : (
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusCls[p.status] ?? statusCls.on_hold}`}>
-                      {statusLabel[p.status] ?? p.status}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {p.description ? (
-                <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{p.description}</p>
-              ) : null}
-
-              {p.location_notes ? (
-                <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="truncate">{p.location_notes}</span>
-                </div>
-              ) : null}
-
-              {p.default_engineer ? (
-                <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 font-medium">
-                  <HardHat className="w-3.5 h-3.5 flex-shrink-0" />
-                  {p.default_engineer.full_name}
-                </div>
-              ) : null}
-
-              {p.start_date || p.end_date ? (
-                <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  <CalendarDays className="w-3.5 h-3.5" />
-                  {p.start_date ?? "—"} — {p.end_date ?? "—"}
-                </div>
-              ) : null}
+              <span className="sr-only">{p.name}</span>
             </Link>
 
-            <div className="px-5 pb-5 pt-0 border-t border-gray-100 dark:border-gray-800">
+            <div className="relative z-10 flex flex-col flex-1 min-h-0 pointer-events-none">
+              <div className="flex flex-col gap-3 p-5 flex-1 min-h-0">
+                {/* Title + status (status controls are interactive — not under the stretch link) */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-9 h-9 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <FolderKanban className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 dark:text-gray-50 truncate">{p.name}</h3>
+                  </div>
+
+                  <div className="pointer-events-auto flex items-center gap-1.5 flex-shrink-0">
+                    {overdueTasks > 0 ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                        <AlertCircle className="w-3 h-3" /> {overdueTasks} متأخرة
+                      </span>
+                    ) : null}
+
+                    {canManage ? (
+                      <ProjectStatusSelect projectId={p.id} currentStatus={p.status} />
+                    ) : (
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusCls[p.status] ?? statusCls.on_hold}`}>
+                        {statusLabel[p.status] ?? p.status}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {p.description ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{p.description}</p>
+                ) : null}
+
+                {p.location_notes ? (
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">{p.location_notes}</span>
+                  </div>
+                ) : null}
+
+                {p.default_engineer ? (
+                  <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 font-medium">
+                    <HardHat className="w-3.5 h-3.5 flex-shrink-0" />
+                    {p.default_engineer.full_name}
+                  </div>
+                ) : null}
+
+                {p.start_date || p.end_date ? (
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    <CalendarDays className="w-3.5 h-3.5" />
+                    {p.start_date ?? "—"} — {p.end_date ?? "—"}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="relative z-10 px-5 pb-5 pt-0 border-t border-gray-100 dark:border-gray-800 pointer-events-auto">
               <button
                 type="button"
                 className="w-full text-start rounded-xl px-2 py-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                 aria-expanded={isExpanded}
                 aria-controls={`project-tasks-${p.id}`}
                 id={`project-stats-${p.id}`}
-                onClick={() => setExpandedId(isExpanded ? null : p.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpandedId(isExpanded ? null : p.id);
+                }}
               >
                 <div className="flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
                   <span className="inline-flex items-center gap-1">

@@ -86,7 +86,8 @@ async function AuthenticatedPortal({
   });
 
   const pendingRequestsCount = badgeCounts.pendingRequests;
-  const unreadWarningsCount = badgeCounts.unreadWarnings;
+  const unreadWarningAlerts = badgeCounts.unreadWarningAlerts;
+  const unreadNotificationAlerts = badgeCounts.unreadNotificationAlerts;
   const pendingSignupRequestsCount = badgeCounts.pendingSignupRequests;
   const expiringPapersCount = badgeCounts.expiringPapers;
 
@@ -105,7 +106,8 @@ async function AuthenticatedPortal({
       enabledFeatures={enabledFeatures}
       roleFeatures={roleFeatures}
       pendingRequestsCount={pendingRequestsCount}
-      unreadWarningsCount={unreadWarningsCount}
+      unreadWarningAlerts={unreadWarningAlerts}
+      unreadNotificationAlerts={unreadNotificationAlerts}
       pendingSignupRequestsCount={pendingSignupRequestsCount}
       expiringPapersCount={expiringPapersCount}
       showDolceSignupNav={showDolceSignupNav}

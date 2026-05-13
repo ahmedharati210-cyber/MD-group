@@ -28,7 +28,8 @@ type Props = {
   enabledFeatures: AppFeature[] | null;
   roleFeatures: RoleFeatures | null;
   pendingRequestsCount: number;
-  unreadWarningsCount: number;
+  unreadWarningAlerts: number;
+  unreadNotificationAlerts: number;
   pendingSignupRequestsCount: number;
   expiringPapersCount: number;
   showDolceSignupNav: boolean;
@@ -45,7 +46,8 @@ export function PortalShell({
   enabledFeatures,
   roleFeatures,
   pendingRequestsCount,
-  unreadWarningsCount,
+  unreadWarningAlerts,
+  unreadNotificationAlerts,
   pendingSignupRequestsCount,
   expiringPapersCount,
   showDolceSignupNav,
@@ -76,7 +78,8 @@ export function PortalShell({
             enabledFeatures={enabledFeatures}
             roleFeatures={roleFeatures}
             pendingRequestsCount={pendingRequestsCount}
-            unreadWarningsCount={unreadWarningsCount}
+            unreadWarningAlerts={unreadWarningAlerts}
+            unreadNotificationAlerts={unreadNotificationAlerts}
             pendingSignupRequestsCount={pendingSignupRequestsCount}
             expiringPapersCount={expiringPapersCount}
             showDolceSignupNav={showDolceSignupNav}

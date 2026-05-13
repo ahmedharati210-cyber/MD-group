@@ -1,15 +1,54 @@
 import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { UserRole } from "@/types/db";
+import type { UserRole, WarningKind } from "@/types/db";
 
 export type BadgeCounts = {
   pendingRequests: number;
-  unreadWarnings: number;
+  /** Unread rows with kind = warning (sidebar badge prefers red when > 0) */
+  unreadWarningAlerts: number;
+  /** Unread rows with kind = notification (sidebar orange when warnings = 0) */
+  unreadNotificationAlerts: number;
   pendingSignupRequests: number;
   /** Papers with expires_on in the last month before expiry (not yet expired); RLS-scoped */
   expiringPapers: number;
 };
+
+async function countUnreadWarningsForKind(params: {
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  userId: string;
+  isEmployee: boolean;
+  companyId: string | null;
+  isSuperAdmin: boolean;
+  kind: WarningKind;
+}): Promise<number> {
+  const { supabase, userId, isEmployee, companyId, isSuperAdmin, kind } = params;
+
+  let q = supabase
+    .from("warnings")
+    .select("id", { count: "exact", head: true })
+    .eq("is_read", false)
+    .eq("kind", kind);
+
+  if (isEmployee) {
+    const { count } = await q.or(
+      `target_profile_id.eq.${userId},target_profile_id.is.null`,
+    );
+    return count ?? 0;
+  }
+
+  if (isSuperAdmin) {
+    const { count } = await q;
+    return count ?? 0;
+  }
+
+  if (companyId) {
+    const { count } = await q.eq("company_id", companyId);
+    return count ?? 0;
+  }
+
+  return 0;
+}
 
 /**
  * Sidebar notification badge counts. Always fetches fresh data per request —
@@ -50,50 +89,45 @@ export async function getBadgeCounts(params: {
     return count ?? 0;
   })();
 
-  const [pendingResult, warningsResult, pendingSignupRequests, expiringRpc] =
-    await Promise.all([
-      params.isEmployee
-        ? supabase
+  const countArgs = {
+    supabase,
+    userId: params.userId,
+    isEmployee: params.isEmployee,
+    companyId: params.companyId,
+    isSuperAdmin: params.isSuperAdmin,
+  };
+
+  const [
+    pendingResult,
+    unreadWarningAlerts,
+    unreadNotificationAlerts,
+    pendingSignupRequests,
+    expiringRpc,
+  ] = await Promise.all([
+    params.isEmployee
+      ? supabase
+          .from("engineer_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending")
+          .eq("requester_id", params.userId)
+      : (async () => {
+          if (params.role === "md_admin" && !params.companyId) {
+            return { count: 0 };
+          }
+          let q = supabase
             .from("engineer_requests")
             .select("id", { count: "exact", head: true })
-            .eq("status", "pending")
-            .eq("requester_id", params.userId)
-        : (async () => {
-            if (params.role === "md_admin" && !params.companyId) {
-              return { count: 0 };
-            }
-            let q = supabase
-              .from("engineer_requests")
-              .select("id", { count: "exact", head: true })
-              .eq("status", "pending");
-            if (!params.isSuperAdmin && params.companyId) {
-              q = q.eq("company_id", params.companyId);
-            }
-            return await q;
-          })(),
-      params.isEmployee
-        ? supabase
-            .from("warnings")
-            .select("id", { count: "exact", head: true })
-            .eq("is_read", false)
-            .or(
-              `target_profile_id.eq.${params.userId},target_profile_id.is.null`,
-            )
-        : params.isSuperAdmin
-          ? supabase
-              .from("warnings")
-              .select("id", { count: "exact", head: true })
-              .eq("is_read", false)
-          : params.companyId
-            ? supabase
-                .from("warnings")
-                .select("id", { count: "exact", head: true })
-                .eq("is_read", false)
-                .eq("company_id", params.companyId)
-            : Promise.resolve({ count: 0 }),
-      pendingSignupPromise,
-      supabase.rpc("count_documents_expiring_soon"),
-    ]);
+            .eq("status", "pending");
+          if (!params.isSuperAdmin && params.companyId) {
+            q = q.eq("company_id", params.companyId);
+          }
+          return await q;
+        })(),
+    countUnreadWarningsForKind({ ...countArgs, kind: "warning" }),
+    countUnreadWarningsForKind({ ...countArgs, kind: "notification" }),
+    pendingSignupPromise,
+    supabase.rpc("count_documents_expiring_soon"),
+  ]);
 
   let expiringPapers = 0;
   if (!expiringRpc.error && expiringRpc.data != null) {
@@ -114,7 +148,8 @@ export async function getBadgeCounts(params: {
 
   return {
     pendingRequests: pendingResult.count ?? 0,
-    unreadWarnings: (warningsResult as { count: number | null }).count ?? 0,
+    unreadWarningAlerts,
+    unreadNotificationAlerts,
     pendingSignupRequests,
     expiringPapers,
   };

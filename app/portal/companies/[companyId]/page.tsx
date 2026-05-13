@@ -212,7 +212,7 @@ export default async function CompanyDetailPage({
       icon: AlertTriangle,
       tone: "warning",
       show: has("warnings"),
-      href: q("/portal/warnings"),
+      href: q("/portal/notifications"),
     },
     {
       label: featureLabels.reports,
@@ -293,8 +293,8 @@ export default async function CompanyDetailPage({
       show: has("maps"),
     },
     {
-      href: q("/portal/warnings"),
-      title: "إنذارات الشركة",
+      href: q("/portal/notifications"),
+      title: "إشعارات الشركة",
       icon: AlertTriangle,
       show: has("warnings"),
     },

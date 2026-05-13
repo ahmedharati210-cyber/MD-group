@@ -21,7 +21,7 @@ import {
   ClipboardEdit,
   Receipt,
   Map,
-  AlertTriangle,
+  Bell,
   ShieldCheck,
   ScrollText,
 } from "lucide-react";
@@ -87,9 +87,9 @@ const items: Item[] = [
     feature: "contacts",
   },
   {
-    href: "/portal/warnings",
-    label: "الإنذارات",
-    icon: AlertTriangle,
+    href: "/portal/notifications",
+    label: "مركز الإشعارات",
+    icon: Bell,
     roles: ["md_admin", "company_manager", "employee"],
     feature: "warnings",
   },
@@ -153,7 +153,8 @@ type Props = {
   enabledFeatures: AppFeature[] | null;
   roleFeatures: RoleFeatures | null;
   pendingRequestsCount: number;
-  unreadWarningsCount: number;
+  unreadWarningAlerts: number;
+  unreadNotificationAlerts: number;
   pendingSignupRequestsCount: number;
   /** Papers in the final month before expiry (not yet expired); sidebar red badge */
   expiringPapersCount: number;
@@ -172,7 +173,8 @@ export function Sidebar({
   enabledFeatures,
   roleFeatures,
   pendingRequestsCount,
-  unreadWarningsCount,
+  unreadWarningAlerts,
+  unreadNotificationAlerts,
   pendingSignupRequestsCount,
   expiringPapersCount,
   showDolceSignupNav,
@@ -345,11 +347,20 @@ export function Sidebar({
               const label = resolveLabel(item);
               const active = isActive(href);
               const Icon = item.icon;
+              const unreadAlertsTotal =
+                unreadWarningAlerts + unreadNotificationAlerts;
               const badge =
                 item.href === "/portal/requests" && pendingRequestsCount > 0
                   ? { count: pendingRequestsCount, cls: "bg-amber-500" }
-                  : item.href === "/portal/warnings" && unreadWarningsCount > 0
-                    ? { count: unreadWarningsCount, cls: "bg-red-500" }
+                  : item.href === "/portal/notifications" &&
+                      unreadAlertsTotal > 0
+                    ? {
+                        count: unreadAlertsTotal,
+                        cls:
+                          unreadWarningAlerts > 0
+                            ? "bg-red-500"
+                            : "bg-orange-500",
+                      }
                     : item.href === "/portal/papers" && expiringPapersCount > 0
                       ? { count: expiringPapersCount, cls: "bg-red-600" }
                       : item.href === "/portal/employees/signup-requests" &&
