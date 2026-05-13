@@ -387,6 +387,26 @@ type ProjectCategoryInsert = {
   created_at?: string;
 };
 
+/** Private draft notes on a project/category; visible to author + superadmin only (RLS). */
+export interface ProjectPersonalDraft {
+  id: string;
+  author_id: string;
+  project_id: string;
+  category_id: string | null;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+type ProjectPersonalDraftInsert = {
+  id?: string;
+  author_id: string;
+  project_id: string;
+  category_id?: string | null;
+  body: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export interface ProjectTask {
   id: string;
   category_id: string;
@@ -700,6 +720,10 @@ export interface Database {
       sites: TableDef<Site, SiteInsert>;
       projects: TableDef<Project, ProjectInsert>;
       project_categories: TableDef<ProjectCategory, ProjectCategoryInsert>;
+      project_personal_drafts: TableDef<
+        ProjectPersonalDraft,
+        ProjectPersonalDraftInsert
+      >;
       project_tasks: TableDef<ProjectTask, ProjectTaskInsert>;
       engineer_reports: TableDef<EngineerReport, EngineerReportInsert>;
       engineer_requests: TableDef<EngineerRequest, EngineerRequestInsert>;

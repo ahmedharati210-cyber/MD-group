@@ -24,9 +24,14 @@ import {
   Bell,
   ShieldCheck,
   ScrollText,
+  NotebookPen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getVisibleFeatures, MD_MANAGER_CORE_FEATURES } from "@/lib/features";
+import {
+  getVisibleFeatures,
+  isMdManagerFeatureAllowed,
+  MD_MANAGER_CORE_FEATURES,
+} from "@/lib/features";
 import { logoutAction } from "@/app/login/actions";
 import type { UserRole, AppFeature, RoleFeatures } from "@/types/db";
 
@@ -105,6 +110,13 @@ const items: Item[] = [
     label: "المشاريع",
     icon: FolderKanban,
     roles: ["md_admin", "company_manager", "employee"],
+    feature: "timeline",
+  },
+  {
+    href: "/portal/timeline/drafts",
+    label: "مسوداتي",
+    icon: NotebookPen,
+    roles: ["md_admin"],
     feature: "timeline",
   },
   {
@@ -209,6 +221,11 @@ export function Sidebar({
   );
 
   const visibleItems = items.filter((item) => {
+    if (item.href === "/portal/timeline/drafts") {
+      if (!(isSuperAdmin || role === "md_admin")) return false;
+      if (isSuperAdmin) return true;
+      return isMdManagerFeatureAllowed("timeline", enabledFeatures);
+    }
     if (!item.roles.includes(role)) return false;
     if (
       item.href === "/portal/employees/signup-requests" &&
@@ -229,6 +246,15 @@ export function Sidebar({
 
   const isActive = (href: string) => {
     if (href === "/portal") return pathname === "/portal";
+    if (href === "/portal/timeline/drafts") {
+      return pathname.startsWith("/portal/timeline/drafts");
+    }
+    if (href === "/portal/timeline") {
+      return (
+        pathname.startsWith("/portal/timeline") &&
+        !pathname.startsWith("/portal/timeline/drafts")
+      );
+    }
     if (href === "/portal/employees/signup-requests") {
       return pathname.startsWith("/portal/employees/signup-requests");
     }
