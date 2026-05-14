@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/portal/PageHeader";
 import { DeleteButton } from "@/components/portal/DeleteButton";
 import { formatDate, formatTime } from "@/lib/utils";
 import { deleteEmployeeAction } from "../actions";
+import { EmployeeDirectoryDetailView } from "../_components/employee-directory-detail-view";
 import type { BloodType, ContractType, EducationLevel, Gender } from "@/types/db";
 
 // ── Label helpers ────────────────────────────────────────────
@@ -64,9 +65,39 @@ export default async function EmployeeProfilePage({
     .from("profiles")
     .select("*, companies(id, name_ar)")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
-  if (!person) notFound();
+  if (!person) {
+    if (me.role === "employee") notFound();
+
+    const { data: directoryRow } = await supabase
+      .from("employee_directory")
+      .select("*, companies(id, name_ar)")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!directoryRow) notFound();
+
+    const companyId = directoryRow.company_id as string;
+    const isScopedManager = me.role === "company_manager" && !me.is_super_admin;
+    if (isScopedManager && me.company_id !== companyId) {
+      notFound();
+    }
+
+    const canManageDirectory =
+      me.role === "md_admin" ||
+      me.is_super_admin ||
+      (me.role === "company_manager" && me.company_id === companyId);
+
+    return (
+      <EmployeeDirectoryDetailView
+        row={directoryRow as Record<string, unknown>}
+        id={id}
+        errorMessage={errorMessage}
+        canManage={canManageDirectory}
+      />
+    );
+  }
 
   const [{ data: attendance }, { data: docs }] = await Promise.all([
     supabase

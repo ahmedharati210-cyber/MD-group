@@ -1,0 +1,5 @@
+{
+  "_comment": "Copy to csv-company-map.local.json (gitignored). Keys = CSV company cell; values = company UUID from `npm run employees:list-companies`. After migration 0040, «MD GROUP» can match slug `md-group` (مجموعة MD Group) without a manual row.",
+  "شركة إعمار": "00000000-0000-0000-0000-000000000001",
+  "MD GROUP": "00000000-0000-0000-0000-000000000002"
+}

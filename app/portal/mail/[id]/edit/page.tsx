@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { requireRole } from "@/lib/auth";
+import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { MailForm } from "../../mail-form";
@@ -18,16 +19,15 @@ export default async function EditMailPage({
   const { id } = await params;
 
   const supabase = await createSupabaseServerClient();
-  const [{ data: mail }, { data: companies }, { data: docs }] =
-    await Promise.all([
-      supabase.from("mail").select("*").eq("id", id).single(),
-      supabase.from("companies").select("id, name_ar").order("name_ar"),
-      supabase
-        .from("documents")
-        .select("id, title")
-        .order("created_at", { ascending: false })
-        .limit(100),
-    ]);
+  const [{ data: mail }, companies, { data: docs }] = await Promise.all([
+    supabase.from("mail").select("*").eq("id", id).single(),
+    fetchCompaniesForDropdown(supabase),
+    supabase
+      .from("documents")
+      .select("id, title")
+      .order("created_at", { ascending: false })
+      .limit(100),
+  ]);
 
   if (!mail) notFound();
 

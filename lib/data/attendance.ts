@@ -1,5 +1,6 @@
 import "server-only";
 
+import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type AttendanceRecord = {
@@ -65,12 +66,11 @@ export async function getManagerAttendanceData(
     empQuery = empQuery.eq("company_id", filterCompanyId);
   }
 
-  const [{ data: empRaw }, { data: companies }, { data: rows }] =
-    await Promise.all([
-      empQuery,
-      supabase.from("companies").select("id, name_ar").order("name_ar"),
-      supabase.from("attendance").select("*").eq("date", selectedDate),
-    ]);
+  const [{ data: empRaw }, companies, { data: rows }] = await Promise.all([
+    empQuery,
+    fetchCompaniesForDropdown(supabase),
+    supabase.from("attendance").select("*").eq("date", selectedDate),
+  ]);
 
   const employees: EmployeeRow[] = (empRaw ?? []).map((e) => ({
     id: e.id,
@@ -83,7 +83,7 @@ export async function getManagerAttendanceData(
 
   return {
     employees,
-    companies: (companies ?? []) as { id: string; name_ar: string }[],
+    companies: companies ?? [],
     rows: (rows ?? []) as AttendanceRecord[],
   };
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { requireRole } from "@/lib/auth";
+import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { ContactForm } from "../../contact-form";
@@ -19,9 +20,9 @@ export default async function EditContactPage({
   const { id } = await params;
 
   const supabase = await createSupabaseServerClient();
-  const [{ data: contact }, { data: companies }] = await Promise.all([
+  const [{ data: contact }, companies] = await Promise.all([
     supabase.from("contacts").select("*").eq("id", id).single(),
-    supabase.from("companies").select("id, name_ar").order("name_ar"),
+    fetchCompaniesForDropdown(supabase),
   ]);
 
   if (!contact) notFound();

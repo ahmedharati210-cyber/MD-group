@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { requireRole } from "@/lib/auth";
+import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { ContactForm } from "../contact-form";
@@ -12,10 +13,7 @@ export const metadata = { title: "إضافة جهة اتصال" };
 export default async function NewContactPage() {
   const { profile } = await requireRole(["md_admin", "company_manager"]);
   const supabase = await createSupabaseServerClient();
-  const { data: companies } = await supabase
-    .from("companies")
-    .select("id, name_ar")
-    .order("name_ar");
+  const companies = await fetchCompaniesForDropdown(supabase);
 
   // Trade categories only shown for the construction company (has timeline feature)
   const showTradeCategory = await isConstructionCompany(supabase, profile.company_id);

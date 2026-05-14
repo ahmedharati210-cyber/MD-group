@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { requireRole } from "@/lib/auth";
+import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { NewEmployeeForm } from "./new-employee-form";
@@ -11,10 +12,7 @@ export default async function NewEmployeePage() {
   const { profile } = await requireRole(["md_admin", "company_manager"]);
 
   const supabase = await createSupabaseServerClient();
-  const { data: companies } = await supabase
-    .from("companies")
-    .select("id, name_ar")
-    .order("name_ar");
+  const companies = await fetchCompaniesForDropdown(supabase);
 
   return (
     <div className="max-w-3xl">
@@ -27,7 +25,7 @@ export default async function NewEmployeePage() {
       </Link>
       <PageHeader
         title="إضافة موظف جديد"
-        description="سيتم إنشاء حساب تسجيل دخول للموظف وإرساله للمدير."
+        description="يُحفظ سجل الموارد البشرية فقط دون إنشاء حساب في المنصّة. لاحقاً يمكن إنشاء حساب تسجيل دخول من لوحة الإدارة عند الحاجة."
       />
       <NewEmployeeForm
         companies={companies ?? []}

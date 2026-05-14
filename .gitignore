@@ -42,3 +42,11 @@ next-env.d.ts
 *.jpeg
 *.jpg
 
+# Local employee CSV import maps and generated reports (see scripts/import-employees-csv.ts)
+scripts/csv-company-map.local.json
+import-employees-credentials*.txt
+import-employees-report*.txt
+
+# Local HR CSV imports (may contain PII; never commit)
+data/hr-import/
+

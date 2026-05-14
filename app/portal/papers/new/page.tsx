@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { requireRole } from "@/lib/auth";
+import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { UploadPaperForm } from "./upload-paper-form";
@@ -11,10 +12,7 @@ export default async function NewPaperPage() {
   const { profile } = await requireRole(["md_admin", "company_manager"]);
 
   const supabase = await createSupabaseServerClient();
-  const { data: companies } = await supabase
-    .from("companies")
-    .select("id, name_ar")
-    .order("name_ar");
+  const companies = await fetchCompaniesForDropdown(supabase);
 
   const { data: employees } = await supabase
     .from("profiles")

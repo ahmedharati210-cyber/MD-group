@@ -3,6 +3,7 @@ import { Plus, Map, MapPin, ExternalLink, Pencil, Building2 } from "lucide-react
 import { requireFeature } from "@/lib/auth";
 import { getMapsData } from "@/lib/data/maps";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
+import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
@@ -54,11 +55,8 @@ export default async function MapsPage({
     (profile.role === "md_admin" || (profile.is_super_admin ?? false))
   ) {
     const supabase = await createSupabaseServerClient();
-    const { data } = await supabase
-      .from("companies")
-      .select("id, name_ar")
-      .order("name_ar");
-    companiesForFilter = (data ?? []) as { id: string; name_ar: string }[];
+    const companiesForFilterRaw = await fetchCompaniesForDropdown(supabase);
+    companiesForFilter = companiesForFilterRaw;
   }
 
   const selectClasses =

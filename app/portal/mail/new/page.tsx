@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { requireRole } from "@/lib/auth";
+import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { MailForm } from "../mail-form";
@@ -11,10 +12,7 @@ export const metadata = { title: "إضافة بريد" };
 export default async function NewMailPage() {
   const { profile } = await requireRole(["md_admin", "company_manager"]);
   const supabase = await createSupabaseServerClient();
-  const { data: companies } = await supabase
-    .from("companies")
-    .select("id, name_ar")
-    .order("name_ar");
+  const companies = await fetchCompaniesForDropdown(supabase);
   const { data: docs } = await supabase
     .from("documents")
     .select("id, title")

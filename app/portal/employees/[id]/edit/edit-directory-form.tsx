@@ -3,8 +3,8 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertCircle, Loader2, User, Briefcase, FileText, Phone } from "lucide-react";
-import { createEmployeeAction, type ActionState } from "../actions";
-import type { UserRole } from "@/types/db";
+import { updateEmployeeDirectoryAction, type ActionState } from "../../actions";
+import type { EmployeeDirectoryRow } from "@/types/db";
 
 type Company = { id: string; name_ar: string };
 
@@ -22,16 +22,16 @@ function Submit() {
           جارٍ الحفظ...
         </>
       ) : (
-        "حفظ بيانات الموظف"
+        "حفظ التعديلات"
       )}
     </button>
   );
 }
 
 type Props = {
+  row: EmployeeDirectoryRow;
   companies: Company[];
-  currentRole: UserRole;
-  currentCompanyId: string | null;
+  canChangeCompany: boolean;
 };
 
 const inputClasses =
@@ -69,21 +69,19 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={inputClasses} />;
 }
 
-export function NewEmployeeForm({
-  companies,
-  currentRole,
-  currentCompanyId,
-}: Props) {
+export function EditDirectoryForm({ row, companies, canChangeCompany }: Props) {
   const [state, action] = useActionState<ActionState, FormData>(
-    createEmployeeAction,
+    updateEmployeeDirectoryAction,
     {},
   );
 
-  const isManager = currentRole === "company_manager";
-  const lockedCompanyId = isManager ? (currentCompanyId ?? "") : "";
-
   return (
     <form action={action} className="space-y-5">
+      <input type="hidden" name="id" value={row.id} />
+      {!canChangeCompany ? (
+        <input type="hidden" name="company_id" value={row.company_id} />
+      ) : null}
+
       {state?.error ? (
         <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
           <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
@@ -91,7 +89,6 @@ export function NewEmployeeForm({
         </div>
       ) : null}
 
-      {/* ── Identity (no portal login) ─────────────────────────── */}
       <section className={sectionClasses}>
         <h2 className={sectionTitleClasses}>
           <User className="w-4 h-4" />
@@ -99,19 +96,31 @@ export function NewEmployeeForm({
         </h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="الاسم الكامل" span2>
-            <Input name="full_name" required />
+            <Input name="full_name" required defaultValue={row.full_name} />
           </Field>
-          <Field
-            label="بريد للمراسلة (اختياري)"
-            hint="للتواصل فقط؛ لا يُنشئ حساباً في المنصّة. يمكن لاحقاً إنشاء حساب من لوحة الإدارة."
-            span2
-          >
-            <Input name="contact_email" type="email" dir="ltr" autoComplete="off" />
+          <Field label="بريد للمراسلة (اختياري)" span2>
+            <Input
+              name="contact_email"
+              type="email"
+              dir="ltr"
+              autoComplete="off"
+              defaultValue={row.contact_email ?? ""}
+            />
+          </Field>
+          <Field label="نشط في السجل" span2>
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="is_active"
+                defaultChecked={row.is_active}
+                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm text-gray-700 dark:text-gray-300">الموظف نشط</span>
+            </label>
           </Field>
         </div>
       </section>
 
-      {/* ── Personal Information ──────────────────────────────── */}
       <section className={sectionClasses}>
         <h2 className={sectionTitleClasses}>
           <User className="w-4 h-4" />
@@ -119,31 +128,41 @@ export function NewEmployeeForm({
         </h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="رقم الهاتف">
-            <Input name="phone" type="tel" dir="ltr" />
+            <Input name="phone" type="tel" dir="ltr" defaultValue={row.phone ?? ""} />
           </Field>
           <Field label="تاريخ الميلاد">
-            <Input name="date_of_birth" type="date" />
+            <Input
+              name="date_of_birth"
+              type="date"
+              defaultValue={row.date_of_birth?.slice(0, 10) ?? ""}
+            />
           </Field>
           <Field label="الجنس">
-            <select name="gender" className={inputClasses}>
+            <select name="gender" className={inputClasses} defaultValue={row.gender ?? ""}>
               <option value="">— اختر —</option>
               <option value="male">ذكر</option>
               <option value="female">أنثى</option>
             </select>
           </Field>
           <Field label="الجنسية">
-            <Input name="nationality" />
+            <Input name="nationality" defaultValue={row.nationality ?? ""} />
           </Field>
           <Field label="فصيلة الدم">
-            <select name="blood_type" className={inputClasses}>
+            <select name="blood_type" className={inputClasses} defaultValue={row.blood_type ?? ""}>
               <option value="">— اختر —</option>
               {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>
+                  {t}
+                </option>
               ))}
             </select>
           </Field>
           <Field label="المستوى التعليمي">
-            <select name="education_level" className={inputClasses}>
+            <select
+              name="education_level"
+              className={inputClasses}
+              defaultValue={row.education_level ?? ""}
+            >
               <option value="">— اختر —</option>
               <option value="high_school">ثانوي</option>
               <option value="diploma">دبلوم</option>
@@ -154,12 +173,11 @@ export function NewEmployeeForm({
             </select>
           </Field>
           <Field label="العنوان" span2>
-            <Input name="address" />
+            <Input name="address" defaultValue={row.address ?? ""} />
           </Field>
         </div>
       </section>
 
-      {/* ── Employment Details ────────────────────────────────── */}
       <section className={sectionClasses}>
         <h2 className={sectionTitleClasses}>
           <Briefcase className="w-4 h-4" />
@@ -167,16 +185,16 @@ export function NewEmployeeForm({
         </h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="المسمى الوظيفي">
-            <Input name="job_title" placeholder="محاسب، مهندس..." />
+            <Input name="job_title" defaultValue={row.job_title ?? ""} />
           </Field>
           <Field label="القسم / الإدارة">
-            <Input name="department" />
+            <Input name="department" defaultValue={row.department ?? ""} />
           </Field>
           <Field label="تاريخ التوظيف">
-            <Input name="hired_at" type="date" />
+            <Input name="hired_at" type="date" defaultValue={row.hired_at?.slice(0, 10) ?? ""} />
           </Field>
           <Field label="نوع العقد">
-            <select name="contract_type" className={inputClasses}>
+            <select name="contract_type" className={inputClasses} defaultValue={row.contract_type ?? ""}>
               <option value="">— اختر —</option>
               <option value="full_time">دوام كامل</option>
               <option value="part_time">دوام جزئي</option>
@@ -185,30 +203,33 @@ export function NewEmployeeForm({
             </select>
           </Field>
           <Field label="تاريخ انتهاء العقد">
-            <Input name="contract_end_date" type="date" />
+            <Input
+              name="contract_end_date"
+              type="date"
+              defaultValue={row.contract_end_date?.slice(0, 10) ?? ""}
+            />
           </Field>
 
-          <div className="sm:col-span-2">
-            <label className={labelClasses}>الشركة</label>
-            <select
-              name="company_id"
-              required
-              disabled={isManager}
-              defaultValue={lockedCompanyId || undefined}
-              className={`${inputClasses} disabled:bg-gray-50 dark:disabled:bg-gray-900`}
-            >
-              <option value="">اختر الشركة</option>
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name_ar}
-                </option>
-              ))}
-            </select>
-          </div>
+          {canChangeCompany ? (
+            <div className="sm:col-span-2">
+              <label className={labelClasses}>الشركة</label>
+              <select
+                name="company_id"
+                required
+                defaultValue={row.company_id}
+                className={inputClasses}
+              >
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name_ar}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
         </div>
       </section>
 
-      {/* ── Official Documents ────────────────────────────────── */}
       <section className={sectionClasses}>
         <h2 className={sectionTitleClasses}>
           <FileText className="w-4 h-4" />
@@ -216,15 +237,14 @@ export function NewEmployeeForm({
         </h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="الرقم الوطني">
-            <Input name="national_id" dir="ltr" />
+            <Input name="national_id" dir="ltr" defaultValue={row.national_id ?? ""} />
           </Field>
           <Field label="رقم جواز السفر">
-            <Input name="passport_number" dir="ltr" />
+            <Input name="passport_number" dir="ltr" defaultValue={row.passport_number ?? ""} />
           </Field>
         </div>
       </section>
 
-      {/* ── Emergency Contact ─────────────────────────────────── */}
       <section className={sectionClasses}>
         <h2 className={sectionTitleClasses}>
           <Phone className="w-4 h-4" />
@@ -232,15 +252,20 @@ export function NewEmployeeForm({
         </h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="الاسم">
-            <Input name="emergency_contact_name" />
+            <Input name="emergency_contact_name" defaultValue={row.emergency_contact_name ?? ""} />
           </Field>
           <Field label="رقم الهاتف">
-            <Input name="emergency_contact_phone" type="tel" dir="ltr" />
+            <Input
+              name="emergency_contact_phone"
+              type="tel"
+              dir="ltr"
+              defaultValue={row.emergency_contact_phone ?? ""}
+            />
           </Field>
           <Field label="صلة القرابة">
             <Input
               name="emergency_contact_relationship"
-              placeholder="مثال: زوجة، أخ، والد"
+              defaultValue={row.emergency_contact_relationship ?? ""}
             />
           </Field>
         </div>
@@ -256,7 +281,7 @@ export function NewEmployeeForm({
             name="hr_notes"
             rows={3}
             className={inputClasses}
-            placeholder="معلومات إضافية للفريق الإداري فقط..."
+            defaultValue={row.hr_notes ?? ""}
           />
         </Field>
       </section>

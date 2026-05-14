@@ -1,5 +1,6 @@
 import "server-only";
 
+import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import type { WarningKind } from "@/types/db";
@@ -75,11 +76,7 @@ export async function getWarningsData(params: {
     engineers = engData;
 
     if (params.isSuperAdmin || params.role === "md_admin") {
-      const { data } = await supabase
-        .from("companies")
-        .select("id, name_ar")
-        .order("name_ar");
-      companies = data as typeof companies;
+      companies = await fetchCompaniesForDropdown(supabase);
     } else if (params.filterCompanyId) {
       const { data } = await supabase
         .from("companies")
