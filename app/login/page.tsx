@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { LogIn } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 import { LoginForm } from "./login-form";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
@@ -49,7 +49,13 @@ export default function LoginPage(props: { searchParams: SearchParams }) {
         </div>
 
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-black/40 border border-gray-100 dark:border-gray-800 p-6 sm:p-8">
-          <Suspense>
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-10" aria-busy="true">
+                <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+              </div>
+            }
+          >
             <LoginContent searchParams={props.searchParams} />
           </Suspense>
         </div>

@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { PortalBootSplashDismiss } from "./PortalBootSplashDismiss";
 
 /**
  * Full-screen branded splash while portal auth/layout data loads.
@@ -14,7 +13,6 @@ export function PortalBootSplash() {
       aria-busy="true"
       aria-label="جاري تحميل MD Group"
     >
-      <PortalBootSplashDismiss />
       <span className="inline-flex rounded-2xl bg-white dark:bg-gray-900 shadow-md ring-1 ring-gray-100 dark:ring-gray-800 p-4 animate-pulse">
         <Image
           src="/Logo-MD.png"

@@ -37,6 +37,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("light");
 
   useEffect(() => {
+    // Legacy inline PWA splash (removed) could block the UI after /portal → /login redirects.
+    document.getElementById("md-boot-splash")?.remove();
+
     try {
       const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
       if (stored === "light" || stored === "dark") {
@@ -102,10 +105,6 @@ export const themeInitScript = `
       root.style.colorScheme = 'dark';
     } else {
       root.style.colorScheme = 'light';
-    }
-    var splash = document.getElementById('md-boot-splash');
-    if (splash && /^\\/portal(\\/|$)/.test(location.pathname)) {
-      splash.hidden = false;
     }
   } catch (e) {}
 })();

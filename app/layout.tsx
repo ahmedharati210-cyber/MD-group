@@ -51,36 +51,6 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="antialiased font-sans m-0 p-0 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-        <div
-          id="md-boot-splash"
-          hidden
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "#f5f3f0",
-          }}
-          aria-hidden="true"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/Logo-MD.png"
-            alt=""
-            width={160}
-            height={80}
-            style={{ height: "5rem", width: "auto", objectFit: "contain" }}
-          />
-        </div>
-        <style
-          dangerouslySetInnerHTML={{
-            __html:
-              "html.dark #md-boot-splash{background:#030712!important}",
-          }}
-        />
         <ThemeProvider>
           {children}
           <Toaster
