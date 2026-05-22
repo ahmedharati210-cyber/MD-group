@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
@@ -74,6 +74,10 @@ export function PortalShell({
   const handleOpen = useCallback(() => setIsOpen(true), []);
 
   usePortalPushRefresh();
+
+  useEffect(() => {
+    document.getElementById("md-boot-splash")?.remove();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">

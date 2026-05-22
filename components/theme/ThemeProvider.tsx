@@ -103,6 +103,10 @@ export const themeInitScript = `
     } else {
       root.style.colorScheme = 'light';
     }
+    var splash = document.getElementById('md-boot-splash');
+    if (splash && /^\\/portal(\\/|$)/.test(location.pathname)) {
+      splash.hidden = false;
+    }
   } catch (e) {}
 })();
 `;

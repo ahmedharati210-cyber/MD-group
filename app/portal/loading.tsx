@@ -1,9 +1,5 @@
-import { Loader2 } from "lucide-react";
+import { PortalBootSplash } from "@/components/portal/PortalBootSplash";
 
 export default function PortalLoading() {
-  return (
-    <div className="min-h-[40vh] flex items-center justify-center">
-      <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
-    </div>
-  );
+  return <PortalBootSplash />;
 }

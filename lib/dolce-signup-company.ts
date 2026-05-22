@@ -4,7 +4,7 @@ import { cache } from "react";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getCompanyData } from "@/lib/company";
 import { isMdManagerFeatureAllowed } from "@/lib/features";
-import type { Profile } from "@/types/db";
+import type { AppFeature, Profile } from "@/types/db";
 
 /**
  * Seed company #2 (`0001_init.sql`) — Dolce employee signup is restricted to this company.
@@ -38,7 +38,36 @@ export const getDolceSignupCompanyDisplay = cache(
  * Dolce signup UI/API: super admin; company managers of the Dolce company;
  * MD Group managers only when their active shell is Dolce **and** the company
  * has `employee_signup` in `enabled_features`.
+ *
+ * Pass `shellEnabledFeatures` when the shell company row is already loaded
+ * (avoids a duplicate `getCompanyData` in the portal layout).
  */
+export function resolveDolceEmployeeSignupAccess(
+  profile: Pick<Profile, "role" | "company_id" | "is_super_admin">,
+  dolceCompanyId: string | null,
+  shellCompanyId?: string | null,
+  shellEnabledFeatures?: AppFeature[] | null,
+): boolean {
+  if (!dolceCompanyId) return false;
+  if (profile.is_super_admin) return true;
+  if (profile.role === "md_admin") {
+    if (shellCompanyId == null || shellCompanyId !== dolceCompanyId) {
+      return false;
+    }
+    return isMdManagerFeatureAllowed(
+      "employee_signup",
+      shellEnabledFeatures ?? null,
+    );
+  }
+  if (
+    profile.role === "company_manager" &&
+    profile.company_id === dolceCompanyId
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export async function canAccessDolceEmployeeSignup(
   profile: Pick<Profile, "role" | "company_id" | "is_super_admin">,
   dolceCompanyId: string | null,
@@ -52,16 +81,17 @@ export async function canAccessDolceEmployeeSignup(
       return false;
     }
     const row = await getCompanyData(shellCompanyId);
-    return isMdManagerFeatureAllowed(
-      "employee_signup",
+    return resolveDolceEmployeeSignupAccess(
+      profile,
+      dolceCompanyId,
+      shellCompanyId,
       row?.enabled_features ?? null,
     );
   }
-  if (
-    profile.role === "company_manager" &&
-    profile.company_id === dolceCompanyId
-  ) {
-    return true;
-  }
-  return false;
+  return resolveDolceEmployeeSignupAccess(
+    profile,
+    dolceCompanyId,
+    shellCompanyId,
+    null,
+  );
 }

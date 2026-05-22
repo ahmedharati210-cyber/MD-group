@@ -5,9 +5,10 @@ import { getCompanyData } from "@/lib/company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { getBadgeCounts } from "@/lib/data/badges";
 import {
-  canAccessDolceEmployeeSignup,
   getDolceSignupCompanyId,
+  resolveDolceEmployeeSignupAccess,
 } from "@/lib/dolce-signup-company";
+import { PortalBootSplash } from "@/components/portal/PortalBootSplash";
 import { PortalShell } from "@/components/portal/PortalShell";
 import type { AppFeature, RoleFeatures } from "@/types/db";
 
@@ -36,7 +37,7 @@ export default function PortalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Suspense>
+    <Suspense fallback={<PortalBootSplash />}>
       <AuthenticatedPortal>{children}</AuthenticatedPortal>
     </Suspense>
   );
@@ -58,25 +59,27 @@ async function AuthenticatedPortal({
   const isSuperAdmin = profile.is_super_admin ?? false;
   const isEmployee = profile.role === "employee";
 
-  const shellCompanyId = await getShellCompanyIdForProfile(profile);
-
-  const dolceSignupCompanyId = await getDolceSignupCompanyId();
-  const showDolceSignupNav = await canAccessDolceEmployeeSignup(
-    profile,
-    dolceSignupCompanyId,
-    shellCompanyId,
-  );
+  const [shellCompanyId, dolceSignupCompanyId] = await Promise.all([
+    getShellCompanyIdForProfile(profile),
+    getDolceSignupCompanyId(),
+  ]);
 
   const companyRow = shellCompanyId
     ? await getCompanyData(shellCompanyId)
     : null;
 
-  const badgeCompanyId =
-    profile.is_super_admin
-      ? null
-      : profile.role === "md_admin"
-        ? shellCompanyId
-        : profile.company_id;
+  const showDolceSignupNav = resolveDolceEmployeeSignupAccess(
+    profile,
+    dolceSignupCompanyId,
+    shellCompanyId,
+    companyRow?.enabled_features ?? null,
+  );
+
+  const badgeCompanyId = profile.is_super_admin
+    ? null
+    : profile.role === "md_admin"
+      ? shellCompanyId
+      : profile.company_id;
 
   const badgeCounts = await getBadgeCounts({
     userId: profile.id ?? "",
