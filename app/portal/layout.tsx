@@ -20,6 +20,9 @@ export const metadata: import("next").Metadata = {
     title: "MD Group",
     statusBarStyle: "default",
   },
+  icons: {
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 /**

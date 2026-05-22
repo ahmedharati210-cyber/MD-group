@@ -19,14 +19,13 @@ export const metadata: Metadata = {
   description:
     "MD Group — منصة إدارة الشركات الداخلية: الموظفون، الحضور، الأوراق الرسمية، البريد، وجهات الاتصال.",
   keywords: "MD Group, إدارة, موارد بشرية, أوراق رسمية, شركات",
-  manifest: "/manifest.json",
+  manifest: "/portal-manifest.json",
   icons: {
     icon: [
-      { url: "/Icon-MD.png", sizes: "any", type: "image/png" },
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
     ],
-    apple: [
-      { url: "/Icon-MD.png", sizes: "180x180", type: "image/png" },
-    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
 };
 
@@ -34,6 +33,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#8c6032" },
     { media: "(prefers-color-scheme: dark)", color: "#0b0b0f" },

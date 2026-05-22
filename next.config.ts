@@ -40,7 +40,50 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  serverExternalPackages: ["pdf-parse"],
+  serverExternalPackages: ["pdf-parse", "web-push"],
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+          {
+            key: "Service-Worker-Allowed",
+            value: "/",
+          },
+        ],
+      },
+      {
+        source: "/portal-manifest.json",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/manifest+json",
+          },
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400",
+          },
+        ],
+      },
+      {
+        source: "/manifest.json",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/manifest+json",
+          },
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400",
+          },
+        ],
+      },
+    ];
+  },
   allowedDevOrigins: getLanOrigins(),
   experimental: {
     serverActions: {

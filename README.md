@@ -45,6 +45,10 @@ All restrictions are enforced at the database level via Postgres **RLS**.
 npm install --legacy-peer-deps
 ```
 
+Production builds use webpack (required for the Serwist service worker). `public/sw.js` is generated during `npm run build` and is gitignored.
+
+Optional Web Push: add VAPID keys to `.env.local` (see `.env.example`). Run `npx web-push generate-vapid-keys`, apply migration `0040_push_subscriptions.sql`, then enable notifications under **الإعدادات** in the portal.
+
 ### 2. Create a Supabase project
 
 - Sign up at [supabase.com](https://supabase.com).

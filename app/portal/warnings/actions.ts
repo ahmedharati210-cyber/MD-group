@@ -6,6 +6,10 @@ import { requireUser, requireRole } from "@/lib/auth";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { sendWhatsAppTemplate } from "@/lib/whatsapp";
+import {
+  dispatchWarningWebPush,
+  dispatchWarningWebPushBroadcast,
+} from "@/lib/push/dispatch-warning";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -74,6 +78,16 @@ export async function sendWarningAction(
       console.error("[warnings] WhatsApp dispatch (broadcast) failed", e);
     }
 
+    try {
+      await dispatchWarningWebPushBroadcast({
+        companyId: broadcastCompanyId,
+        kind,
+        message,
+      });
+    } catch (e) {
+      console.error("[warnings] Web Push dispatch (broadcast) failed", e);
+    }
+
     const adminForName = createSupabaseAdminClient();
     const { data: broadcastCo } = await adminForName
       .from("companies")
@@ -137,6 +151,12 @@ export async function sendWarningAction(
     dispatchWarningWhatsApp(phones, message);
   } catch (e) {
     console.error("[warnings] WhatsApp dispatch failed", e);
+  }
+
+  try {
+    await dispatchWarningWebPush({ kind, message, targetProfileIds: targetIds });
+  } catch (e) {
+    console.error("[warnings] Web Push dispatch failed", e);
   }
 
   const { data: targetCo } = await supabase

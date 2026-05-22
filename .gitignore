@@ -12,6 +12,9 @@
 /.next/
 /out/
 
+# Serwist generates this on production build (app/sw.ts → public/sw.js)
+/public/sw.js
+
 # production
 /build
 

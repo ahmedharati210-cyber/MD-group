@@ -16,6 +16,10 @@ const PwaInstallBanner = dynamic(
   () => import("./PwaInstallBanner").then((m) => m.PwaInstallBanner),
   { ssr: false },
 );
+const PwaSwUpdateBanner = dynamic(
+  () => import("./PwaSwUpdateBanner").then((m) => m.PwaSwUpdateBanner),
+  { ssr: false },
+);
 
 type Props = {
   role: UserRole;
@@ -65,6 +69,7 @@ export function PortalShell({
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <PwaSwUpdateBanner />
       <PwaInstallBanner />
       {!hideSidebar ? (
         <div className="print:hidden">
@@ -91,12 +96,12 @@ export function PortalShell({
 
       {/* Mobile: menu + refresh only when the sidebar exists */}
       {!hideSidebar ? (
-        <header className="print:hidden md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+        <header className="print:hidden md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 min-h-14 pt-[env(safe-area-inset-top)] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
           <button
             type="button"
             onClick={handleOpen}
             aria-label="فتح القائمة"
-            className="p-2 -mr-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="min-h-11 min-w-11 inline-flex items-center justify-center -mr-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <Menu className="w-6 h-6" />
           </button>
@@ -119,13 +124,13 @@ export function PortalShell({
             type="button"
             onClick={() => router.refresh()}
             aria-label="تحديث الصفحة"
-            className="p-2 -ml-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-transform"
+            className="min-h-11 min-w-11 inline-flex items-center justify-center -ml-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-transform"
           >
             <RefreshCw className="w-5 h-5" />
           </button>
         </header>
       ) : (
-        <header className="print:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+        <header className="print:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 min-h-14 pt-[env(safe-area-inset-top)] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
           <Link
             href="/portal"
             className="flex items-center gap-2 min-w-0 text-gray-900 dark:text-gray-100"
@@ -154,7 +159,7 @@ export function PortalShell({
             ) : null}
             <Link
               href="/portal/settings"
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
               aria-label="الإعدادات"
             >
               <Settings className="w-5 h-5" />
@@ -163,7 +168,7 @@ export function PortalShell({
               type="button"
               onClick={() => router.refresh()}
               aria-label="تحديث الصفحة"
-              className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-transform"
+              className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-transform"
             >
               <RefreshCw className="w-5 h-5" />
             </button>

@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { SettingsForm } from "./settings-form";
 import { AppearanceCard } from "./appearance-card";
+import { PushNotificationsCard } from "@/components/portal/PushNotificationsCard";
 import { AvatarUpload } from "./avatar-upload";
 import { ChangePasswordForm } from "./change-password-form";
 
@@ -42,6 +43,7 @@ export default async function SettingsPage() {
         </p>
         <ChangePasswordForm />
       </div>
+      <PushNotificationsCard />
       <AppearanceCard />
     </div>
   );

@@ -11,7 +11,7 @@ export default function OfflinePage() {
       {/* Logo */}
       <div className="mb-8">
         <img
-          src="/Icon-MD.png"
+          src="/icons/icon-192.png"
           alt="MD Group"
           width={72}
           height={72}
