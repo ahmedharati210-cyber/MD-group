@@ -14,20 +14,53 @@ function truncateMessage(message: string, max = 140): string {
   return `${trimmed.slice(0, max - 1)}…`;
 }
 
-/** Notify target employees via Web Push when a warning/notification is created. */
+export type WarningPushTarget = {
+  profileId: string;
+  warningId: string;
+};
+
+/** One Web Push per target with a unique notification tag (required for iOS banners). */
+export async function dispatchWarningWebPushTargets(options: {
+  kind: WarningKind;
+  message: string;
+  targets: WarningPushTarget[];
+}): Promise<void> {
+  const { kind, message, targets } = options;
+  if (targets.length === 0) return;
+
+  const body = truncateMessage(message);
+  const title = pushTitleForKind(kind);
+
+  await Promise.all(
+    targets.map(({ profileId, warningId }) =>
+      sendWebPushToUserIds([profileId], {
+        title,
+        body,
+        url: "/portal/notifications",
+        tag: `warning-${warningId}`,
+        warningId,
+      }),
+    ),
+  );
+}
+
+/** @deprecated Use dispatchWarningWebPushTargets — kept for callers passing profile ids only. */
 export async function dispatchWarningWebPush(options: {
   kind: WarningKind;
   message: string;
   targetProfileIds: string[];
+  warningId?: string;
 }): Promise<void> {
-  const { kind, message, targetProfileIds } = options;
+  const { kind, message, targetProfileIds, warningId } = options;
   if (targetProfileIds.length === 0) return;
 
+  const tagId = warningId ?? `bulk-${Date.now()}`;
   await sendWebPushToUserIds(targetProfileIds, {
     title: pushTitleForKind(kind),
     body: truncateMessage(message),
     url: "/portal/notifications",
-    tag: `warning-${kind}`,
+    tag: `warning-${tagId}`,
+    warningId: tagId,
   });
 }
 
@@ -36,6 +69,7 @@ export async function dispatchWarningWebPushBroadcast(options: {
   companyId: string;
   kind: WarningKind;
   message: string;
+  warningId: string;
 }): Promise<void> {
   const admin = createSupabaseAdminClient();
   const { data: profiles, error } = await admin
@@ -51,9 +85,13 @@ export async function dispatchWarningWebPushBroadcast(options: {
   }
 
   const ids = (profiles ?? []).map((p) => p.id).filter(Boolean);
-  await dispatchWarningWebPush({
-    kind: options.kind,
-    message: options.message,
-    targetProfileIds: ids,
+  if (ids.length === 0) return;
+
+  await sendWebPushToUserIds(ids, {
+    title: pushTitleForKind(options.kind),
+    body: truncateMessage(options.message),
+    url: "/portal/notifications",
+    tag: `warning-${options.warningId}`,
+    warningId: options.warningId,
   });
 }

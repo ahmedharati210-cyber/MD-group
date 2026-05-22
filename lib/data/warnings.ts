@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cacheLife, cacheTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import type { WarningKind } from "@/types/db";
@@ -37,6 +38,10 @@ export async function getWarningsData(params: {
   page: number;
   pageSize: number;
 }): Promise<WarningsData> {
+  "use cache";
+  cacheTag("warnings", "badges", `warnings:${params.profileId}`);
+  cacheLife({ stale: 0, revalidate: 30 });
+
   const supabase = await createSupabaseServerClient();
   const isManager = params.role !== "employee";
   const offset = (params.page - 1) * params.pageSize;

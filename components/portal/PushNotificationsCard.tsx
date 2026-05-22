@@ -73,6 +73,13 @@ export function PushNotificationsCard() {
         </p>
       ) : null}
 
+      {isStandalone && status === "on" ? (
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+          للتنبيه على شاشة القفل: فعّل الإشعارات من إعدادات الجهاز، أبقِ التطبيق في الخلفية عند
+          الاختبار، وحدّث التطبيق بعد كل نشر جديد.
+        </p>
+      ) : null}
+
       {status === "off" ? (
         <button
           type="button"

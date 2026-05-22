@@ -1,4 +1,5 @@
 import { getPortalServiceWorkerRegistration } from "@/lib/push/portal-sw";
+import { clearPortalAppBadge } from "@/lib/push/sync-app-badge";
 import {
   arrayBufferToBase64Url,
   isPushSupported,
@@ -101,6 +102,7 @@ export async function disableWebPush(): Promise<boolean> {
       });
       await sub.unsubscribe();
     }
+    await clearPortalAppBadge();
     return true;
   } catch {
     return false;

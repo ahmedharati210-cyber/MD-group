@@ -1,9 +1,11 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell, Send, TriangleAlert } from "lucide-react";
 import toast from "react-hot-toast";
 import { sendWarningAction } from "@/app/portal/warnings/actions";
+import { syncPortalAppBadge } from "@/lib/push/sync-app-badge";
 import { cn } from "@/lib/utils";
 
 type Engineer = { id: string; full_name: string };
@@ -21,6 +23,7 @@ type Props = {
 };
 
 export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Props) {
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState(sendWarningAction, init);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [broadcastCompany, setBroadcastCompany] = useState("");
@@ -34,7 +37,9 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
     setBroadcastCompany("");
     setMessageFieldKey((k) => k + 1);
     toast.success("تم الإرسال بنجاح.", { id: "warning-sent" });
-  }, [state]);
+    router.refresh();
+    void syncPortalAppBadge();
+  }, [state, router]);
 
   const allIds = engineers.map((e) => e.id);
   const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));

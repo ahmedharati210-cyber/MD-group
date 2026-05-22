@@ -1,17 +1,25 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import { markWarningReadAction } from "@/app/portal/warnings/actions";
+import { syncPortalAppBadge } from "@/lib/push/sync-app-badge";
 
 export function MarkReadButton({ warningId }: { warningId: string }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   function handleMark() {
     startTransition(async () => {
       const res = await markWarningReadAction(warningId);
-      if (res.error) toast.error(res.error);
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+      router.refresh();
+      void syncPortalAppBadge();
     });
   }
 

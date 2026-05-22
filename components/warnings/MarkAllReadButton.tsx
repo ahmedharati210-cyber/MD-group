@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import { markAllWarningsReadAction } from "@/app/portal/warnings/actions";
+import { clearPortalAppBadge } from "@/lib/push/sync-app-badge";
 
 export function MarkAllReadButton() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export function MarkAllReadButton() {
       }
       toast.success("تم تعليم الكل كمقروء.");
       router.refresh();
+      void clearPortalAppBadge();
     });
   }
 

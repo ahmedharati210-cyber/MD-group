@@ -9,6 +9,7 @@ import { Building2, Menu, RefreshCw, Settings } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { LogoutButton } from "./LogoutButton";
 import { isCompanyImmersivePath } from "@/lib/portal-shell-paths";
+import { usePortalPushRefresh } from "@/lib/hooks/use-portal-push-refresh";
 import type { UserRole, AppFeature, RoleFeatures } from "@/types/db";
 
 // Dynamically imported so framer-motion is excluded from the main portal
@@ -71,6 +72,8 @@ export function PortalShell({
   const [isOpen, setIsOpen] = useState(false);
   const handleClose = useCallback(() => setIsOpen(false), []);
   const handleOpen = useCallback(() => setIsOpen(true), []);
+
+  usePortalPushRefresh();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">

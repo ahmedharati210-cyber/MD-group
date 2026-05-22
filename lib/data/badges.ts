@@ -1,7 +1,8 @@
 import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { UserRole, WarningKind } from "@/types/db";
+import { countUnreadWarningsForKind } from "@/lib/data/notification-badge-counts";
+import type { UserRole } from "@/types/db";
 
 export type BadgeCounts = {
   pendingRequests: number;
@@ -13,42 +14,6 @@ export type BadgeCounts = {
   /** Papers with expires_on in the last month before expiry (not yet expired); RLS-scoped */
   expiringPapers: number;
 };
-
-async function countUnreadWarningsForKind(params: {
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
-  userId: string;
-  isEmployee: boolean;
-  companyId: string | null;
-  isSuperAdmin: boolean;
-  kind: WarningKind;
-}): Promise<number> {
-  const { supabase, userId, isEmployee, companyId, isSuperAdmin, kind } = params;
-
-  let q = supabase
-    .from("warnings")
-    .select("id", { count: "exact", head: true })
-    .eq("is_read", false)
-    .eq("kind", kind);
-
-  if (isEmployee) {
-    const { count } = await q.or(
-      `target_profile_id.eq.${userId},target_profile_id.is.null`,
-    );
-    return count ?? 0;
-  }
-
-  if (isSuperAdmin) {
-    const { count } = await q;
-    return count ?? 0;
-  }
-
-  if (companyId) {
-    const { count } = await q.eq("company_id", companyId);
-    return count ?? 0;
-  }
-
-  return 0;
-}
 
 /**
  * Sidebar notification badge counts. Always fetches fresh data per request —

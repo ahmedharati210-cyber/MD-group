@@ -7,7 +7,7 @@ import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/sup
 import { logAudit } from "@/lib/audit";
 import { sendWhatsAppTemplate } from "@/lib/whatsapp";
 import {
-  dispatchWarningWebPush,
+  dispatchWarningWebPushTargets,
   dispatchWarningWebPushBroadcast,
 } from "@/lib/push/dispatch-warning";
 
@@ -53,13 +53,17 @@ export async function sendWarningAction(
   // Super-admin broadcast to a whole company
   const broadcastCompanyId = formData.get("warning_company_id") as string | null;
   if (broadcastCompanyId && profile.is_super_admin) {
-    const { error } = await supabase.from("warnings").insert({
-      company_id: broadcastCompanyId,
-      sender_id: userId,
-      target_profile_id: null,
-      message,
-      kind,
-    });
+    const { data: broadcastRow, error } = await supabase
+      .from("warnings")
+      .insert({
+        company_id: broadcastCompanyId,
+        sender_id: userId,
+        target_profile_id: null,
+        message,
+        kind,
+      })
+      .select("id")
+      .single<{ id: string }>();
     if (error) return { error: error.message };
 
     try {
@@ -79,11 +83,14 @@ export async function sendWarningAction(
     }
 
     try {
-      await dispatchWarningWebPushBroadcast({
-        companyId: broadcastCompanyId,
-        kind,
-        message,
-      });
+      if (broadcastRow?.id) {
+        await dispatchWarningWebPushBroadcast({
+          companyId: broadcastCompanyId,
+          kind,
+          message,
+          warningId: broadcastRow.id,
+        });
+      }
     } catch (e) {
       console.error("[warnings] Web Push dispatch (broadcast) failed", e);
     }
@@ -136,7 +143,10 @@ export async function sendWarningAction(
     kind,
   }));
 
-  const { error } = await supabase.from("warnings").insert(rows);
+  const { data: insertedRows, error } = await supabase
+    .from("warnings")
+    .insert(rows)
+    .select("id, target_profile_id");
   if (error) return { error: error.message };
 
   try {
@@ -154,7 +164,12 @@ export async function sendWarningAction(
   }
 
   try {
-    await dispatchWarningWebPush({ kind, message, targetProfileIds: targetIds });
+    const pushTargets = (insertedRows ?? [])
+      .filter((r): r is { id: string; target_profile_id: string } =>
+        Boolean(r.id && r.target_profile_id),
+      )
+      .map((r) => ({ profileId: r.target_profile_id, warningId: r.id }));
+    await dispatchWarningWebPushTargets({ kind, message, targets: pushTargets });
   } catch (e) {
     console.error("[warnings] Web Push dispatch failed", e);
   }

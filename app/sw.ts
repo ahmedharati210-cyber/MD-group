@@ -44,9 +44,69 @@ type PushPayload = {
   body?: string;
   url?: string;
   tag?: string;
+  warningId?: string;
+};
+
+type SwClient = {
+  url: string;
+  focus(): Promise<SwClient>;
+  navigate?(url: string): Promise<SwClient>;
+  postMessage?(message: unknown): void;
 };
 
 const worker = self as unknown as ServiceWorkerGlobalScope & EventTarget;
+
+async function notifyPortalClients(payload: { url?: string }): Promise<void> {
+  const swClients = (
+    self as unknown as {
+      clients: {
+        matchAll(opts: {
+          type: string;
+          includeUncontrolled: boolean;
+        }): Promise<readonly SwClient[]>;
+      };
+    }
+  ).clients;
+
+  const clientList = await swClients.matchAll({
+    type: "window",
+    includeUncontrolled: true,
+  });
+
+  for (const client of clientList) {
+    if (!client.url.includes("/portal")) continue;
+    client.postMessage?.({ type: "PORTAL_REFRESH", url: payload.url });
+  }
+}
+
+async function syncBadgeFromServer(origin: string): Promise<void> {
+  try {
+    const sw = self as ServiceWorkerGlobalScope & {
+      navigator?: Navigator & {
+        setAppBadge?: (count: number) => Promise<void>;
+        clearAppBadge?: () => Promise<void>;
+      };
+    };
+    if (typeof sw.navigator?.setAppBadge !== "function") return;
+
+    const res = await fetch(`${origin}/api/portal/badge-counts`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!res.ok) return;
+
+    const data = (await res.json()) as { total?: number };
+    const total = typeof data.total === "number" ? data.total : 0;
+
+    if (total > 0) {
+      await sw.navigator.setAppBadge(total);
+    } else if (typeof sw.navigator.clearAppBadge === "function") {
+      await sw.navigator.clearAppBadge();
+    }
+  } catch {
+    // badge is best-effort
+  }
+}
 
 worker.addEventListener("push", (event: Event) => {
   const pushEvent = event as Event & {
@@ -66,39 +126,36 @@ worker.addEventListener("push", (event: Event) => {
 
       const title = data.title ?? "MD Group";
       const origin = self.location.origin;
-      const options: NotificationOptions = {
+      const tag =
+        data.tag ?? (data.warningId ? `warning-${data.warningId}` : "md-group");
+      const options = {
         body: data.body ?? "",
         icon: `${origin}/icons/icon-192.png`,
         badge: `${origin}/icons/icon-192.png`,
-        tag: data.tag ?? "md-group",
+        tag,
+        renotify: true,
         data: { url: data.url ?? "/portal/notifications" },
-        dir: "rtl",
+        dir: "rtl" as NotificationOptions["dir"],
         lang: "ar",
-      };
+      } satisfies NotificationOptions & { renotify?: boolean };
 
-      // iOS sometimes reports "default" in the SW even when the PWA has granted permission.
       try {
         await self.registration.showNotification(title, options);
       } catch {
         await self.registration.showNotification(title, {
           body: options.body,
           tag: options.tag,
+          renotify: true,
           data: options.data,
           dir: "rtl",
           lang: "ar",
-        });
+        } as NotificationOptions & { renotify?: boolean });
       }
 
-      try {
-        const sw = self as ServiceWorkerGlobalScope & {
-          navigator?: Navigator & { setAppBadge?: (count: number) => Promise<void> };
-        };
-        if (typeof sw.navigator?.setAppBadge === "function") {
-          await sw.navigator.setAppBadge(1);
-        }
-      } catch {
-        // Badging not supported on this device
-      }
+      await Promise.all([
+        notifyPortalClients({ url: data.url }),
+        syncBadgeFromServer(origin),
+      ]);
     })(),
   );
 });
@@ -114,7 +171,6 @@ worker.addEventListener("notificationclick", (event: Event) => {
   const raw = (clickEvent.notification.data?.url as string) ?? "/portal/notifications";
   const targetUrl = new URL(raw, self.location.origin).href;
 
-  type SwClient = { url: string; focus(): Promise<SwClient>; navigate?(url: string): Promise<SwClient> };
   const swClients = (
     self as unknown as {
       clients: {
@@ -126,18 +182,30 @@ worker.addEventListener("notificationclick", (event: Event) => {
       };
     }
   ).clients;
+
   clickEvent.waitUntil(
-    swClients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+    (async () => {
+      await notifyPortalClients({ url: raw });
+
+      const clientList = await swClients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+
       for (const client of clientList) {
         if (!client.url.includes("/portal")) continue;
         if (client.navigate) {
-          return client.navigate(targetUrl).then(() => client.focus());
+          await client.navigate(targetUrl);
+          await client.focus();
+          return;
         }
-        return client.focus();
+        await client.focus();
+        return;
       }
+
       if (swClients.openWindow) {
-        return swClients.openWindow(targetUrl);
+        await swClients.openWindow(targetUrl);
       }
-    }),
+    })(),
   );
 });

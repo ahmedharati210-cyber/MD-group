@@ -9,6 +9,7 @@ export type PushPayload = {
   body: string;
   url?: string;
   tag?: string;
+  warningId?: string;
 };
 
 type PushSubscriptionRow = {
@@ -77,6 +78,7 @@ export async function sendWebPushToUserIds(
     body: payload.body,
     url: payload.url ?? "/portal/notifications",
     tag: payload.tag,
+    warningId: payload.warningId,
   });
 
   let sent = 0;
