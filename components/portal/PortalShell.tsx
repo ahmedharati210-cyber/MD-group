@@ -7,6 +7,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Building2, Menu, RefreshCw, Settings } from "lucide-react";
 import { Sidebar } from "./Sidebar";
+import { LogoutButton } from "./LogoutButton";
 import { isCompanyImmersivePath } from "@/lib/portal-shell-paths";
 import type { UserRole, AppFeature, RoleFeatures } from "@/types/db";
 
@@ -18,6 +19,10 @@ const PwaInstallBanner = dynamic(
 );
 const PwaSwUpdateBanner = dynamic(
   () => import("./PwaSwUpdateBanner").then((m) => m.PwaSwUpdateBanner),
+  { ssr: false },
+);
+const PushOptInModal = dynamic(
+  () => import("./PushOptInModal").then((m) => m.PushOptInModal),
   { ssr: false },
 );
 
@@ -71,6 +76,7 @@ export function PortalShell({
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <PwaSwUpdateBanner />
       <PwaInstallBanner />
+      <PushOptInModal />
       {!hideSidebar ? (
         <div className="print:hidden">
           <Sidebar
@@ -120,14 +126,17 @@ export function PortalShell({
               MD Group
             </span>
           </Link>
-          <button
-            type="button"
-            onClick={() => router.refresh()}
-            aria-label="تحديث الصفحة"
-            className="min-h-11 min-w-11 inline-flex items-center justify-center -ml-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-transform"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1 -ml-2">
+            <LogoutButton variant="icon" />
+            <button
+              type="button"
+              onClick={() => router.refresh()}
+              aria-label="تحديث الصفحة"
+              className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-transform"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+          </div>
         </header>
       ) : (
         <header className="print:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 min-h-14 pt-[env(safe-area-inset-top)] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
@@ -164,6 +173,7 @@ export function PortalShell({
             >
               <Settings className="w-5 h-5" />
             </Link>
+            <LogoutButton variant="icon" />
             <button
               type="button"
               onClick={() => router.refresh()}

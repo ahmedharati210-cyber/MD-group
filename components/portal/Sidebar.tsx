@@ -14,7 +14,6 @@ import {
   Mail,
   Contact,
   Settings,
-  LogOut,
   X,
   FolderKanban,
   FileBarChart2,
@@ -32,7 +31,7 @@ import {
   isMdManagerFeatureAllowed,
   MD_MANAGER_CORE_FEATURES,
 } from "@/lib/features";
-import { logoutAction } from "@/app/login/actions";
+import { LogoutButton } from "@/components/portal/LogoutButton";
 import type { UserRole, AppFeature, RoleFeatures } from "@/types/db";
 
 type Item = {
@@ -455,17 +454,8 @@ export function Sidebar({
           ) : null}
         </nav>
 
-        {/* Logout */}
         <div className="p-3 border-t border-gray-100 dark:border-gray-800">
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-              تسجيل الخروج
-            </button>
-          </form>
+          <LogoutButton variant="sidebar" />
         </div>
       </aside>
     </>
