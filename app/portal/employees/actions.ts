@@ -18,15 +18,17 @@ import { getCompanyData } from "@/lib/company";
 import { isMdManagerFeatureAllowed } from "@/lib/features";
 import { logAudit } from "@/lib/audit";
 
-/** HR-only roster row (no Auth user). Portal accounts are created from admin. */
-const createEmployeeDirectorySchema = z.object({
+const createSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
   full_name: z.string().min(2),
-  contact_email: z.union([z.string().email(), z.null()]),
   phone: z.string().optional().nullable(),
   job_title: z.string().optional().nullable(),
   national_id: z.string().optional().nullable(),
   hired_at: z.string().optional().nullable(),
   company_id: z.string().uuid(),
+  role: z.enum(["employee", "company_manager"]).default("employee"),
+  // Extended HR fields
   date_of_birth: z.string().optional().nullable(),
   gender: z.enum(["male", "female"]).optional().nullable(),
   nationality: z.string().optional().nullable(),
@@ -43,18 +45,7 @@ const createEmployeeDirectorySchema = z.object({
   hr_notes: z.string().optional().nullable(),
 });
 
-const updateEmployeeDirectorySchema = createEmployeeDirectorySchema.extend({
-  id: z.string().uuid(),
-  is_active: z.coerce.boolean(),
-});
-
 export type ActionState = { error?: string; ok?: boolean };
-
-function emptyToNull(v: unknown): string | null {
-  if (v == null) return null;
-  const s = String(v).trim();
-  return s === "" ? null : s;
-}
 
 export async function createEmployeeAction(
   _prev: ActionState | undefined,
@@ -62,50 +53,26 @@ export async function createEmployeeAction(
 ): Promise<ActionState> {
   const current = await requireRole(["md_admin", "company_manager"]);
 
-  const contactRaw = emptyToNull(formData.get("contact_email"));
-  if (contactRaw && !z.string().email().safeParse(contactRaw).success) {
-    return { error: "البريد الإلكتروني للمراسلة غير صالح" };
-  }
-
-  const parsed = createEmployeeDirectorySchema.safeParse({
+  const parsed = createSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
     full_name: formData.get("full_name"),
-    contact_email: contactRaw,
     phone: formData.get("phone") || null,
     job_title: formData.get("job_title") || null,
     national_id: formData.get("national_id") || null,
-    hired_at: emptyToNull(formData.get("hired_at")),
+    hired_at: formData.get("hired_at") || null,
     company_id: formData.get("company_id"),
-    date_of_birth: emptyToNull(formData.get("date_of_birth")),
-    gender: emptyToNull(formData.get("gender")) as "male" | "female" | null,
+    role: formData.get("role") || "employee",
+    date_of_birth: formData.get("date_of_birth") || null,
+    gender: formData.get("gender") || null,
     nationality: formData.get("nationality") || null,
     address: formData.get("address") || null,
     department: formData.get("department") || null,
-    contract_type: emptyToNull(formData.get("contract_type")) as
-      | "full_time"
-      | "part_time"
-      | "contract"
-      | "intern"
-      | null,
-    contract_end_date: emptyToNull(formData.get("contract_end_date")),
+    contract_type: formData.get("contract_type") || null,
+    contract_end_date: formData.get("contract_end_date") || null,
     passport_number: formData.get("passport_number") || null,
-    blood_type: emptyToNull(formData.get("blood_type")) as
-      | "A+"
-      | "A-"
-      | "B+"
-      | "B-"
-      | "AB+"
-      | "AB-"
-      | "O+"
-      | "O-"
-      | null,
-    education_level: emptyToNull(formData.get("education_level")) as
-      | "high_school"
-      | "diploma"
-      | "bachelor"
-      | "master"
-      | "phd"
-      | "other"
-      | null,
+    blood_type: formData.get("blood_type") || null,
+    education_level: formData.get("education_level") || null,
     emergency_contact_name: formData.get("emergency_contact_name") || null,
     emergency_contact_phone: formData.get("emergency_contact_phone") || null,
     emergency_contact_relationship: formData.get("emergency_contact_relationship") || null,
@@ -115,163 +82,40 @@ export async function createEmployeeAction(
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
   }
 
+  // A manager can only create employees within their own company, and cannot
+  // create other managers.
   if (current.profile.role === "company_manager") {
     if (parsed.data.company_id !== current.profile.company_id) {
       return { error: "لا يمكنك إضافة موظف لشركة أخرى" };
     }
+    if (parsed.data.role !== "employee") {
+      return { error: "صلاحية إنشاء المدراء مخصّصة لإدارة المجموعة" };
+    }
   }
-
-  const supabase = await createSupabaseServerClient();
-
-  const { data: inserted, error: insErr } = await supabase
-    .from("employee_directory")
-    .insert({
-      company_id: parsed.data.company_id,
-      full_name: parsed.data.full_name,
-      contact_email: parsed.data.contact_email,
-      phone: parsed.data.phone,
-      job_title: parsed.data.job_title,
-      national_id: parsed.data.national_id,
-      hired_at: parsed.data.hired_at,
-      date_of_birth: parsed.data.date_of_birth,
-      gender: parsed.data.gender,
-      nationality: parsed.data.nationality,
-      address: parsed.data.address,
-      department: parsed.data.department,
-      contract_type: parsed.data.contract_type,
-      contract_end_date: parsed.data.contract_end_date,
-      passport_number: parsed.data.passport_number,
-      blood_type: parsed.data.blood_type,
-      education_level: parsed.data.education_level,
-      emergency_contact_name: parsed.data.emergency_contact_name,
-      emergency_contact_phone: parsed.data.emergency_contact_phone,
-      emergency_contact_relationship: parsed.data.emergency_contact_relationship,
-      hr_notes: parsed.data.hr_notes,
-      created_by: current.userId,
-    })
-    .select("id")
-    .maybeSingle<{ id: string }>();
-
-  if (insErr) return { error: insErr.message };
-  if (!inserted?.id) return { error: "فشل حفظ السجل" };
 
   const admin = createSupabaseAdminClient();
-  let company_name: string | null = null;
-  const { data: companyRow } = await admin
-    .from("companies")
-    .select("name_ar")
-    .eq("id", parsed.data.company_id)
-    .maybeSingle<{ name_ar: string }>();
-  if (companyRow?.name_ar) company_name = companyRow.name_ar;
 
-  await logAudit(current.userId, "employee_directory.create", "employee_directory", inserted.id, {
-    full_name: parsed.data.full_name,
-    ...(company_name ? { company_name } : {}),
+  const { data: userData, error: userErr } = await admin.auth.admin.createUser({
+    email: parsed.data.email,
+    password: parsed.data.password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: parsed.data.full_name,
+      role: parsed.data.role,
+    },
   });
-
-  revalidatePath("/portal/employees");
-  revalidateTag("employees", "default");
-  revalidateTag("dashboard", "default");
-  redirect("/portal/employees");
-}
-
-export async function updateEmployeeDirectoryAction(
-  _prev: ActionState | undefined,
-  formData: FormData,
-): Promise<ActionState> {
-  const current = await requireRole(["md_admin", "company_manager"]);
-
-  const contactRaw = emptyToNull(formData.get("contact_email"));
-  if (contactRaw && !z.string().email().safeParse(contactRaw).success) {
-    return { error: "البريد الإلكتروني للمراسلة غير صالح" };
+  if (userErr || !userData.user) {
+    return { error: userErr?.message ?? "فشل إنشاء المستخدم" };
   }
 
-  const parsed = updateEmployeeDirectorySchema.safeParse({
-    id: formData.get("id"),
-    full_name: formData.get("full_name"),
-    contact_email: contactRaw,
-    phone: formData.get("phone") || null,
-    job_title: formData.get("job_title") || null,
-    national_id: formData.get("national_id") || null,
-    hired_at: emptyToNull(formData.get("hired_at")),
-    company_id: formData.get("company_id"),
-    date_of_birth: emptyToNull(formData.get("date_of_birth")),
-    gender: emptyToNull(formData.get("gender")) as "male" | "female" | null,
-    nationality: formData.get("nationality") || null,
-    address: formData.get("address") || null,
-    department: formData.get("department") || null,
-    contract_type: emptyToNull(formData.get("contract_type")) as
-      | "full_time"
-      | "part_time"
-      | "contract"
-      | "intern"
-      | null,
-    contract_end_date: emptyToNull(formData.get("contract_end_date")),
-    passport_number: formData.get("passport_number") || null,
-    blood_type: emptyToNull(formData.get("blood_type")) as
-      | "A+"
-      | "A-"
-      | "B+"
-      | "B-"
-      | "AB+"
-      | "AB-"
-      | "O+"
-      | "O-"
-      | null,
-    education_level: emptyToNull(formData.get("education_level")) as
-      | "high_school"
-      | "diploma"
-      | "bachelor"
-      | "master"
-      | "phd"
-      | "other"
-      | null,
-    emergency_contact_name: formData.get("emergency_contact_name") || null,
-    emergency_contact_phone: formData.get("emergency_contact_phone") || null,
-    emergency_contact_relationship: formData.get("emergency_contact_relationship") || null,
-    hr_notes: formData.get("hr_notes") || null,
-    is_active: formData.get("is_active") === "on",
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const { data: target, error: fetchErr } = await supabase
-    .from("employee_directory")
-    .select("id, company_id")
-    .eq("id", parsed.data.id)
-    .maybeSingle<{ id: string; company_id: string }>();
-
-  if (fetchErr || !target) {
-    return { error: fetchErr?.message ?? "السجل غير موجود" };
-  }
-
-  const isScopedManager =
-    current.profile.role === "company_manager" && !current.profile.is_super_admin;
-  const canSetCompany =
-    current.profile.role === "md_admin" || current.profile.is_super_admin;
-
-  if (isScopedManager) {
-    if (target.company_id !== current.profile.company_id) {
-      return { error: "صلاحيات غير كافية" };
-    }
-    if (parsed.data.company_id !== current.profile.company_id) {
-      return { error: "لا يمكنك نقل السجل إلى شركة أخرى" };
-    }
-  }
-
-  const company_id = canSetCompany
-    ? parsed.data.company_id
-    : (current.profile.company_id ?? parsed.data.company_id);
-
-  const { error: updErr } = await supabase
-    .from("employee_directory")
+  // The trigger created a profile row; update it with the rest of the fields.
+  const { error: profErr } = await admin
+    .from("profiles")
     .update({
-      company_id,
       full_name: parsed.data.full_name,
-      contact_email: parsed.data.contact_email,
       phone: parsed.data.phone,
+      role: parsed.data.role,
+      company_id: parsed.data.company_id,
       job_title: parsed.data.job_title,
       national_id: parsed.data.national_id,
       hired_at: parsed.data.hired_at,
@@ -289,71 +133,31 @@ export async function updateEmployeeDirectoryAction(
       emergency_contact_phone: parsed.data.emergency_contact_phone,
       emergency_contact_relationship: parsed.data.emergency_contact_relationship,
       hr_notes: parsed.data.hr_notes,
-      is_active: parsed.data.is_active,
     })
-    .eq("id", parsed.data.id);
+    .eq("id", userData.user.id);
 
-  if (updErr) return { error: updErr.message };
+  if (profErr) return { error: profErr.message };
 
-  const admin = createSupabaseAdminClient();
   let company_name: string | null = null;
   const { data: companyRow } = await admin
     .from("companies")
-    .select("name_ar")
-    .eq("id", company_id)
-    .maybeSingle<{ name_ar: string }>();
-  if (companyRow?.name_ar) company_name = companyRow.name_ar;
+    .select("name")
+    .eq("id", parsed.data.company_id)
+    .maybeSingle<{ name: string }>();
+  if (companyRow?.name) company_name = companyRow.name;
 
-  await logAudit(current.userId, "employee_directory.update", "employee_directory", parsed.data.id, {
-    full_name: parsed.data.full_name,
-    ...(company_name ? { company_name } : {}),
+  await admin.from("audit_log").insert({
+    actor_id: current.userId,
+    action: "employee.create",
+    entity: "profiles",
+    entity_id: userData.user.id,
+    payload: {
+      email: parsed.data.email,
+      ...(company_name ? { company_name } : {}),
+    },
   });
 
   revalidatePath("/portal/employees");
-  revalidatePath(`/portal/employees/${parsed.data.id}`);
-  revalidatePath(`/portal/employees/${parsed.data.id}/edit`);
-  revalidateTag("employees", "default");
-  revalidateTag("dashboard", "default");
-  redirect(`/portal/employees/${parsed.data.id}`);
-}
-
-export async function deleteEmployeeDirectoryAction(formData: FormData) {
-  const current = await requireRole(["md_admin", "company_manager"]);
-  const rawId = formData.get("id");
-  if (typeof rawId !== "string" || !z.string().uuid().safeParse(rawId).success) {
-    redirect(`/portal/employees?error=${encodeURIComponent("معرف غير صالح")}`);
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const { data: target, error: fetchErr } = await supabase
-    .from("employee_directory")
-    .select("id, company_id")
-    .eq("id", rawId)
-    .maybeSingle<{ id: string; company_id: string }>();
-
-  if (fetchErr || !target) {
-    redirect(`/portal/employees?error=${encodeURIComponent("السجل غير موجود")}`);
-  }
-
-  const isScopedManager =
-    current.profile.role === "company_manager" && !current.profile.is_super_admin;
-  if (isScopedManager && target.company_id !== current.profile.company_id) {
-    redirect(
-      `/portal/employees/${rawId}?error=${encodeURIComponent("صلاحيات غير كافية.")}`,
-    );
-  }
-
-  const { error: delErr } = await supabase.from("employee_directory").delete().eq("id", rawId);
-  if (delErr) {
-    redirect(
-      `/portal/employees/${rawId}?error=${encodeURIComponent(delErr.message)}`,
-    );
-  }
-
-  await logAudit(current.userId, "employee_directory.delete", "employee_directory", rawId, {});
-
-  revalidatePath("/portal/employees");
-  revalidatePath(`/portal/employees/${rawId}`);
   revalidateTag("employees", "default");
   revalidateTag("dashboard", "default");
   redirect("/portal/employees");

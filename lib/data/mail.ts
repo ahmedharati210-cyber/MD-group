@@ -1,6 +1,5 @@
 import "server-only";
 
-import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type MailData = {
@@ -53,15 +52,19 @@ export async function getMailData(params: {
     { count: inboundCount },
     { count: outboundCount },
     { data: mails, count },
-    companies,
+    { data: companies },
   ] = await Promise.all([
     buildCount(),
     buildCount("inbound"),
     buildCount("outbound"),
     listQuery,
-    fetchCompaniesForDropdown(supabase, {
-      ...(params.scopeCompaniesToId ? { eqId: params.scopeCompaniesToId } : {}),
-    }),
+    (() => {
+      let cq = supabase.from("companies").select("id, name_ar").order("name_ar");
+      if (params.scopeCompaniesToId) {
+        cq = cq.eq("id", params.scopeCompaniesToId);
+      }
+      return cq;
+    })(),
   ]);
 
   return {
@@ -70,6 +73,6 @@ export async function getMailData(params: {
     total: total ?? 0,
     inboundCount: inboundCount ?? 0,
     outboundCount: outboundCount ?? 0,
-    companies: companies ?? [],
+    companies: (companies ?? []) as { id: string; name_ar: string }[],
   };
 }

@@ -22,7 +22,7 @@ function Submit() {
           جارٍ الحفظ...
         </>
       ) : (
-        "حفظ بيانات الموظف"
+        "إضافة الموظف"
       )}
     </button>
   );
@@ -91,22 +91,21 @@ export function NewEmployeeForm({
         </div>
       ) : null}
 
-      {/* ── Identity (no portal login) ─────────────────────────── */}
+      {/* ── Account Credentials ───────────────────────────────── */}
       <section className={sectionClasses}>
         <h2 className={sectionTitleClasses}>
           <User className="w-4 h-4" />
-          الهوية والشركة
+          بيانات الحساب
         </h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="الاسم الكامل" span2>
             <Input name="full_name" required />
           </Field>
-          <Field
-            label="بريد للمراسلة (اختياري)"
-            hint="للتواصل فقط؛ لا يُنشئ حساباً في المنصّة. يمكن لاحقاً إنشاء حساب من لوحة الإدارة."
-            span2
-          >
-            <Input name="contact_email" type="email" dir="ltr" autoComplete="off" />
+          <Field label="البريد الإلكتروني">
+            <Input name="email" type="email" required />
+          </Field>
+          <Field label="كلمة المرور المبدئية" hint="8 أحرف على الأقل">
+            <Input name="password" type="password" required minLength={8} />
           </Field>
         </div>
       </section>
@@ -188,7 +187,7 @@ export function NewEmployeeForm({
             <Input name="contract_end_date" type="date" />
           </Field>
 
-          <div className="sm:col-span-2">
+          <div>
             <label className={labelClasses}>الشركة</label>
             <select
               name="company_id"
@@ -205,6 +204,18 @@ export function NewEmployeeForm({
               ))}
             </select>
           </div>
+
+          {!isManager ? (
+            <div>
+              <label className={labelClasses}>الدور</label>
+              <select name="role" defaultValue="employee" className={inputClasses}>
+                <option value="employee">موظف</option>
+                <option value="company_manager">مدير شركة</option>
+              </select>
+            </div>
+          ) : (
+            <input type="hidden" name="role" value="employee" />
+          )}
         </div>
       </section>
 
@@ -244,21 +255,6 @@ export function NewEmployeeForm({
             />
           </Field>
         </div>
-      </section>
-
-      <section className={sectionClasses}>
-        <h2 className={sectionTitleClasses}>
-          <FileText className="w-4 h-4" />
-          ملاحظات الموارد البشرية
-        </h2>
-        <Field label="ملاحظات داخلية (اختياري)" span2>
-          <textarea
-            name="hr_notes"
-            rows={3}
-            className={inputClasses}
-            placeholder="معلومات إضافية للفريق الإداري فقط..."
-          />
-        </Field>
       </section>
 
       <div className="pt-2">

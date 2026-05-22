@@ -3,7 +3,6 @@ import { Plus, FileBarChart2, CalendarDays, MapPin, User, StickyNote, Clock } fr
 import { requireFeature } from "@/lib/auth";
 import { getReportsData } from "@/lib/data/reports";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
-import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatTime } from "@/lib/utils";
 import { PageHeader } from "@/components/portal/PageHeader";
@@ -55,8 +54,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
   let companiesForFilter: { id: string; name_ar: string }[] = [];
   if (isManager && (profile.role === "md_admin" || (profile.is_super_admin ?? false))) {
     const supabase = await createSupabaseServerClient();
-    const companiesForFilterRaw = await fetchCompaniesForDropdown(supabase);
-    companiesForFilter = companiesForFilterRaw;
+    const { data } = await supabase
+      .from("companies")
+      .select("id, name_ar")
+      .order("name_ar");
+    companiesForFilter = (data ?? []) as { id: string; name_ar: string }[];
   }
 
   const selectClasses =

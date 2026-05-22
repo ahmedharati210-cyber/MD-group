@@ -1,12 +1,11 @@
 import { Building2, Users, ShieldCheck, UserCog } from "lucide-react";
 import { requireSuperAdmin } from "@/lib/auth";
-import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
-import type { AppFeature, Company, RoleFeatures, UserRole } from "@/types/db";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { FeatureToggleForm } from "./feature-toggle-form";
 import { SuperAdminToggle } from "./super-admin-toggle";
 import { UserEditForm } from "./user-edit-form";
+import type { AppFeature, RoleFeatures, UserRole } from "@/types/db";
 
 export const metadata = { title: "لوحة الإدارة العليا" };
 
@@ -27,27 +26,21 @@ export default async function AdminPage() {
 
   const adminClient = createSupabaseAdminClient();
 
-  const [companies, profilesResult, authResult] = await Promise.all([
-    fetchCompaniesForDropdown<
-      Pick<
-        Company,
-        "id" | "name_ar" | "name_en" | "active" | "enabled_features" | "role_features"
-      >
-    >(supabase, {
-      columns: "id, name_ar, name_en, active, enabled_features, role_features",
-    }),
-    supabase
-      .from("profiles")
-      .select(
-        "id, full_name, role, company_id, job_title, is_active, is_super_admin, companies:company_id(name_ar)",
-      )
-      .order("role")
-      .order("full_name"),
-    adminClient.auth.admin.listUsers({ perPage: 1000 }),
-  ]);
-
-  const rawProfiles = profilesResult.data;
-  const authData = authResult.data;
+  const [{ data: companies }, { data: rawProfiles }, { data: authData }] =
+    await Promise.all([
+      supabase
+        .from("companies")
+        .select("id, name_ar, name_en, active, enabled_features, role_features")
+        .order("name_ar"),
+      supabase
+        .from("profiles")
+        .select(
+          "id, full_name, role, company_id, job_title, is_active, is_super_admin, companies:company_id(name_ar)",
+        )
+        .order("role")
+        .order("full_name"),
+      adminClient.auth.admin.listUsers({ perPage: 1000 }),
+    ]);
 
   // Build id → email lookup from Supabase Auth
   const emailMap = new Map(
@@ -55,7 +48,7 @@ export default async function AdminPage() {
   );
 
   const profiles = (rawProfiles ?? []) as unknown as ProfileRow[];
-  const companyList = companies.map((c) => ({
+  const companyList = (companies ?? []).map((c) => ({
     id: c.id,
     name_ar: c.name_ar,
   }));

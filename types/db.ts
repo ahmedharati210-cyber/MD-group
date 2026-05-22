@@ -89,36 +89,6 @@ export type ContractType = "full_time" | "part_time" | "contract" | "intern";
 export type BloodType = "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-";
 export type EducationLevel = "high_school" | "diploma" | "bachelor" | "master" | "phd" | "other";
 
-/** HR roster without Auth; optional link to profiles when a portal user is created later. */
-export interface EmployeeDirectoryRow {
-  id: string;
-  company_id: string;
-  full_name: string;
-  contact_email: string | null;
-  phone: string | null;
-  job_title: string | null;
-  national_id: string | null;
-  hired_at: string | null;
-  date_of_birth: string | null;
-  gender: Gender | null;
-  nationality: string | null;
-  address: string | null;
-  department: string | null;
-  contract_type: ContractType | null;
-  contract_end_date: string | null;
-  passport_number: string | null;
-  blood_type: BloodType | null;
-  education_level: EducationLevel | null;
-  emergency_contact_name: string | null;
-  emergency_contact_phone: string | null;
-  emergency_contact_relationship: string | null;
-  hr_notes: string | null;
-  is_active: boolean;
-  linked_profile_id: string | null;
-  created_by: string | null;
-  created_at: string;
-}
-
 export interface Profile {
   id: string;
   full_name: string;

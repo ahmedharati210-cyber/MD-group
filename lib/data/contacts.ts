@@ -1,6 +1,5 @@
 import "server-only";
 
-import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isConstructionCompany } from "@/lib/features";
 
@@ -51,7 +50,10 @@ export async function getContactsData(params: {
 
   const { data: contacts, count } = await query;
 
-  const companies = await fetchCompaniesForDropdown(supabase);
+  const { data: companies } = await supabase
+    .from("companies")
+    .select("id, name_ar")
+    .order("name_ar");
 
   return {
     contacts: contacts ?? [],

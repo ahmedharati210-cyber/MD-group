@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { requireRole } from "@/lib/auth";
-import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { formatTime } from "@/lib/utils";
@@ -34,9 +33,9 @@ export default async function NewAttendancePage({
     empQuery = empQuery.eq("company_id", profile.company_id);
   }
 
-  const [{ data: employees }, companies] = await Promise.all([
+  const [{ data: employees }, { data: companies }] = await Promise.all([
     empQuery,
-    fetchCompaniesForDropdown(supabase),
+    supabase.from("companies").select("id, name_ar").order("name_ar"),
   ]);
 
   // If an employee + date are provided, fetch an existing record so the form

@@ -1,6 +1,5 @@
 import "server-only";
 
-import { fetchCompaniesForDropdown } from "@/lib/companies-dropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { DocumentRow } from "@/types/db";
 
@@ -41,13 +40,13 @@ export async function getPapersData(params: {
     query = query.eq("company_id", params.companyId);
   }
 
-  const [{ data: docs }, companies] = await Promise.all([
+  const [{ data: docs }, { data: companies }] = await Promise.all([
     query,
-    fetchCompaniesForDropdown(supabase),
+    supabase.from("companies").select("id, name_ar").order("name_ar"),
   ]);
 
   return {
     docs: (docs ?? []) as PaperDoc[],
-    companies: companies ?? [],
+    companies: (companies ?? []) as { id: string; name_ar: string }[],
   };
 }

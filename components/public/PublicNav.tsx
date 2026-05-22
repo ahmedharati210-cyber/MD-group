@@ -30,8 +30,10 @@ export function PublicNav() {
   return (
     <nav
       className={cn(
-        "sticky top-0 z-50 bg-white/95 dark:bg-gray-950/90 backdrop-blur border-b border-gray-200 dark:border-gray-800 transition-shadow",
-        scrolled ? "shadow-md dark:shadow-black/40" : "shadow-sm",
+        "sticky top-0 z-50 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-700 transition-shadow",
+        scrolled
+          ? "shadow-md dark:shadow-black/50"
+          : "shadow-sm dark:shadow-black/30",
       )}
     >
       <div className="container-custom">
