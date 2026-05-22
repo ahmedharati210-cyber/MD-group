@@ -54,30 +54,62 @@ worker.addEventListener("push", (event: Event) => {
     waitUntil(p: Promise<unknown>): void;
   };
   if (!pushEvent.data) return;
-  let data: PushPayload = {};
-  try {
-    data = pushEvent.data.json() as PushPayload;
-  } catch {
-    data = { body: pushEvent.data.text() };
-  }
-  const title = data.title ?? "MD Group";
-  const options: NotificationOptions = {
-    body: data.body ?? "",
-    icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
-    tag: data.tag ?? "md-group",
-    data: { url: data.url ?? "/portal/notifications" },
-    dir: "rtl",
-    lang: "ar",
-  };
-  pushEvent.waitUntil(self.registration.showNotification(title, options));
+
+  pushEvent.waitUntil(
+    (async () => {
+      let data: PushPayload = {};
+      try {
+        data = pushEvent.data!.json() as PushPayload;
+      } catch {
+        data = { body: pushEvent.data!.text() };
+      }
+
+      const title = data.title ?? "MD Group";
+      const origin = self.location.origin;
+      const options: NotificationOptions = {
+        body: data.body ?? "",
+        icon: `${origin}/icons/icon-192.png`,
+        badge: `${origin}/icons/icon-192.png`,
+        tag: data.tag ?? "md-group",
+        data: { url: data.url ?? "/portal/notifications" },
+        dir: "rtl",
+        lang: "ar",
+      };
+
+      // iOS sometimes reports "default" in the SW even when the PWA has granted permission.
+      try {
+        await self.registration.showNotification(title, options);
+      } catch {
+        await self.registration.showNotification(title, {
+          body: options.body,
+          tag: options.tag,
+          data: options.data,
+          dir: "rtl",
+          lang: "ar",
+        });
+      }
+
+      try {
+        const sw = self as ServiceWorkerGlobalScope & {
+          navigator?: Navigator & { setAppBadge?: (count: number) => Promise<void> };
+        };
+        if (typeof sw.navigator?.setAppBadge === "function") {
+          await sw.navigator.setAppBadge(1);
+        }
+      } catch {
+        // Badging not supported on this device
+      }
+    })(),
+  );
 });
 
 worker.addEventListener("notificationclick", (event: Event) => {
   const clickEvent = event as Event & {
     notification: Notification & { close(): void; data?: { url?: string } };
     waitUntil(p: Promise<unknown>): void;
+    preventDefault(): void;
   };
+  clickEvent.preventDefault();
   clickEvent.notification.close();
   const raw = (clickEvent.notification.data?.url as string) ?? "/portal/notifications";
   const targetUrl = new URL(raw, self.location.origin).href;

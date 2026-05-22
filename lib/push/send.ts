@@ -62,6 +62,16 @@ export async function sendWebPushToUserIds(
     return { sent: 0, failed: 0 };
   }
 
+  const subscriptionRows = (rows ?? []) as PushSubscriptionRow[];
+  if (subscriptionRows.length === 0) {
+    console.info(
+      "[web-push] skipped: no registered devices for",
+      uniqueIds.length,
+      "recipient profile(s). Enable الإشعارات on the recipient phone, or select them when sending.",
+    );
+    return { sent: 0, failed: 0 };
+  }
+
   const body = JSON.stringify({
     title: payload.title,
     body: payload.body,
@@ -72,7 +82,7 @@ export async function sendWebPushToUserIds(
   let sent = 0;
   let failed = 0;
 
-  for (const row of (rows ?? []) as PushSubscriptionRow[]) {
+  for (const row of subscriptionRows) {
     try {
       await webpush.sendNotification(
         {
@@ -85,13 +95,28 @@ export async function sendWebPushToUserIds(
       sent += 1;
     } catch (e: unknown) {
       failed += 1;
-      const status = (e as { statusCode?: number })?.statusCode;
-      if (status === 404 || status === 410) {
+      const err = e as { statusCode?: number; body?: string };
+      const status = err.statusCode;
+      const isBadVapid =
+        status === 403 &&
+        typeof err.body === "string" &&
+        err.body.includes("BadJwtToken");
+      if (status === 404 || status === 410 || isBadVapid) {
+        if (isBadVapid) {
+          console.warn(
+            "[web-push] removed stale subscription (VAPID key/subject mismatch — re-enable in الإعدادات)",
+            row.endpoint.slice(0, 48),
+          );
+        }
         await removeSubscriptionById(row.id);
       } else {
         console.error("[web-push] send failed", row.endpoint.slice(0, 48), e);
       }
     }
+  }
+
+  if (sent > 0 || failed > 0) {
+    console.info(`[web-push] delivered ${sent}, failed ${failed}`);
   }
 
   return { sent, failed };
