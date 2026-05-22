@@ -1,6 +1,5 @@
 import "server-only";
 
-import { cacheLife, cacheTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import type { WarningKind } from "@/types/db";
@@ -24,8 +23,8 @@ export type WarningsData = {
 
 /**
  * Warnings list with related engineers/companies for the send-warning form.
- * Short TTL (30s stale) so new warnings are reflected quickly.
- * Revalidated by warnings/actions.ts.
+ * Fetched per request (no "use cache" — Supabase client reads session cookies).
+ * Freshness: revalidatePath from warnings/actions.ts plus client router.refresh on push/focus.
  *
  * `filterCompanyId`: when set, list + engineer picker are scoped to that company.
  * Super admins and MD Group managers may pass null to list warnings across all companies.
@@ -38,10 +37,6 @@ export async function getWarningsData(params: {
   page: number;
   pageSize: number;
 }): Promise<WarningsData> {
-  "use cache";
-  cacheTag("warnings", "badges", `warnings:${params.profileId}`);
-  cacheLife({ stale: 0, revalidate: 30 });
-
   const supabase = await createSupabaseServerClient();
   const isManager = params.role !== "employee";
   const offset = (params.page - 1) * params.pageSize;
