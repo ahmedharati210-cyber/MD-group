@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import type { DocumentCategory } from "@/types/db";
 import { requireUser, requireRole } from "@/lib/auth";
 import {
   createSupabaseAdminClient,
@@ -21,8 +22,21 @@ const dateOrEmpty = z
     return t;
   });
 
-const updateDatesSchema = z.object({
+const documentCategorySchema = z.enum([
+  "record",
+  "license",
+  "stats_code",
+  "contract",
+  "other",
+  "letter",
+  "memo",
+  "personal",
+]);
+
+const updatePaperSchema = z.object({
   document_id: z.string().uuid(),
+  title: z.string().trim().min(1, "عنوان الورقة مطلوب"),
+  category: documentCategorySchema,
   issued_on: dateOrEmpty,
   expires_on: dateOrEmpty,
 });
@@ -32,15 +46,17 @@ export async function updatePaperDatesAction(
   formData: FormData,
 ): Promise<PaperDatesState> {
   const { userId, profile } = await requireUser();
-  const parsed = updateDatesSchema.safeParse({
+  const parsed = updatePaperSchema.safeParse({
     document_id: formData.get("document_id"),
+    title: formData.get("title"),
+    category: formData.get("category"),
     issued_on: formData.get("issued_on") ?? undefined,
     expires_on: formData.get("expires_on") ?? undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
   }
-  const { document_id, issued_on, expires_on } = parsed.data;
+  const { document_id, title, category, issued_on, expires_on } = parsed.data;
 
   if (issued_on && expires_on && issued_on > expires_on) {
     return {
@@ -90,6 +106,8 @@ export async function updatePaperDatesAction(
   }
 
   const payload = {
+    title,
+    category: category as DocumentCategory,
     issued_on,
     expires_on,
     expiry_notified_at,
@@ -120,6 +138,9 @@ export async function updatePaperDatesAction(
   revalidateTag("dashboard", "default");
   return { ok: true };
 }
+
+/** @deprecated Use updatePaperDatesAction — same implementation. */
+export const updatePaperAction = updatePaperDatesAction;
 
 export async function deletePaperAction(formData: FormData) {
   const current = await requireRole(["md_admin", "company_manager"]);

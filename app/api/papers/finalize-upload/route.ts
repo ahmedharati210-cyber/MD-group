@@ -122,7 +122,15 @@ export async function POST(req: NextRequest) {
           ? owner_profile_id
           : null,
       title,
-      category: category as "letter" | "contract" | "memo" | "personal" | "other",
+      category: category as
+        | "letter"
+        | "contract"
+        | "memo"
+        | "personal"
+        | "other"
+        | "record"
+        | "license"
+        | "stats_code",
       storage_path,
       mime_type: mime_type ?? null,
       size_bytes: typeof file_size === "number" ? file_size : null,

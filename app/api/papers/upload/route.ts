@@ -131,7 +131,10 @@ export async function POST(req: NextRequest) {
         | "contract"
         | "memo"
         | "personal"
-        | "other",
+        | "other"
+        | "record"
+        | "license"
+        | "stats_code",
       storage_path: key,
       mime_type: file.type,
       size_bytes: file.size,

@@ -8,15 +8,8 @@ import { DeleteButton } from "@/components/portal/DeleteButton";
 import { bytesToReadable, formatDate } from "@/lib/utils";
 import { PaperViewer } from "./paper-viewer";
 import { deletePaperAction } from "../actions";
+import { paperCategoryLabelFor } from "@/lib/paper-categories";
 import { PaperDatesForm } from "./paper-dates-form";
-
-const categoryLabel: Record<string, string> = {
-  letter: "مراسلة",
-  contract: "عقد",
-  memo: "مذكرة",
-  personal: "شخصي",
-  other: "أخرى",
-};
 
 export default async function PaperPage({
   params,
@@ -71,7 +64,7 @@ export default async function PaperPage({
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <PageHeader
           title={doc.title}
-          description={categoryLabel[doc.category] ?? doc.category}
+          description={paperCategoryLabelFor(doc.category)}
         />
         {canDelete ? (
           <DeleteButton
@@ -120,11 +113,13 @@ export default async function PaperPage({
 
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-sm">
             <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-              تواريخ الورقة
+              بيانات الورقة
             </h3>
             <PaperDatesForm
               key={doc.id}
               documentId={doc.id}
+              title={doc.title}
+              category={doc.category}
               issuedOn={issuedOn}
               expiresOn={expiresOn}
               expiryNotifiedAt={expiryNotifiedAt}

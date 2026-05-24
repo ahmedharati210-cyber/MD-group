@@ -4,6 +4,10 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Loader2, Upload, CheckCircle } from "lucide-react";
+import {
+  PAPER_STAT_CATEGORIES,
+  paperCategoryLabel,
+} from "@/lib/paper-categories";
 
 type Company = { id: string; name_ar: string };
 type Employee = { id: string; full_name: string; company_id: string | null };
@@ -181,11 +185,11 @@ export function UploadPaperForm({
             defaultValue="other"
             className={inputClasses}
           >
-            <option value="letter">مراسلة</option>
-            <option value="contract">عقد</option>
-            <option value="memo">مذكرة</option>
-            <option value="personal">شخصي</option>
-            <option value="other">أخرى</option>
+            {PAPER_STAT_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {paperCategoryLabel[cat]}
+              </option>
+            ))}
           </select>
         </div>
 

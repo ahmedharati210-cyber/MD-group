@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -8,6 +8,11 @@ import {
   updatePaperDatesAction,
   type PaperDatesState,
 } from "@/app/portal/papers/actions";
+import {
+  PAPER_STAT_CATEGORIES,
+  paperCategoryLabel,
+  paperCategoryLabelFor,
+} from "@/lib/paper-categories";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
 const inputClasses =
@@ -17,14 +22,29 @@ const labelClasses =
 
 type Props = {
   documentId: string;
+  title: string;
+  category: string;
   issuedOn: string | null;
   expiresOn: string | null;
   expiryNotifiedAt: string | null;
   canEdit: boolean;
 };
 
+function categoriesForSelect(current: string): string[] {
+  if (
+    PAPER_STAT_CATEGORIES.includes(
+      current as (typeof PAPER_STAT_CATEGORIES)[number],
+    )
+  ) {
+    return [...PAPER_STAT_CATEGORIES];
+  }
+  return [...PAPER_STAT_CATEGORIES, current];
+}
+
 export function PaperDatesForm({
   documentId,
+  title,
+  category,
   issuedOn,
   expiresOn,
   expiryNotifiedAt,
@@ -37,6 +57,11 @@ export function PaperDatesForm({
     FormData
   >(updatePaperDatesAction, undefined);
 
+  const categoryOptions = useMemo(
+    () => categoriesForSelect(category),
+    [category],
+  );
+
   useEffect(() => {
     if (pending) {
       wasPendingRef.current = true;
@@ -44,7 +69,7 @@ export function PaperDatesForm({
     }
     if (wasPendingRef.current && state?.ok) {
       wasPendingRef.current = false;
-      toast.success("تم حفظ التواريخ.", { id: "paper-dates-saved" });
+      toast.success("تم حفظ التغييرات.", { id: "paper-dates-saved" });
       router.push("/portal/papers");
       router.refresh();
       return;
@@ -58,6 +83,20 @@ export function PaperDatesForm({
   if (!canEdit) {
     return (
       <div className="space-y-2 text-sm">
+        <div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            عنوان الورقة
+          </div>
+          <div className="font-semibold text-gray-900 dark:text-gray-100">
+            {title}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">النوع</div>
+          <div className="font-semibold text-gray-900 dark:text-gray-100">
+            {paperCategoryLabelFor(category)}
+          </div>
+        </div>
         <div>
           <div className="text-xs text-gray-500 dark:text-gray-400">
             تاريخ الإصدار
@@ -87,6 +126,36 @@ export function PaperDatesForm({
   return (
     <form action={formAction} className="space-y-3">
       <input type="hidden" name="document_id" value={documentId} />
+      <div>
+        <label className={labelClasses} htmlFor={`title-${documentId}`}>
+          عنوان الورقة
+        </label>
+        <input
+          id={`title-${documentId}`}
+          name="title"
+          type="text"
+          required
+          defaultValue={title}
+          className={inputClasses}
+        />
+      </div>
+      <div>
+        <label className={labelClasses} htmlFor={`category-${documentId}`}>
+          النوع
+        </label>
+        <select
+          id={`category-${documentId}`}
+          name="category"
+          defaultValue={category}
+          className={inputClasses}
+        >
+          {categoryOptions.map((cat) => (
+            <option key={cat} value={cat}>
+              {paperCategoryLabel[cat] ?? paperCategoryLabelFor(cat)}
+            </option>
+          ))}
+        </select>
+      </div>
       <div>
         <label className={labelClasses} htmlFor={`issued-${documentId}`}>
           تاريخ الإصدار
@@ -131,7 +200,7 @@ export function PaperDatesForm({
             جارٍ الحفظ...
           </>
         ) : (
-          "حفظ التواريخ"
+          "حفظ التغييرات"
         )}
       </button>
     </form>

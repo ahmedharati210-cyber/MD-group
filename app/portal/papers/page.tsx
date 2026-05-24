@@ -2,6 +2,11 @@ import Link from "next/link";
 import { FileText, Plus, Building2 } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
 import { getPapersData, type PaperDoc } from "@/lib/data/papers";
+import {
+  PAPER_STAT_CATEGORIES,
+  paperCategoryLabel,
+  paperCategoryLabelFor,
+} from "@/lib/paper-categories";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { bytesToReadable, formatDate } from "@/lib/utils";
@@ -11,13 +16,24 @@ import {
 } from "@/lib/paper-expiry";
 export const metadata = { title: "الأوراق الرسمية" };
 
-const categoryLabel: Record<string, string> = {
-  letter: "مراسلة",
-  contract: "عقد",
-  memo: "مذكرة",
-  personal: "شخصي",
-  other: "أخرى",
-};
+function papersFilterHref(params: {
+  category?: string;
+  q?: string;
+  companyId?: string;
+  expiry?: string;
+}): string {
+  const sp = new URLSearchParams();
+  if (params.q?.trim()) sp.set("q", params.q.trim());
+  if (params.companyId) sp.set("companyId", params.companyId);
+  if (params.category && params.category !== "all") {
+    sp.set("category", params.category);
+  }
+  if (params.expiry && params.expiry !== "all") {
+    sp.set("expiry", params.expiry);
+  }
+  const qs = sp.toString();
+  return qs ? `/portal/papers?${qs}` : "/portal/papers";
+}
 
 const expiryStatusLabel: Record<PaperExpiryVisualState, string> = {
   none: "—",
@@ -43,6 +59,7 @@ type SearchParams = Promise<{
   q?: string;
   category?: string;
   companyId?: string;
+  expiry?: string;
 }>;
 
 export default async function PapersPage({
@@ -51,18 +68,25 @@ export default async function PapersPage({
   searchParams: SearchParams;
 }) {
   const { profile } = await requireFeature("papers");
-  const { q, category, companyId } = await searchParams;
+  const { q, category, companyId, expiry } = await searchParams;
 
   const canUpload = profile.role !== "employee";
 
   const effectiveCompanyId =
     companyId && companyId.length > 0 ? companyId : undefined;
 
-  const { docs, companies } = await getPapersData({
+  const effectiveExpiry =
+    expiry === "ok" || expiry === "renew" ? expiry : undefined;
+
+  const { docs, companies, expiryCounts } = await getPapersData({
     q: q || undefined,
     category: category || undefined,
     companyId: effectiveCompanyId || undefined,
+    expiry: effectiveExpiry,
   });
+
+  const activeCategory =
+    category && category !== "all" ? category : undefined;
 
   const selectClasses =
     "px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none";
@@ -71,7 +95,7 @@ export default async function PapersPage({
     <div>
       <PageHeader
         title="الأوراق الرسمية"
-        description="إدارة العقود، المراسلات، المذكرات، والملفات الشخصية."
+        description="إدارة السجلات، الرخص، غرف رمز الإحصاء، العقود، والأوراق الأخرى."
         action={
           canUpload ? (
             <Link
@@ -85,7 +109,59 @@ export default async function PapersPage({
         }
       />
 
-      <form className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-5">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-5">
+        {(
+          [
+            {
+              key: "ok" as const,
+              label: "سارية",
+              count: expiryCounts.ok,
+              activeClass:
+                "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/25 ring-2 ring-emerald-500/40",
+              countClass: "text-emerald-700 dark:text-emerald-300",
+            },
+            {
+              key: "renew" as const,
+              label: "تحتاج تجديد",
+              count: expiryCounts.renew,
+              activeClass:
+                "border-amber-500 bg-amber-50 dark:bg-amber-900/25 ring-2 ring-amber-500/40",
+              countClass: "text-amber-700 dark:text-amber-300",
+            },
+          ] as const
+        ).map(({ key, label, count, activeClass, countClass }) => {
+          const isActive = effectiveExpiry === key;
+          return (
+            <Link
+              key={key}
+              href={papersFilterHref({
+                expiry: isActive ? undefined : key,
+                q,
+                companyId: effectiveCompanyId,
+                category: activeCategory,
+              })}
+              className={`rounded-2xl border p-3 sm:p-4 text-center transition-shadow hover:shadow-md ${
+                isActive
+                  ? activeClass
+                  : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+              }`}
+            >
+              <div className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                {label}
+              </div>
+              <div
+                className={`text-2xl font-bold tabular-nums ${
+                  isActive ? countClass : "text-gray-900 dark:text-gray-50"
+                }`}
+              >
+                {count}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
+      <form className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-5">
         <input
           type="text"
           name="q"
@@ -99,11 +175,20 @@ export default async function PapersPage({
           className={selectClasses}
         >
           <option value="all">كل الأنواع</option>
-          <option value="letter">مراسلة</option>
-          <option value="contract">عقد</option>
-          <option value="memo">مذكرة</option>
-          <option value="personal">شخصي</option>
-          <option value="other">أخرى</option>
+          {PAPER_STAT_CATEGORIES.map((cat) => (
+            <option key={cat} value={cat}>
+              {paperCategoryLabel[cat]}
+            </option>
+          ))}
+        </select>
+        <select
+          name="expiry"
+          defaultValue={effectiveExpiry ?? "all"}
+          className={selectClasses}
+        >
+          <option value="all">كل الحالات</option>
+          <option value="ok">سارية</option>
+          <option value="renew">تحتاج تجديد</option>
         </select>
         {(profile.role === "md_admin" || profile.is_super_admin) ? (
           <select
@@ -121,7 +206,7 @@ export default async function PapersPage({
         ) : null}
         <button
           type="submit"
-          className="sm:col-span-2 lg:col-span-4 px-5 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-semibold text-sm hover:bg-gray-800 dark:hover:bg-white"
+          className="sm:col-span-2 lg:col-span-5 px-5 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-semibold text-sm hover:bg-gray-800 dark:hover:bg-white"
         >
           تصفية
         </button>
@@ -163,7 +248,7 @@ export default async function PapersPage({
                       <span className="text-gray-400 dark:text-gray-500">
                         النوع:{" "}
                       </span>
-                      {categoryLabel[d.category]}
+                      {paperCategoryLabelFor(d.category)}
                     </div>
                     <div>
                       <span className="text-gray-400 dark:text-gray-500">
@@ -235,7 +320,7 @@ export default async function PapersPage({
                           </Link>
                         </td>
                         <td className="px-5 py-3 text-gray-700 dark:text-gray-300">
-                          {categoryLabel[d.category]}
+                          {paperCategoryLabelFor(d.category)}
                         </td>
                         <td className="px-5 py-3 text-gray-700 dark:text-gray-300">
                           <div className="inline-flex items-center gap-1.5">

@@ -48,6 +48,9 @@ export function subtractCalendarMonthsFromIso(iso: string, months: number): stri
 
 export type PaperExpiryVisualState = "none" | "ok" | "expiring" | "expired";
 
+/** URL / filter values for papers list expiry filtering. */
+export type PaperExpiryFilter = "all" | "ok" | "renew";
+
 export function paperExpiryVisualState(
   expiresOn: string | null | undefined,
   todayIso = utcTodayIso(),
@@ -59,4 +62,51 @@ export function paperExpiryVisualState(
   const threshold = subtractCalendarMonthsFromIso(exp, 1);
   if (today >= threshold) return "expiring";
   return "ok";
+}
+
+/** سارية: no expiry date, or expiry is more than ~1 month away. */
+export function isPaperExpiryOk(
+  expiresOn: string | null | undefined,
+  todayIso = utcTodayIso(),
+): boolean {
+  const st = paperExpiryVisualState(expiresOn, todayIso);
+  return st === "none" || st === "ok";
+}
+
+/** تحتاج تجديد: expiring soon or already expired. */
+export function isPaperExpiryNeedsRenewal(
+  expiresOn: string | null | undefined,
+  todayIso = utcTodayIso(),
+): boolean {
+  const st = paperExpiryVisualState(expiresOn, todayIso);
+  return st === "expiring" || st === "expired";
+}
+
+export function matchesPaperExpiryFilter(
+  expiresOn: string | null | undefined,
+  filter: PaperExpiryFilter,
+  todayIso = utcTodayIso(),
+): boolean {
+  if (filter === "all") return true;
+  if (filter === "ok") return isPaperExpiryOk(expiresOn, todayIso);
+  return isPaperExpiryNeedsRenewal(expiresOn, todayIso);
+}
+
+/**
+ * PostgREST `.or()` filter for documents.expires_on (date column).
+ * Mirrors {@link paperExpiryVisualState} using calendar-month threshold.
+ */
+export function paperExpiryPostgrestOrFilter(
+  filter: Exclude<PaperExpiryFilter, "all">,
+  todayIso = utcTodayIso(),
+): string {
+  const today = toDateOnlyIso(todayIso) ?? todayIso.slice(0, 10);
+  // Latest expiry still in the "expiring soon" window (exp - 1 month <= today <= exp).
+  const expiringWindowEnd = subtractCalendarMonthsFromIso(today, -1);
+
+  if (filter === "ok") {
+    return `expires_on.is.null,expires_on.gt.${expiringWindowEnd}`;
+  }
+  // renew: expired OR expiring
+  return `expires_on.lt.${today},and(expires_on.gte.${today},expires_on.lte.${expiringWindowEnd})`;
 }

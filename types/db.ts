@@ -10,7 +10,10 @@ export type DocumentCategory =
   | "contract"
   | "memo"
   | "personal"
-  | "other";
+  | "other"
+  | "record"
+  | "license"
+  | "stats_code";
 export type MailDirection = "inbound" | "outbound";
 export type TradeCategory =
   | "laborer"
