@@ -10,6 +10,23 @@ import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 
 export type ActionState = { error?: string; ok?: boolean };
 
+/** Empty form field → null; otherwise non-negative integer days. */
+function parseEstimatedDaysFromForm(value: FormDataEntryValue | null): number | null {
+  if (value === null || value === "") return null;
+  const n = Number(value);
+  if (Number.isNaN(n) || n < 0) return null;
+  return Math.floor(n);
+}
+
+const estimatedDaysSchema = z.preprocess(
+  (val) => {
+    if (val === "" || val === null || val === undefined) return null;
+    const n = Number(val);
+    return Number.isNaN(n) ? null : n;
+  },
+  z.number().int().min(0).nullable().optional(),
+);
+
 function revalidateTimeline(projectId?: string) {
   revalidatePath("/portal/timeline");
   if (projectId) revalidatePath(`/portal/timeline/${projectId}`);
@@ -137,6 +154,35 @@ export async function updateProjectStatusAction(
   return { ok: true };
 }
 
+/** Lightweight action — update only the project-level estimated days (manual total). */
+export async function updateProjectEstimatedDaysAction(
+  projectId: string,
+  estimatedDays: number | null,
+): Promise<ActionState> {
+  const { userId } = await requireRole(["md_admin", "company_manager"]);
+  const parsed = estimatedDaysSchema.safeParse(estimatedDays);
+  if (!parsed.success) return { error: "عدد الأيام غير صالح" };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({
+      estimated_days: parsed.data ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", projectId);
+  if (error) return { error: error.message };
+
+  const project_name = await projectNameById(supabase, projectId);
+  void logAudit(userId, "update", "project", projectId, {
+    estimated_days: parsed.data ?? null,
+    ...(project_name ? { project_name } : {}),
+  });
+
+  revalidateTimeline(projectId);
+  return { ok: true };
+}
+
 export async function updateProjectAction(
   id: string,
   _prev: ActionState | undefined,
@@ -188,7 +234,13 @@ export async function deleteProjectAction(id: string): Promise<ActionState> {
 // ---------------------------------------------------------------------------
 // Categories
 // ---------------------------------------------------------------------------
-const categorySchema = z.object({
+const categoryCreateSchema = z.object({
+  name: z.string().min(1, "اسم الفئة مطلوب"),
+  sort_order: z.coerce.number().default(0),
+  estimated_days: estimatedDaysSchema,
+});
+
+const categoryUpdateSchema = z.object({
   name: z.string().min(1, "اسم الفئة مطلوب"),
   sort_order: z.coerce.number().default(0),
 });
@@ -199,9 +251,10 @@ export async function createCategoryAction(
   formData: FormData,
 ): Promise<ActionState> {
   const { userId } = await requireRole(["md_admin", "company_manager"]);
-  const parsed = categorySchema.safeParse({
+  const parsed = categoryCreateSchema.safeParse({
     name: formData.get("name"),
     sort_order: formData.get("sort_order") || 0,
+    estimated_days: formData.get("estimated_days"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
 
@@ -230,7 +283,7 @@ export async function updateCategoryAction(
   formData: FormData,
 ): Promise<ActionState> {
   const { userId } = await requireRole(["md_admin", "company_manager"]);
-  const parsed = categorySchema.safeParse({
+  const parsed = categoryUpdateSchema.safeParse({
     name: formData.get("name"),
     sort_order: formData.get("sort_order") || 0,
   });
@@ -244,6 +297,35 @@ export async function updateCategoryAction(
   void logAudit(userId, "update", "project_category", categoryId, {
     name: parsed.data.name,
     ...(project_name ? { project_name } : {}),
+  });
+
+  revalidateTimeline(projectId);
+  return { ok: true };
+}
+
+/** Lightweight action — update only category-level estimated days. */
+export async function updateCategoryEstimatedDaysAction(
+  categoryId: string,
+  projectId: string,
+  estimatedDays: number | null,
+): Promise<ActionState> {
+  const { userId } = await requireRole(["md_admin", "company_manager"]);
+  const parsed = estimatedDaysSchema.safeParse(estimatedDays);
+  if (!parsed.success) return { error: "عدد الأيام غير صالح" };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("project_categories")
+    .update({ estimated_days: parsed.data ?? null })
+    .eq("id", categoryId);
+  if (error) return { error: error.message };
+
+  const project_name = await projectNameById(supabase, projectId);
+  const category_name = await categoryNameById(supabase, categoryId);
+  void logAudit(userId, "update", "project_category", categoryId, {
+    estimated_days: parsed.data ?? null,
+    ...(project_name ? { project_name } : {}),
+    ...(category_name ? { category_name } : {}),
   });
 
   revalidateTimeline(projectId);
@@ -268,7 +350,7 @@ export async function deleteCategoryAction(categoryId: string, projectId: string
 // ---------------------------------------------------------------------------
 // Tasks
 // ---------------------------------------------------------------------------
-const taskSchema = z.object({
+const taskUpdateSchema = z.object({
   title: z.string().min(1, "عنوان المهمة مطلوب"),
   description: z.string().optional().nullable(),
   assigned_to: z.string().uuid().optional().nullable(),
@@ -291,6 +373,7 @@ export async function createTaskAction(
   const rawTitle = (formData.get("title") as string | null) ?? "";
   const assigned_to = (formData.get("assigned_to") as string | null) || null;
   const due_date = (formData.get("due_date") as string | null) || null;
+  const estimated_days = parseEstimatedDaysFromForm(formData.get("estimated_days"));
 
   // Support bulk creation: titles separated by newline
   const titles = rawTitle
@@ -307,6 +390,7 @@ export async function createTaskAction(
     title,
     assigned_to: assigned_to || null,
     due_date: due_date || null,
+    estimated_days,
     sort_order: idx,
   }));
 
@@ -332,7 +416,7 @@ export async function updateTaskAction(
   formData: FormData,
 ): Promise<ActionState> {
   const { userId } = await requireRole(["md_admin", "company_manager"]);
-  const parsed = taskSchema.safeParse({
+  const parsed = taskUpdateSchema.safeParse({
     title: formData.get("title"),
     description: formData.get("description") || null,
     assigned_to: formData.get("assigned_to") || null,
@@ -348,6 +432,33 @@ export async function updateTaskAction(
   const project_name = await projectNameById(supabase, projectId);
   void logAudit(userId, "update", "project_task", taskId, {
     title: parsed.data.title,
+    ...(project_name ? { project_name } : {}),
+  });
+
+  revalidateTimeline(projectId);
+  return { ok: true };
+}
+
+/** Lightweight action — update only task-level estimated days. */
+export async function updateTaskEstimatedDaysAction(
+  taskId: string,
+  projectId: string,
+  estimatedDays: number | null,
+): Promise<ActionState> {
+  const { userId } = await requireRole(["md_admin", "company_manager"]);
+  const parsed = estimatedDaysSchema.safeParse(estimatedDays);
+  if (!parsed.success) return { error: "عدد الأيام غير صالح" };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("project_tasks")
+    .update({ estimated_days: parsed.data ?? null })
+    .eq("id", taskId);
+  if (error) return { error: error.message };
+
+  const project_name = await projectNameById(supabase, projectId);
+  void logAudit(userId, "update", "project_task", taskId, {
+    estimated_days: parsed.data ?? null,
     ...(project_name ? { project_name } : {}),
   });
 

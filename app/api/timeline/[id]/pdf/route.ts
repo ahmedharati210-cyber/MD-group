@@ -18,6 +18,7 @@ type TaskRow = {
   title: string;
   description: string | null;
   due_date: string | null;
+  estimated_days: number | null;
   is_completed: boolean;
   sort_order: number;
   assignee: { full_name: string } | null;
@@ -27,8 +28,14 @@ type CategoryRow = {
   id: string;
   name: string;
   sort_order: number;
+  estimated_days: number | null;
   tasks: TaskRow[];
 };
+
+function estimatedDaysLabel(days: number | null | undefined): string {
+  if (days == null || days < 0) return "—";
+  return days === 1 ? "يوم" : `${days} يوم`;
+}
 
 function escapeHtml(str: string | null | undefined): string {
   if (!str) return "";
@@ -51,6 +58,7 @@ function buildHtml(
     manager_name: string | null;
     manager_phone: string | null;
     default_engineer: { full_name: string } | null;
+    estimated_days: number | null;
   },
   categories: CategoryRow[],
   today: string,
@@ -73,7 +81,7 @@ function buildHtml(
       const catDone = cat.tasks.filter((t) => t.is_completed).length;
       const tasksHtml =
         cat.tasks.length === 0
-          ? `<tr><td colspan="4" style="color:#999;padding:8px 12px;">لا توجد مهام</td></tr>`
+          ? `<tr><td colspan="5" style="color:#999;padding:8px 12px;">لا توجد مهام</td></tr>`
           : cat.tasks
               .map((task) => {
                 const isOverdue =
@@ -89,6 +97,7 @@ function buildHtml(
                   ${task.description ? `<div class="sub">${escapeHtml(task.description)}</div>` : ""}
                 </td>
                 <td class="td-meta">${escapeHtml(task.assignee?.full_name) || "—"}</td>
+                <td class="td-meta">${estimatedDaysLabel(task.estimated_days)}</td>
                 <td class="td-meta${isOverdue ? " overdue-text" : ""}">
                   ${escapeHtml(task.due_date) || "—"}${isOverdue ? " ⚠" : ""}
                 </td>
@@ -100,7 +109,10 @@ function buildHtml(
       <div class="cat-block">
         <div class="cat-header">
           <strong>${escapeHtml(cat.name)}</strong>
-          <span>${catDone}/${cat.tasks.length} تم</span>
+          <span>
+            ${cat.estimated_days != null ? `تقدير: ${estimatedDaysLabel(cat.estimated_days)} · ` : ""}
+            ${catDone}/${cat.tasks.length} تم
+          </span>
         </div>
         <table>
           <tbody>${tasksHtml}</tbody>
@@ -271,6 +283,7 @@ function buildHtml(
   <div class="progress-bar-wrap">
     <div><span class="pct">${pct}%</span> مكتمل</div>
     <div>${done} / ${total} مهمة</div>
+    ${project.estimated_days != null ? `<div>تقدير المشروع: ${estimatedDaysLabel(project.estimated_days)}</div>` : ""}
     ${overdue > 0 ? `<div class="overdue-label">${overdue} مهمة متأخرة</div>` : ""}
     <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
   </div>
@@ -314,14 +327,14 @@ export async function GET(
     supabase
       .from("projects")
       .select(
-        "id, name, description, start_date, end_date, status, location_notes, manager_name, manager_phone, default_engineer:default_engineer_id(full_name)",
+        "id, name, description, start_date, end_date, status, estimated_days, location_notes, manager_name, manager_phone, default_engineer:default_engineer_id(full_name)",
       )
       .eq("id", id)
       .single(),
     supabase
       .from("project_categories")
       .select(
-        "id, name, sort_order, tasks:project_tasks(id, title, description, due_date, is_completed, sort_order, assignee:assigned_to(full_name))",
+        "id, name, sort_order, estimated_days, tasks:project_tasks(id, title, description, due_date, estimated_days, is_completed, sort_order, assignee:assigned_to(full_name))",
       )
       .eq("project_id", id)
       .order("sort_order"),
@@ -338,6 +351,7 @@ export async function GET(
     start_date: string | null;
     end_date: string | null;
     status: ProjectStatus;
+    estimated_days: number | null;
     location_notes: string | null;
     manager_name: string | null;
     manager_phone: string | null;

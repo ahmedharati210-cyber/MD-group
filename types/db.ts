@@ -349,6 +349,8 @@ export interface Project {
   manager_phone: string | null;
   manager_email: string | null;
   default_engineer_id: string | null;
+  /** Manual client-entered estimate; not summed from tasks/categories */
+  estimated_days: number | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -367,6 +369,7 @@ type ProjectInsert = {
   manager_phone?: string | null;
   manager_email?: string | null;
   default_engineer_id?: string | null;
+  estimated_days?: number | null;
   created_by?: string | null;
   created_at?: string;
   updated_at?: string;
@@ -377,6 +380,7 @@ export interface ProjectCategory {
   project_id: string;
   name: string;
   sort_order: number;
+  estimated_days: number | null;
   created_at: string;
 }
 type ProjectCategoryInsert = {
@@ -384,6 +388,7 @@ type ProjectCategoryInsert = {
   project_id: string;
   name: string;
   sort_order?: number;
+  estimated_days?: number | null;
   created_at?: string;
 };
 
@@ -416,6 +421,7 @@ export interface ProjectTask {
   notes: string | null;
   assigned_to: string | null;
   due_date: string | null;
+  estimated_days: number | null;
   is_completed: boolean;
   completed_by: string | null;
   completed_at: string | null;
@@ -431,6 +437,7 @@ type ProjectTaskInsert = {
   notes?: string | null;
   assigned_to?: string | null;
   due_date?: string | null;
+  estimated_days?: number | null;
   is_completed?: boolean;
   completed_by?: string | null;
   completed_at?: string | null;

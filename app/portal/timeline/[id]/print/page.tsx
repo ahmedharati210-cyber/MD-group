@@ -16,11 +16,17 @@ const statusLabels: Record<ProjectStatus, string> = {
   on_hold_claim: "متوقف ( مطالبة)",
 };
 
+function estimatedDaysLabel(days: number | null | undefined): string {
+  if (days == null || days < 0) return "—";
+  return days === 1 ? "يوم" : `${days} يوم`;
+}
+
 type TaskRow = {
   id: string;
   title: string;
   description: string | null;
   due_date: string | null;
+  estimated_days: number | null;
   is_completed: boolean;
   sort_order: number;
   assignee: { full_name: string } | null;
@@ -30,6 +36,7 @@ type CategoryRow = {
   id: string;
   name: string;
   sort_order: number;
+  estimated_days: number | null;
   tasks: TaskRow[];
 };
 
@@ -40,6 +47,7 @@ type ProjectRow = {
   start_date: string | null;
   end_date: string | null;
   status: ProjectStatus;
+  estimated_days: number | null;
   location_notes: string | null;
   manager_name: string | null;
   manager_phone: string | null;
@@ -54,12 +62,12 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
   const [{ data: rawProject }, { data: rawCategories }] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, name, description, start_date, end_date, status, location_notes, manager_name, manager_phone, default_engineer:default_engineer_id(full_name)")
+      .select("id, name, description, start_date, end_date, status, estimated_days, location_notes, manager_name, manager_phone, default_engineer:default_engineer_id(full_name)")
       .eq("id", id)
       .single(),
     supabase
       .from("project_categories")
-      .select("id, name, sort_order, tasks:project_tasks(id, title, description, due_date, is_completed, sort_order, assignee:assigned_to(full_name))")
+      .select("id, name, sort_order, estimated_days, tasks:project_tasks(id, title, description, due_date, estimated_days, is_completed, sort_order, assignee:assigned_to(full_name))")
       .eq("project_id", id)
       .order("sort_order"),
   ]);
@@ -139,9 +147,15 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
       </div>
 
       {/* Progress summary */}
-      <div className="flex items-center gap-6 mb-6 p-3 bg-gray-50 rounded-xl text-sm">
+      <div className="flex items-center gap-6 mb-6 p-3 bg-gray-50 rounded-xl text-sm flex-wrap">
         <div><span className="font-bold text-lg">{pct}%</span> <span className="text-gray-600">مكتمل</span></div>
         <div><span className="font-semibold">{completedTasks}</span> / {totalTasks} <span className="text-gray-600">مهمة</span></div>
+        {project.estimated_days != null ? (
+          <div>
+            <span className="font-semibold">{estimatedDaysLabel(project.estimated_days)}</span>{" "}
+            <span className="text-gray-600">تقدير المشروع</span>
+          </div>
+        ) : null}
         {overdueTasks > 0 ? (
           <div className="text-red-600 font-semibold">{overdueTasks} مهمة متأخرة</div>
         ) : null}
@@ -163,13 +177,27 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
                 {/* Category heading */}
                 <div className="flex items-center justify-between bg-gray-100 px-4 py-2 rounded-lg mb-1">
                   <h2 className="font-bold text-gray-900">{cat.name}</h2>
-                  <span className="text-sm text-gray-600">{catDone}/{cat.tasks.length} تم</span>
+                  <div className="text-sm text-gray-600 flex items-center gap-3">
+                    {cat.estimated_days != null ? (
+                      <span>تقدير: {estimatedDaysLabel(cat.estimated_days)}</span>
+                    ) : null}
+                    <span>{catDone}/{cat.tasks.length} تم</span>
+                  </div>
                 </div>
 
                 {cat.tasks.length === 0 ? (
                   <p className="text-sm text-gray-400 px-4 py-2">لا توجد مهام.</p>
                 ) : (
                   <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-gray-500 border-b border-gray-200">
+                        <th className="py-1 px-2 w-6" />
+                        <th className="py-1 px-2 text-right">المهمة</th>
+                        <th className="py-1 px-2 text-right">المسؤول</th>
+                        <th className="py-1 px-2 text-right whitespace-nowrap">أيام تقديرية</th>
+                        <th className="py-1 px-2 text-right whitespace-nowrap">الاستحقاق</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {cat.tasks.map((task) => {
                         const isOverdue = !task.is_completed && task.due_date && task.due_date < today;
@@ -193,6 +221,9 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
                             </td>
                             <td className="py-2 px-2 text-gray-500 text-xs whitespace-nowrap">
                               {task.assignee?.full_name ?? "—"}
+                            </td>
+                            <td className="py-2 px-2 text-gray-600 text-xs whitespace-nowrap tabular-nums">
+                              {estimatedDaysLabel(task.estimated_days)}
                             </td>
                             <td className={`py-2 px-2 text-xs whitespace-nowrap ${isOverdue ? "text-red-600 font-semibold" : "text-gray-500"}`}>
                               {task.due_date ?? "—"}

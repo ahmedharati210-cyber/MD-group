@@ -24,11 +24,13 @@ export function AddTaskForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [rows, setRows] = useState<string[]>([""]);
   const [dueDate, setDueDate] = useState("");
+  const [estimatedDays, setEstimatedDays] = useState("");
 
   useEffect(() => {
     if (state?.ok) {
       setRows([""]);
       setDueDate("");
+      setEstimatedDays("");
       formRef.current?.reset();
     }
   }, [state?.ok]);
@@ -56,8 +58,9 @@ export function AddTaskForm({
 
       {/* Hidden: all task titles as newline-separated */}
       <input type="hidden" name="title" value={rows.filter((r) => r.trim()).join("\n")} />
-      {/* Hidden: shared due_date for all tasks in this batch */}
+      {/* Hidden: shared due_date / estimated_days for all tasks in this batch */}
       <input type="hidden" name="due_date" value={dueDate} />
+      <input type="hidden" name="estimated_days" value={estimatedDays} />
 
       {engineers.length > 0 ? (
         <select name="assigned_to" className={`w-full ${inputCls}`}>
@@ -88,6 +91,28 @@ export function AddTaskForm({
             ) : null}
           </div>
         ))}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">أيام تقديرية:</label>
+        <input
+          type="number"
+          min={0}
+          step={1}
+          value={estimatedDays}
+          onChange={(e) => setEstimatedDays(e.target.value)}
+          placeholder="—"
+          className={`${inputCls} w-24`}
+        />
+        {estimatedDays ? (
+          <button
+            type="button"
+            onClick={() => setEstimatedDays("")}
+            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            مسح
+          </button>
+        ) : null}
       </div>
 
       {/* Due date shared for all tasks in this batch */}

@@ -16,6 +16,9 @@ import { EditTaskButton } from "@/components/timeline/EditTaskButton";
 import { EditCategoryButton } from "@/components/timeline/EditCategoryButton";
 import { AssignEngineerButton } from "@/components/timeline/AssignEngineerButton";
 import { TimelineNav } from "@/components/timeline/TimelineNav";
+import { ProjectEstimatedDaysField } from "@/components/timeline/ProjectEstimatedDaysField";
+import { CategoryEstimatedDaysField } from "@/components/timeline/CategoryEstimatedDaysField";
+import { TaskEstimatedDaysField } from "@/components/timeline/TaskEstimatedDaysField";
 import type { ProjectStatus } from "@/types/db";
 
 const statusMap: Record<ProjectStatus, { label: string; cls: string }> = {
@@ -34,6 +37,7 @@ type TaskRow = {
   description: string | null;
   notes: string | null;
   due_date: string | null;
+  estimated_days: number | null;
   is_completed: boolean;
   completed_by: string | null;
   completed_at: string | null;
@@ -47,6 +51,7 @@ type CategoryRow = {
   id: string;
   name: string;
   sort_order: number;
+  estimated_days: number | null;
   tasks: TaskRow[];
 };
 
@@ -57,6 +62,7 @@ type ProjectRow = {
   start_date: string | null;
   end_date: string | null;
   status: ProjectStatus;
+  estimated_days: number | null;
   location_notes: string | null;
   manager_name: string | null;
   manager_phone: string | null;
@@ -72,12 +78,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const [{ data: rawProject }, { data: rawCategories }, { data: engineers }] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, name, description, start_date, end_date, status, location_notes, manager_name, manager_phone, default_engineer:default_engineer_id(full_name)")
+      .select("id, name, description, start_date, end_date, status, estimated_days, location_notes, manager_name, manager_phone, default_engineer:default_engineer_id(full_name)")
       .eq("id", id)
       .single(),
     supabase
       .from("project_categories")
-      .select("id, name, sort_order, tasks:project_tasks(id, title, description, notes, due_date, is_completed, completed_by, completed_at, assigned_to, sort_order, assignee:assigned_to(full_name), completer:completed_by(full_name))")
+      .select("id, name, sort_order, estimated_days, tasks:project_tasks(id, title, description, notes, due_date, estimated_days, is_completed, completed_by, completed_at, assigned_to, sort_order, assignee:assigned_to(full_name), completer:completed_by(full_name))")
       .eq("project_id", id)
       .order("sort_order"),
     canManage
@@ -212,19 +218,31 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </div>
       ) : null}
 
-      {/* Overall progress */}
-      {totalTasks > 0 ? (
+      {/* Project total estimation + overall progress */}
+      {(canManage || project.estimated_days != null || totalTasks > 0) ? (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 mb-5 shadow-sm">
-          <div className="flex justify-between text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            <span>إجمالي الإنجاز</span>
-            <span className="tabular-nums">{completedTasks} / {totalTasks} ({overallPct}%)</span>
-          </div>
-          <div className="w-full h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary-500 dark:bg-primary-400 rounded-full transition-all duration-500"
-              style={{ width: `${overallPct}%` }}
-            />
-          </div>
+          <ProjectEstimatedDaysField
+            projectId={id}
+            initialEstimatedDays={project.estimated_days}
+            canEdit={canManage}
+            showDivider={totalTasks > 0}
+          />
+          {totalTasks > 0 ? (
+            <>
+              <div className="flex justify-between text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <span>إجمالي الإنجاز</span>
+                <span className="tabular-nums">{completedTasks} / {totalTasks} ({overallPct}%)</span>
+              </div>
+              <div className="w-full h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary-500 dark:bg-primary-400 rounded-full transition-all duration-500"
+                  style={{ width: `${overallPct}%` }}
+                />
+              </div>
+            </>
+          ) : canManage ? (
+            <p className="text-xs text-gray-400 dark:text-gray-500">لم تُضف مهام بعد — يمكنك تعيين التقدير الإجمالي أعلاه.</p>
+          ) : null}
         </div>
       ) : null}
 
@@ -259,10 +277,20 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <h3 className="font-bold text-gray-800 dark:text-gray-100 truncate">{cat.name}</h3>
                     {canManage ? (
-                      <EditCategoryButton categoryId={cat.id} projectId={id} currentName={cat.name} />
+                      <EditCategoryButton
+                        categoryId={cat.id}
+                        projectId={id}
+                        currentName={cat.name}
+                      />
                     ) : null}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    <CategoryEstimatedDaysField
+                      categoryId={cat.id}
+                      projectId={id}
+                      initialEstimatedDays={cat.estimated_days}
+                      canEdit={canManage}
+                    />
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${catDone === catTotal && catTotal > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>
                       {catDone}/{catTotal} تم
                     </span>
@@ -323,6 +351,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                             </span>
                           ) : null}
                           {dueDateChip(task.due_date, task.is_completed)}
+                          {!canManage ? (
+                            <TaskEstimatedDaysField
+                              taskId={task.id}
+                              projectId={id}
+                              initialEstimatedDays={task.estimated_days}
+                              canEdit={false}
+                            />
+                          ) : null}
                           {task.is_completed && task.completer ? (
                             <span className="text-xs text-green-600 dark:text-green-400">
                               ✓ {task.completer.full_name}
@@ -335,7 +371,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                         </div>
                       </div>
                       {canManage ? (
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <TaskEstimatedDaysField
+                            taskId={task.id}
+                            projectId={id}
+                            initialEstimatedDays={task.estimated_days}
+                            canEdit
+                          />
                           <EditTaskButton
                             taskId={task.id}
                             projectId={id}
