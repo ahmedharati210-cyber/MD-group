@@ -25,9 +25,11 @@ const dateOrEmpty = z
 const documentCategorySchema = z.enum([
   "record",
   "license",
-  "stats_code",
+  "chamber",
+  "statistics_code",
   "contract",
   "other",
+  "stats_code",
   "letter",
   "memo",
   "personal",

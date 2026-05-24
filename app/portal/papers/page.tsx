@@ -95,7 +95,7 @@ export default async function PapersPage({
     <div>
       <PageHeader
         title="الأوراق الرسمية"
-        description="إدارة السجلات، الرخص، غرف رمز الإحصاء، العقود، والأوراق الأخرى."
+        description="إدارة السجلات، الرخص، الغرف، رموز الإحصاء، العقود، والأوراق الأخرى."
         action={
           canUpload ? (
             <Link

@@ -13,7 +13,9 @@ export type DocumentCategory =
   | "other"
   | "record"
   | "license"
-  | "stats_code";
+  | "stats_code"
+  | "chamber"
+  | "statistics_code";
 export type MailDirection = "inbound" | "outbound";
 export type TradeCategory =
   | "laborer"

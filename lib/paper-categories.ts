@@ -1,10 +1,11 @@
 import type { DocumentCategory } from "@/types/db";
 
-/** Primary categories shown in stats, filters, and upload/edit forms. */
+/** Primary categories shown in filters and upload/edit forms. */
 export const PAPER_STAT_CATEGORIES = [
   "record",
   "license",
-  "stats_code",
+  "chamber",
+  "statistics_code",
   "contract",
   "other",
 ] as const satisfies readonly DocumentCategory[];
@@ -14,10 +15,12 @@ export type PaperStatCategory = (typeof PAPER_STAT_CATEGORIES)[number];
 export const paperCategoryLabel: Record<string, string> = {
   record: "سجل",
   license: "رخصة",
-  stats_code: "غرفة رمز الاحصاء",
+  chamber: "غرفة",
+  statistics_code: "رمز الاحصاء",
   contract: "عقد",
   other: "أخرى",
-  // Legacy values (existing rows + employee RLS)
+  // Legacy / deprecated combined value (pre-split)
+  stats_code: "غرفة / رمز الاحصاء (قديم)",
   letter: "مراسلة",
   memo: "مذكرة",
   personal: "شخصي",

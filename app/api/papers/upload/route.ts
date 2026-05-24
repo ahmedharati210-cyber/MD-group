@@ -134,6 +134,8 @@ export async function POST(req: NextRequest) {
         | "other"
         | "record"
         | "license"
+        | "chamber"
+        | "statistics_code"
         | "stats_code",
       storage_path: key,
       mime_type: file.type,
