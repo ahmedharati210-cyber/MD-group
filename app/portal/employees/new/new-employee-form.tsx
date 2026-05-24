@@ -101,11 +101,17 @@ export function NewEmployeeForm({
           <Field label="الاسم الكامل" span2>
             <Input name="full_name" required />
           </Field>
-          <Field label="البريد الإلكتروني">
-            <Input name="email" type="email" required />
+          <Field
+            label="البريد الإلكتروني"
+            hint="اختياري — سيُولَّد تلقائياً إذا تُرك فارغاً"
+          >
+            <Input name="email" type="email" />
           </Field>
-          <Field label="كلمة المرور المبدئية" hint="8 أحرف على الأقل">
-            <Input name="password" type="password" required minLength={8} />
+          <Field
+            label="كلمة المرور المبدئية"
+            hint="اختياري — سيُولَّد تلقائياً إذا تُرك فارغاً (8 أحرف على الأقل إذا أدخلتها)"
+          >
+            <Input name="password" type="password" />
           </Field>
         </div>
       </section>

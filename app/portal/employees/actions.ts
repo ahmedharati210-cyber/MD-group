@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -19,8 +20,8 @@ import { isMdManagerFeatureAllowed } from "@/lib/features";
 import { logAudit } from "@/lib/audit";
 
 const createSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().email().optional(),
+  password: z.string().min(8).optional(),
   full_name: z.string().min(2),
   phone: z.string().optional().nullable(),
   job_title: z.string().optional().nullable(),
@@ -45,7 +46,7 @@ const createSchema = z.object({
   hr_notes: z.string().optional().nullable(),
 });
 
-export type ActionState = { error?: string; ok?: boolean };
+export type ActionState = { error?: string };
 
 export async function createEmployeeAction(
   _prev: ActionState | undefined,
@@ -54,8 +55,8 @@ export async function createEmployeeAction(
   const current = await requireRole(["md_admin", "company_manager"]);
 
   const parsed = createSchema.safeParse({
-    email: formData.get("email"),
-    password: formData.get("password"),
+    email: formData.get("email") || undefined,
+    password: formData.get("password") || undefined,
     full_name: formData.get("full_name"),
     phone: formData.get("phone") || null,
     job_title: formData.get("job_title") || null,
@@ -93,11 +94,18 @@ export async function createEmployeeAction(
     }
   }
 
+  const domain =
+    process.env.SIGNUP_INTERNAL_AUTH_EMAIL_DOMAIN ?? "signup-local.invalid";
+  const finalEmail =
+    parsed.data.email ?? `emp-${randomBytes(8).toString("hex")}@${domain}`;
+  const finalPassword =
+    parsed.data.password ?? randomBytes(16).toString("base64url");
+
   const admin = createSupabaseAdminClient();
 
   const { data: userData, error: userErr } = await admin.auth.admin.createUser({
-    email: parsed.data.email,
-    password: parsed.data.password,
+    email: finalEmail,
+    password: finalPassword,
     email_confirm: true,
     user_metadata: {
       full_name: parsed.data.full_name,
@@ -152,7 +160,7 @@ export async function createEmployeeAction(
     entity: "profiles",
     entity_id: userData.user.id,
     payload: {
-      email: parsed.data.email,
+      email: finalEmail,
       ...(company_name ? { company_name } : {}),
     },
   });
