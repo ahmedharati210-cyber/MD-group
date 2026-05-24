@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, CheckCircle } from "lucide-react";
 
 type Company = { id: string; name_ar: string };
 type Employee = { id: string; full_name: string; company_id: string | null };
@@ -21,6 +21,8 @@ const inputClasses =
 const labelClasses =
   "block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5";
 
+type UploadStep = "idle" | "preparing" | "uploading" | "saving" | "done";
+
 export function UploadPaperForm({
   companies,
   employees,
@@ -28,10 +30,13 @@ export function UploadPaperForm({
   isAdmin,
 }: Props) {
   const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
+  const [step, setStep] = useState<UploadStep>("idle");
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedCompany, setSelectedCompany] = useState<string>(
     isAdmin ? "" : (currentCompanyId ?? ""),
   );
+
+  const submitting = step !== "idle" && step !== "done";
 
   const filteredEmployees = useMemo(
     () => employees.filter((e) => e.company_id === selectedCompany),
@@ -42,31 +47,98 @@ export function UploadPaperForm({
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    if (!(data.get("file") instanceof File)) {
+    const file = data.get("file");
+
+    if (!(file instanceof File) || file.size === 0) {
       toast.error("يجب اختيار ملف");
       return;
     }
-    setSubmitting(true);
-    const toastId = toast.loading("جارٍ الرفع...");
+
+    const toastId = toast.loading("جارٍ التحضير...");
+    setStep("preparing");
+    setUploadProgress(0);
+
     try {
-      const res = await fetch("/api/papers/upload", {
+      // Step 1: get a signed upload URL from our server (tiny JSON, no file).
+      const prepareRes = await fetch("/api/papers/prepare-upload", {
         method: "POST",
-        body: data,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company_id: data.get("company_id"),
+          title: data.get("title"),
+          file_name: file.name,
+          mime_type: file.type || "application/octet-stream",
+          file_size: file.size,
+        }),
       });
-      const json = await res.json();
-      if (!res.ok) {
-        toast.error(json?.error ?? "فشل الرفع", { id: toastId });
+      const prepareJson = await prepareRes.json();
+      if (!prepareRes.ok) {
+        toast.error(prepareJson?.error ?? "فشل التحضير", { id: toastId });
+        setStep("idle");
         return;
       }
+
+      const { signedUrl, storagePath } = prepareJson as {
+        signedUrl: string;
+        storagePath: string;
+      };
+
+      // Step 2: upload the file directly to Supabase Storage with XHR for progress.
+      setStep("uploading");
+      toast.loading("جارٍ رفع الملف...", { id: toastId });
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", signedUrl);
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`رمز الاستجابة: ${xhr.status}`));
+        };
+        xhr.onerror = () => reject(new Error("فشل الاتصال بالخادم"));
+        xhr.send(file);
+      });
+
+      // Step 3: save metadata row (tiny JSON, no file).
+      setStep("saving");
+      toast.loading("جارٍ الحفظ...", { id: toastId });
+
+      const finalizeRes = await fetch("/api/papers/finalize-upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storage_path: storagePath,
+          company_id: data.get("company_id"),
+          title: data.get("title"),
+          category: data.get("category") ?? "other",
+          owner_profile_id: data.get("owner_profile_id") || null,
+          issued_on: data.get("issued_on") || null,
+          expires_on: data.get("expires_on") || null,
+          mime_type: file.type || null,
+          file_size: file.size,
+        }),
+      });
+      const finalizeJson = await finalizeRes.json();
+      if (!finalizeRes.ok) {
+        toast.error(finalizeJson?.error ?? "فشل الحفظ", { id: toastId });
+        setStep("idle");
+        return;
+      }
+
+      setStep("done");
       toast.success("تم الرفع بنجاح", { id: toastId });
-      router.push(`/portal/papers/${json.id}`);
+      router.push(`/portal/papers/${finalizeJson.id}`);
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "خطأ غير معروف", {
         id: toastId,
       });
-    } finally {
-      setSubmitting(false);
+      setStep("idle");
     }
   }
 
@@ -163,17 +235,51 @@ export function UploadPaperForm({
         </div>
       </div>
 
+      {step === "uploading" && (
+        <div className="w-full space-y-1">
+          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+            <span>جارٍ رفع الملف مباشرةً...</span>
+            <span>{uploadProgress}%</span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-primary-600 h-2 rounded-full transition-all duration-200"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={submitting}
         className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-xl font-semibold shadow-md hover:bg-primary-700 disabled:opacity-60"
       >
-        {submitting ? (
+        {step === "preparing" && (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            جارٍ الرفع...
+            جارٍ التحضير...
           </>
-        ) : (
+        )}
+        {step === "uploading" && (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            جارٍ الرفع ({uploadProgress}%)...
+          </>
+        )}
+        {step === "saving" && (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            جارٍ الحفظ...
+          </>
+        )}
+        {step === "done" && (
+          <>
+            <CheckCircle className="w-4 h-4" />
+            تم الرفع
+          </>
+        )}
+        {step === "idle" && (
           <>
             <Upload className="w-4 h-4" />
             رفع الورقة
