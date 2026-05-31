@@ -10,6 +10,7 @@ import { Sidebar } from "./Sidebar";
 import { LogoutButton } from "./LogoutButton";
 import { isCompanyImmersivePath } from "@/lib/portal-shell-paths";
 import { usePortalPushRefresh } from "@/lib/hooks/use-portal-push-refresh";
+import { usePushRebind } from "@/lib/hooks/use-push-rebind";
 import type { UserRole, AppFeature, RoleFeatures } from "@/types/db";
 
 // Dynamically imported so framer-motion is excluded from the main portal
@@ -41,7 +42,8 @@ type Props = {
   unreadWarningAlerts: number;
   unreadNotificationAlerts: number;
   pendingSignupRequestsCount: number;
-  expiringPapersCount: number;
+  expiredPapersCount: number;
+  expiringSoonPapersCount: number;
   showDolceSignupNav: boolean;
   children: React.ReactNode;
 };
@@ -59,7 +61,8 @@ export function PortalShell({
   unreadWarningAlerts,
   unreadNotificationAlerts,
   pendingSignupRequestsCount,
-  expiringPapersCount,
+  expiredPapersCount,
+  expiringSoonPapersCount,
   showDolceSignupNav,
   children,
 }: Props) {
@@ -74,6 +77,7 @@ export function PortalShell({
   const handleOpen = useCallback(() => setIsOpen(true), []);
 
   usePortalPushRefresh();
+  usePushRebind();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -95,7 +99,8 @@ export function PortalShell({
             unreadWarningAlerts={unreadWarningAlerts}
             unreadNotificationAlerts={unreadNotificationAlerts}
             pendingSignupRequestsCount={pendingSignupRequestsCount}
-            expiringPapersCount={expiringPapersCount}
+            expiredPapersCount={expiredPapersCount}
+            expiringSoonPapersCount={expiringSoonPapersCount}
             showDolceSignupNav={showDolceSignupNav}
             isOpen={isOpen}
             onClose={handleClose}
