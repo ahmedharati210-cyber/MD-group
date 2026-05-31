@@ -22,7 +22,7 @@ import { StatCard } from "@/components/portal/StatCard";
 import { DeleteButton } from "@/components/portal/DeleteButton";
 import { deleteCompanyAction } from "../actions";
 import { SetActiveCompanyOnVisit } from "@/components/portal/SetActiveCompanyOnVisit";
-import { isFeatureEnabled, featureLabels } from "@/lib/features";
+import { isFeatureEnabled, featureLabels, OWNER_FEATURES } from "@/lib/features";
 import type { AppFeature } from "@/types/db";
 
 export default async function CompanyDetailPage({
@@ -32,11 +32,12 @@ export default async function CompanyDetailPage({
   params: Promise<{ companyId: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  const { profile } = await requireRole(["md_admin", "company_manager"]);
+  const { profile } = await requireRole(["md_admin", "company_manager", "owner"]);
   const { companyId } = await params;
   const { error: errorMessage } = await searchParams;
-  const isAdmin = profile.role === "md_admin";
-  const isMdGroupManager = profile.role === "md_admin" && !profile.is_super_admin;
+  const isAdmin = profile.role === "md_admin" || profile.role === "owner";
+  const isOwner = profile.role === "owner";
+  const isMdGroupManager = (profile.role === "md_admin" || profile.role === "owner") && !profile.is_super_admin;
   const supabase = await createSupabaseServerClient();
 
   const { data: company } = await supabase
@@ -48,7 +49,10 @@ export default async function CompanyDetailPage({
   if (!company) notFound();
 
   const enabled = company.enabled_features as AppFeature[] | null;
-  const has = (f: AppFeature) => isFeatureEnabled(f, enabled, false);
+  const has = (f: AppFeature) => {
+    if (isOwner) return OWNER_FEATURES.includes(f) && isFeatureEnabled(f, enabled, false);
+    return isFeatureEnabled(f, enabled, false);
+  };
   const today = new Date().toISOString().slice(0, 10);
 
   const [
@@ -69,7 +73,7 @@ export default async function CompanyDetailPage({
       .select("id", { count: "exact", head: true })
       .eq("role", "employee")
       .eq("company_id", companyId),
-    has("attendance")
+    !isOwner && has("attendance")
       ? supabase
           .from("attendance")
           .select("id", { count: "exact", head: true })
@@ -94,31 +98,31 @@ export default async function CompanyDetailPage({
           .select("id", { count: "exact", head: true })
           .eq("company_id", companyId)
       : Promise.resolve({ count: 0 }),
-    has("claims")
+    !isOwner && has("claims")
       ? supabase
           .from("manager_claims")
           .select("id", { count: "exact", head: true })
           .eq("company_id", companyId)
       : Promise.resolve({ count: 0 }),
-    has("requests")
+    !isOwner && has("requests")
       ? supabase
           .from("engineer_requests")
           .select("id", { count: "exact", head: true })
           .eq("company_id", companyId)
       : Promise.resolve({ count: 0 }),
-    has("maps")
+    !isOwner && has("maps")
       ? supabase
           .from("map_links")
           .select("id", { count: "exact", head: true })
           .eq("company_id", companyId)
       : Promise.resolve({ count: 0 }),
-    has("warnings")
+    !isOwner && has("warnings")
       ? supabase
           .from("warnings")
           .select("id", { count: "exact", head: true })
           .eq("company_id", companyId)
       : Promise.resolve({ count: 0 }),
-    has("reports")
+    !isOwner && has("reports")
       ? supabase
           .from("engineer_reports")
           .select("id", { count: "exact", head: true })
@@ -254,7 +258,7 @@ export default async function CompanyDetailPage({
       href: `/portal/attendance?companyId=${company.id}`,
       title: "حضور الشركة",
       icon: CalendarCheck,
-      show: has("attendance"),
+      show: !isOwner && has("attendance"),
     },
     {
       href: `/portal/mail?companyId=${company.id}`,
@@ -272,31 +276,31 @@ export default async function CompanyDetailPage({
       href: q("/portal/claims"),
       title: "مطالبات الشركة",
       icon: Receipt,
-      show: has("claims"),
+      show: !isOwner && has("claims"),
     },
     {
       href: q("/portal/requests"),
       title: "طلبات الشركة",
       icon: ClipboardEdit,
-      show: has("requests"),
+      show: !isOwner && has("requests"),
     },
     {
       href: q("/portal/reports"),
       title: "تقارير الشركة",
       icon: FileBarChart2,
-      show: has("reports"),
+      show: !isOwner && has("reports"),
     },
     {
       href: q("/portal/maps"),
       title: "خرائط الشركة",
       icon: Map,
-      show: has("maps"),
+      show: !isOwner && has("maps"),
     },
     {
       href: q("/portal/notifications"),
       title: "إشعارات الشركة",
       icon: AlertTriangle,
-      show: has("warnings"),
+      show: !isOwner && has("warnings"),
     },
     {
       href: `/portal/contacts?companyId=${company.id}`,

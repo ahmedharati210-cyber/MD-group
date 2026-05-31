@@ -18,7 +18,7 @@ export default async function EmployeesPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const current = await requireRole(["md_admin", "company_manager"]);
+  const current = await requireRole(["md_admin", "company_manager", "owner"]);
   const { companyId, q, page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam ?? 1));
   const from = (page - 1) * PAGE_SIZE;
@@ -48,13 +48,15 @@ export default async function EmployeesPage({
         title="الموظفون"
         description="إدارة الموظفين والمدراء ضمن صلاحياتك."
         action={
-          <Link
-            href="/portal/employees/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm shadow-md hover:bg-primary-700 transition-colors w-full sm:w-auto justify-center"
-          >
-            <Plus className="w-4 h-4" />
-            إضافة موظف
-          </Link>
+          current.profile.role !== "owner" ? (
+            <Link
+              href="/portal/employees/new"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm shadow-md hover:bg-primary-700 transition-colors w-full sm:w-auto justify-center"
+            >
+              <Plus className="w-4 h-4" />
+              إضافة موظف
+            </Link>
+          ) : null
         }
       />
 

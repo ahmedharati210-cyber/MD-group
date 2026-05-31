@@ -74,7 +74,7 @@ export async function getWarningsData(params: {
     const { data: engData } = await engQuery;
     engineers = engData;
 
-    if (params.isSuperAdmin || params.role === "md_admin") {
+    if (params.isSuperAdmin || params.role === "md_admin" || params.role === "owner") {
       const { data } = await supabase
         .from("companies")
         .select("id, name_ar")

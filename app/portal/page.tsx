@@ -14,7 +14,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getVisibleFeatures, isMdManagerFeatureAllowed } from "@/lib/features";
+import { getVisibleFeatures, isMdManagerFeatureAllowed, OWNER_FEATURES } from "@/lib/features";
 import { getCompanyData } from "@/lib/company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { getDashboardData } from "@/lib/data/dashboard";
@@ -38,7 +38,7 @@ export default async function PortalDashboard() {
 
   const shellCompanyId =
     profile.company_id ??
-    (profile.role === "md_admin" && !(profile.is_super_admin ?? false)
+    ((profile.role === "md_admin" || profile.role === "owner") && !(profile.is_super_admin ?? false)
       ? await getShellCompanyIdForProfile(profile)
       : null);
 
@@ -62,10 +62,14 @@ export default async function PortalDashboard() {
     if (profile.role === "md_admin") {
       return isMdManagerFeatureAllowed(f, enabledFeatures);
     }
+    if (profile.role === "owner") {
+      return OWNER_FEATURES.includes(f);
+    }
     return visibleFeatures === null || visibleFeatures.includes(f);
   };
 
-  const isAdmin = profile.role === "md_admin";
+  // Owners see all-company stats like md_admin (no company restriction)
+  const isAdmin = profile.role === "md_admin" || profile.role === "owner";
   const isEmployee = profile.role === "employee";
 
   const { counts, topProjects } = await getDashboardData({

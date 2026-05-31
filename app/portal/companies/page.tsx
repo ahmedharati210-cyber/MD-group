@@ -15,7 +15,7 @@ export default async function CompaniesPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { profile } = await requireRole(["md_admin", "company_manager"]);
+  const { profile } = await requireRole(["md_admin", "company_manager", "owner"]);
   const { needCompany } = await searchParams;
 
   // Company managers only manage their own company — send them directly there.
@@ -27,14 +27,14 @@ export default async function CompaniesPage({
     );
   }
 
-  const isMdTeam = profile.role === "md_admin";
+  const isMdTeam = profile.role === "md_admin" || profile.role === "owner";
   const canManageCompanies = profile.is_super_admin ?? false;
 
   const rows = await getCompaniesWithCounts();
 
   return (
     <div>
-      {needCompany === "1" && profile.role === "md_admin" && !profile.is_super_admin ? (
+      {needCompany === "1" && (profile.role === "md_admin" || profile.role === "owner") && !profile.is_super_admin ? (
         <div className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100 text-sm">
           اختر شركة من القائمة لفتح لوحة العمل وتفعيل عناصر القائمة الجانبية.
         </div>

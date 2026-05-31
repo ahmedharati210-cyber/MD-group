@@ -95,7 +95,7 @@ export default async function EmployeeProfilePage({
       person.company_id === me.company_id &&
       person.role === "employee");
   const canDelete = canManage && person.id !== userId;
-  const canSeeHrNotes = me.role === "md_admin" || me.role === "company_manager";
+  const canSeeHrNotes = me.role === "md_admin" || me.role === "company_manager" || me.role === "owner";
 
   return (
     <div>

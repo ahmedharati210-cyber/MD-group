@@ -7,6 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   getVisibleFeatures,
   isMdManagerFeatureAllowed,
+  OWNER_FEATURES,
 } from "@/lib/features";
 import { getCompanyData } from "@/lib/company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
@@ -108,6 +109,12 @@ export async function requireFeature(
     ) {
       redirect("/portal");
     }
+    return current;
+  }
+
+  // Owners have a fixed, hardcoded set of visible features regardless of company flags.
+  if (current.profile.role === "owner") {
+    if (!OWNER_FEATURES.includes(feature)) redirect("/portal");
     return current;
   }
 

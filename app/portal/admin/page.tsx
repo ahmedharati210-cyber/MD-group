@@ -55,6 +55,7 @@ export default async function AdminPage() {
 
   // Group profiles by role for display
   const admins = profiles.filter((p) => p.role === "md_admin");
+  const owners = profiles.filter((p) => p.role === "owner");
   const managers = profiles.filter((p) => p.role === "company_manager");
   const employees = profiles.filter((p) => p.role === "employee");
 
@@ -177,6 +178,11 @@ export default async function AdminPage() {
             "مدراء عامون",
             admins,
             "text-violet-600 dark:text-violet-400 bg-violet-50/60 dark:bg-violet-900/10 border-b border-gray-100 dark:border-gray-800",
+          )}
+          {roleSection(
+            "ملاك (عرض فقط)",
+            owners,
+            "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-900/10 border-b border-gray-100 dark:border-gray-800",
           )}
           {roleSection(
             "مدراء شركات",

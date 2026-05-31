@@ -30,12 +30,12 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
   const projectCompanyId =
     profile.role === "company_manager"
       ? scopeId
-      : profile.role === "md_admin" || (profile.is_super_admin ?? false)
+      : profile.role === "md_admin" || profile.role === "owner" || (profile.is_super_admin ?? false)
         ? companyIdParam
         : scopeId;
 
   const supabase = await createSupabaseServerClient();
-  const canManage = profile.role !== "employee";
+  const canManage = profile.role !== "employee" && profile.role !== "owner";
 
   let projectQuery = supabase
     .from("projects")

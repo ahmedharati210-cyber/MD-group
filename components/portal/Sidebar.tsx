@@ -30,6 +30,7 @@ import {
   getVisibleFeatures,
   isMdManagerFeatureAllowed,
   MD_MANAGER_CORE_FEATURES,
+  OWNER_FEATURES,
 } from "@/lib/features";
 import { LogoutButton } from "@/components/portal/LogoutButton";
 import type { UserRole, AppFeature, RoleFeatures } from "@/types/db";
@@ -48,20 +49,20 @@ const items: Item[] = [
     href: "/portal",
     label: "لوحة التحكم",
     icon: LayoutDashboard,
-    roles: ["md_admin", "company_manager", "employee"],
+    roles: ["md_admin", "company_manager", "employee", "owner"],
   },
   {
     // href is dynamically overridden for company_manager in the render loop
     href: "/portal/companies",
     label: "الشركات",
     icon: Building2,
-    roles: ["md_admin"],
+    roles: ["md_admin", "owner"],
   },
   {
     href: "/portal/employees",
     label: "الموظفون",
     icon: Users,
-    roles: ["md_admin", "company_manager"],
+    roles: ["md_admin", "company_manager", "owner"],
   },
   {
     href: "/portal/employees/signup-requests",
@@ -73,21 +74,21 @@ const items: Item[] = [
     href: "/portal/papers",
     label: "الأوراق الرسمية",
     icon: FileText,
-    roles: ["md_admin", "company_manager", "employee"],
+    roles: ["md_admin", "company_manager", "employee", "owner"],
     feature: "papers",
   },
   {
     href: "/portal/mail",
     label: "البريد",
     icon: Mail,
-    roles: ["md_admin", "company_manager"],
+    roles: ["md_admin", "company_manager", "owner"],
     feature: "mail",
   },
   {
     href: "/portal/contacts",
     label: "جهات الاتصال",
     icon: Contact,
-    roles: ["md_admin", "company_manager", "employee"],
+    roles: ["md_admin", "company_manager", "employee", "owner"],
     feature: "contacts",
   },
   {
@@ -108,7 +109,7 @@ const items: Item[] = [
     href: "/portal/timeline",
     label: "المشاريع",
     icon: FolderKanban,
-    roles: ["md_admin", "company_manager", "employee"],
+    roles: ["md_admin", "company_manager", "employee", "owner"],
     feature: "timeline",
   },
   {
@@ -150,7 +151,7 @@ const items: Item[] = [
     href: "/portal/settings",
     label: "الإعدادات",
     icon: Settings,
-    roles: ["md_admin", "company_manager", "employee"],
+    roles: ["md_admin", "company_manager", "employee", "owner"],
   },
 ];
 
@@ -167,8 +168,10 @@ type Props = {
   unreadWarningAlerts: number;
   unreadNotificationAlerts: number;
   pendingSignupRequestsCount: number;
-  /** Papers in the final month before expiry (not yet expired); sidebar red badge */
-  expiringPapersCount: number;
+  /** Papers past expiry — sidebar red badge */
+  expiredPapersCount: number;
+  /** Papers in the final month before expiry — sidebar orange badge */
+  expiringSoonPapersCount: number;
   showDolceSignupNav: boolean;
   isOpen: boolean;
   onClose: () => void;
@@ -187,7 +190,8 @@ export function Sidebar({
   unreadWarningAlerts,
   unreadNotificationAlerts,
   pendingSignupRequestsCount,
-  expiringPapersCount,
+  expiredPapersCount,
+  expiringSoonPapersCount,
   showDolceSignupNav,
   isOpen,
   onClose,
@@ -239,6 +243,8 @@ export function Sidebar({
       // not the global sidebar — avoids "leaking" the active company's enabled_features here.
       return MD_MANAGER_CORE_FEATURES.includes(item.feature);
     }
+    // Owners always see their fixed feature set in the sidebar.
+    if (role === "owner") return OWNER_FEATURES.includes(item.feature);
     if (visibleFeatures === null) return true;
     return visibleFeatures.includes(item.feature);
   });
@@ -273,6 +279,7 @@ export function Sidebar({
     md_admin: "مدير مجموعة MD Group",
     company_manager: "مدير شركة",
     employee: "موظف",
+    owner: "مالك",
   };
 
   /**
@@ -372,23 +379,10 @@ export function Sidebar({
               const label = resolveLabel(item);
               const active = isActive(href);
               const Icon = item.icon;
-              const unreadAlertsTotal =
-                unreadWarningAlerts + unreadNotificationAlerts;
               const badge =
                 item.href === "/portal/requests" && pendingRequestsCount > 0
                   ? { count: pendingRequestsCount, cls: "bg-amber-500" }
-                  : item.href === "/portal/notifications" &&
-                      unreadAlertsTotal > 0
-                    ? {
-                        count: unreadAlertsTotal,
-                        cls:
-                          unreadWarningAlerts > 0
-                            ? "bg-red-500"
-                            : "bg-orange-500",
-                      }
-                    : item.href === "/portal/papers" && expiringPapersCount > 0
-                      ? { count: expiringPapersCount, cls: "bg-red-600" }
-                      : item.href === "/portal/employees/signup-requests" &&
+                  : item.href === "/portal/employees/signup-requests" &&
                           pendingSignupRequestsCount > 0
                         ? {
                             count: pendingSignupRequestsCount,
@@ -415,7 +409,39 @@ export function Sidebar({
                       )}
                     />
                     <span className="flex-1 truncate">{label}</span>
-                    {badge ? (
+                    {item.href === "/portal/papers" &&
+                    (expiredPapersCount > 0 || expiringSoonPapersCount > 0) ? (
+                      <span className="flex items-center gap-1 flex-shrink-0">
+                        {expiredPapersCount > 0 ? (
+                          <span className="min-w-5 h-5 px-1.5 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center tabular-nums">
+                            {expiredPapersCount > 99 ? "99+" : expiredPapersCount}
+                          </span>
+                        ) : null}
+                        {expiringSoonPapersCount > 0 ? (
+                          <span className="min-w-5 h-5 px-1.5 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center tabular-nums">
+                            {expiringSoonPapersCount > 99
+                              ? "99+"
+                              : expiringSoonPapersCount}
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : item.href === "/portal/notifications" &&
+                      (unreadWarningAlerts > 0 || unreadNotificationAlerts > 0) ? (
+                      <span className="flex items-center gap-1 flex-shrink-0">
+                        {unreadWarningAlerts > 0 ? (
+                          <span className="min-w-5 h-5 px-1.5 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center tabular-nums">
+                            {unreadWarningAlerts > 99 ? "99+" : unreadWarningAlerts}
+                          </span>
+                        ) : null}
+                        {unreadNotificationAlerts > 0 ? (
+                          <span className="min-w-5 h-5 px-1.5 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center tabular-nums">
+                            {unreadNotificationAlerts > 99
+                              ? "99+"
+                              : unreadNotificationAlerts}
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : badge ? (
                       <span className={cn("flex-shrink-0 min-w-5 h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center tabular-nums", badge.cls)}>
                         {badge.count > 99 ? "99+" : badge.count}
                       </span>

@@ -24,7 +24,7 @@ export default async function MailDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  await requireRole(["md_admin", "company_manager"]);
+  const { profile: viewer } = await requireRole(["md_admin", "company_manager", "owner"]);
   const { id } = await params;
   const { error: errorMessage } = await searchParams;
 
@@ -80,16 +80,18 @@ export default async function MailDetailPage({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/portal/mail/${id}/edit`}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-700"
-          >
-            <Pencil className="w-4 h-4" />
-            تعديل
-          </Link>
-          <DeleteButton action={deleteMailAction} id={id} />
-        </div>
+        {viewer.role !== "owner" ? (
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/portal/mail/${id}/edit`}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-700"
+            >
+              <Pencil className="w-4 h-4" />
+              تعديل
+            </Link>
+            <DeleteButton action={deleteMailAction} id={id} />
+          </div>
+        ) : null}
       </div>
 
       {errorMessage ? (

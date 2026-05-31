@@ -58,6 +58,7 @@ async function AuthenticatedPortal({
 
   const isSuperAdmin = profile.is_super_admin ?? false;
   const isEmployee = profile.role === "employee";
+  const isOwner = profile.role === "owner";
 
   const [shellCompanyId, dolceSignupCompanyId] = await Promise.all([
     getShellCompanyIdForProfile(profile),
@@ -77,7 +78,7 @@ async function AuthenticatedPortal({
 
   const badgeCompanyId = profile.is_super_admin
     ? null
-    : profile.role === "md_admin"
+    : profile.role === "md_admin" || isOwner
       ? shellCompanyId
       : profile.company_id;
 
@@ -95,7 +96,8 @@ async function AuthenticatedPortal({
   const unreadWarningAlerts = badgeCounts.unreadWarningAlerts;
   const unreadNotificationAlerts = badgeCounts.unreadNotificationAlerts;
   const pendingSignupRequestsCount = badgeCounts.pendingSignupRequests;
-  const expiringPapersCount = badgeCounts.expiringPapers;
+  const expiredPapersCount = badgeCounts.expiredPapers;
+  const expiringSoonPapersCount = badgeCounts.expiringSoonPapers;
 
   const companyName = companyRow?.name_ar ?? null;
   const enabledFeatures: AppFeature[] | null = companyRow?.enabled_features ?? null;
@@ -115,7 +117,8 @@ async function AuthenticatedPortal({
       unreadWarningAlerts={unreadWarningAlerts}
       unreadNotificationAlerts={unreadNotificationAlerts}
       pendingSignupRequestsCount={pendingSignupRequestsCount}
-      expiringPapersCount={expiringPapersCount}
+      expiredPapersCount={expiredPapersCount}
+      expiringSoonPapersCount={expiringSoonPapersCount}
       showDolceSignupNav={showDolceSignupNav}
     >
       {children}

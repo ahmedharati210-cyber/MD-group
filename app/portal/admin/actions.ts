@@ -200,7 +200,7 @@ export async function setSuperAdminAction(
 // ---------------------------------------------------------------------------
 const roleSchema = z.object({
   profile_id: z.string().uuid(),
-  role: z.enum(["md_admin", "company_manager", "employee"]),
+  role: z.enum(["md_admin", "company_manager", "employee", "owner"]),
   company_id: z.string().uuid().optional().nullable(),
 });
 
@@ -246,7 +246,7 @@ export async function setUserRoleAction(
 const editProfileSchema = z.object({
   profile_id: z.string().uuid(),
   full_name: z.string().min(2, "الاسم مطلوب"),
-  role: z.enum(["md_admin", "company_manager", "employee"]),
+  role: z.enum(["md_admin", "company_manager", "employee", "owner"]),
   company_id: z.string().uuid().optional().nullable(),
   job_title: z.string().optional().nullable(),
   is_active: z.boolean().optional().default(true),
@@ -280,6 +280,7 @@ export async function editProfileAction(
       company_id: parsed.data.company_id ?? null,
       job_title: parsed.data.job_title ?? null,
       is_active: parsed.data.is_active,
+      // Strip super_admin flag when not an md_admin
       ...(parsed.data.role !== "md_admin" ? { is_super_admin: false } : {}),
     })
     .eq("id", parsed.data.profile_id);

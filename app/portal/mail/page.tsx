@@ -33,13 +33,14 @@ export default async function MailPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { profile } = await requireFeature("mail", ["md_admin", "company_manager"]);
+  const { profile } = await requireFeature("mail", ["md_admin", "company_manager", "owner"]);
   const { direction, companyId, q, page: pageStr } = await searchParams;
   const page = Math.max(1, parseInt(pageStr ?? "1", 10));
 
   const tab: "all" | "inbound" | "outbound" =
     direction === "inbound" || direction === "outbound" ? direction : "all";
 
+  const isReadOnlyRole = profile.role === "owner";
   const filterCo =
     profile.role === "company_manager"
       ? profile.company_id ?? undefined
@@ -90,13 +91,15 @@ export default async function MailPage({
         title="البريد"
         description="سجل البريد الوارد والصادر."
         action={
-          <Link
-            href="/portal/mail/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm shadow-md hover:bg-primary-700 w-full sm:w-auto justify-center"
-          >
-            <Plus className="w-4 h-4" />
-            بريد جديد
-          </Link>
+          !isReadOnlyRole ? (
+            <Link
+              href="/portal/mail/new"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm shadow-md hover:bg-primary-700 w-full sm:w-auto justify-center"
+            >
+              <Plus className="w-4 h-4" />
+              بريد جديد
+            </Link>
+          ) : null
         }
       />
 
@@ -143,7 +146,7 @@ export default async function MailPage({
           placeholder="بحث بالموضوع..."
           className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none"
         />
-        {profile.role === "md_admin" ? (
+        {(profile.role === "md_admin" || profile.role === "owner") ? (
           <select
             name="companyId"
             defaultValue={companyId ?? ""}

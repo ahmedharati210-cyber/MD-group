@@ -64,6 +64,17 @@ export const MD_MANAGER_CORE_FEATURES: AppFeature[] = [
 ];
 
 /**
+ * Fixed set of features visible to the `owner` role.
+ * Owners always see these modules regardless of company feature flags.
+ */
+export const OWNER_FEATURES: AppFeature[] = [
+  "papers",
+  "mail",
+  "contacts",
+  "timeline",
+];
+
+/**
  * Modules Super Admin enables per company; MD Group managers only see these
  * when listed in `companies.enabled_features`. `null`/empty enabled_features
  * means no optional modules for managers (strict), not "all on".
@@ -113,6 +124,9 @@ export function getVisibleFeatures(
     if (enabledFeatures == null || enabledFeatures.length === 0) return [];
     return enabledFeatures.filter((f) => MD_MANAGER_PANEL_FEATURES.includes(f));
   }
+
+  // Owners have a fixed feature set — not driven by company feature flags.
+  if (role === "owner") return OWNER_FEATURES;
 
   const roleOverride =
     roleFeatures?.[role as "company_manager" | "employee"];

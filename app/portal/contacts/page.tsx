@@ -52,7 +52,7 @@ const tradeBadgeCls: Record<TradeCategory, string> = {
 
 export default async function ContactsPage({ searchParams }: { searchParams: SearchParams }) {
   const { profile } = await requireFeature("contacts");
-  const canEdit = profile.role !== "employee";
+  const canEdit = profile.role !== "employee" && profile.role !== "owner";
   const { q, companyId, trade, page: pageStr } = await searchParams;
   const page = Math.max(1, parseInt(pageStr ?? "1", 10));
   const shellId = await getShellCompanyIdForProfile(profile);
@@ -104,7 +104,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Sea
             ))}
           </select>
         ) : null}
-        {profile.role === "md_admin" ? (
+        {(profile.role === "md_admin" || profile.role === "owner") ? (
           <select
             name="companyId"
             defaultValue={companyId ?? ""}

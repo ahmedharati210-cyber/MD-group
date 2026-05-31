@@ -3,7 +3,7 @@
  * Eventually replace with `supabase gen types typescript` output.
  */
 
-export type UserRole = "md_admin" | "company_manager" | "employee";
+export type UserRole = "md_admin" | "company_manager" | "employee" | "owner";
 export type AttendanceStatus = "present" | "absent" | "late" | "leave";
 export type DocumentCategory =
   | "letter"

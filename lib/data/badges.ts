@@ -6,14 +6,27 @@ import type { UserRole } from "@/types/db";
 
 export type BadgeCounts = {
   pendingRequests: number;
-  /** Unread rows with kind = warning (sidebar badge prefers red when > 0) */
+  /** Unread rows with kind = warning — sidebar red badge on مركز الإشعارات */
   unreadWarningAlerts: number;
-  /** Unread rows with kind = notification (sidebar orange when warnings = 0) */
+  /** Unread rows with kind = notification — sidebar orange badge on مركز الإشعارات */
   unreadNotificationAlerts: number;
   pendingSignupRequests: number;
-  /** Papers with expires_on in the last month before expiry (not yet expired); RLS-scoped */
-  expiringPapers: number;
+  /** Papers past expires_on; RLS-scoped */
+  expiredPapers: number;
+  /** Papers in the final month before expiry (not yet expired); RLS-scoped */
+  expiringSoonPapers: number;
 };
+
+function parseRpcCount(data: unknown): number {
+  if (data == null) return 0;
+  const n =
+    typeof data === "number"
+      ? data
+      : typeof data === "string"
+        ? parseInt(data, 10)
+        : NaN;
+  return Number.isFinite(n) ? n : 0;
+}
 
 /**
  * Sidebar notification badge counts. Always fetches fresh data per request —
@@ -67,7 +80,8 @@ export async function getBadgeCounts(params: {
     unreadWarningAlerts,
     unreadNotificationAlerts,
     pendingSignupRequests,
-    expiringRpc,
+    expiredRpc,
+    expiringSoonRpc,
   ] = await Promise.all([
     params.isEmployee
       ? supabase
@@ -76,7 +90,8 @@ export async function getBadgeCounts(params: {
           .eq("status", "pending")
           .eq("requester_id", params.userId)
       : (async () => {
-          if (params.role === "md_admin" && !params.companyId) {
+          // Owner and md_admin without an active company show no badge
+          if ((params.role === "md_admin" || params.role === "owner") && !params.companyId) {
             return { count: 0 };
           }
           let q = supabase
@@ -88,26 +103,24 @@ export async function getBadgeCounts(params: {
           }
           return await q;
         })(),
-    countUnreadWarningsForKind({ ...countArgs, kind: "warning" }),
-    countUnreadWarningsForKind({ ...countArgs, kind: "notification" }),
+    params.role === "owner"
+      ? Promise.resolve(0)
+      : countUnreadWarningsForKind({ ...countArgs, kind: "warning" }),
+    params.role === "owner"
+      ? Promise.resolve(0)
+      : countUnreadWarningsForKind({ ...countArgs, kind: "notification" }),
     pendingSignupPromise,
+    supabase.rpc("count_documents_expired"),
     supabase.rpc("count_documents_expiring_soon"),
   ]);
 
-  let expiringPapers = 0;
-  if (!expiringRpc.error && expiringRpc.data != null) {
-    const raw = expiringRpc.data;
-    const n =
-      typeof raw === "number"
-        ? raw
-        : typeof raw === "string"
-          ? parseInt(raw, 10)
-          : NaN;
-    expiringPapers = Number.isFinite(n) ? n : 0;
-  } else if (expiringRpc.error) {
+  if (expiredRpc.error) {
+    console.warn("[badges] count_documents_expired:", expiredRpc.error.message);
+  }
+  if (expiringSoonRpc.error) {
     console.warn(
       "[badges] count_documents_expiring_soon:",
-      expiringRpc.error.message,
+      expiringSoonRpc.error.message,
     );
   }
 
@@ -116,6 +129,7 @@ export async function getBadgeCounts(params: {
     unreadWarningAlerts,
     unreadNotificationAlerts,
     pendingSignupRequests,
-    expiringPapers,
+    expiredPapers: parseRpcCount(expiredRpc.data),
+    expiringSoonPapers: parseRpcCount(expiringSoonRpc.data),
   };
 }

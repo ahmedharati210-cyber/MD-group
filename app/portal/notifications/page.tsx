@@ -25,7 +25,10 @@ export default async function NotificationsPage({
 }) {
   const sp = await searchParams;
   const { profile } = await requireFeature("warnings");
-  const isManager = profile.role !== "employee";
+  const isEmployee = profile.role === "employee";
+  const isOwner = profile.role === "owner";
+  // isManager controls sending/managing notifications (not applicable to owner)
+  const isManager = !isEmployee && !isOwner;
   const page = Math.max(1, parseInt(sp.page ?? "1", 10));
   const scopeId = await getShellCompanyIdForProfile(profile);
 
@@ -47,7 +50,7 @@ export default async function NotificationsPage({
   });
 
   let employeeUnreadCount = 0;
-  if (!isManager && profile.id) {
+  if (isEmployee && profile.id) {
     const supabase = await createSupabaseServerClient();
     const { count } = await supabase
       .from("warnings")
@@ -58,7 +61,7 @@ export default async function NotificationsPage({
   }
 
   const showCompanyFilter =
-    isManager && (profile.is_super_admin || profile.role === "md_admin");
+    !isEmployee && (profile.is_super_admin || profile.role === "md_admin" || profile.role === "owner");
 
   const selectClasses =
     "px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none";
@@ -68,12 +71,14 @@ export default async function NotificationsPage({
       <PageHeader
         title="مركز الإشعارات"
         description={
-          isManager
-            ? "أرسل إنذارات أو إشعارات للمهندسين."
-            : "الإنذارات والإشعارات الموجهة إليك."
+          isEmployee
+            ? "الإنذارات والإشعارات الموجهة إليك."
+            : isOwner
+              ? "عرض الإنذارات والإشعارات لجميع الشركات."
+              : "أرسل إنذارات أو إشعارات للمهندسين."
         }
         action={
-          !isManager && employeeUnreadCount > 0 ? <MarkAllReadButton /> : undefined
+          isEmployee && employeeUnreadCount > 0 ? <MarkAllReadButton /> : undefined
         }
       />
 
@@ -131,7 +136,7 @@ export default async function NotificationsPage({
           <div className="space-y-3">
             {warnings.map((w) => {
               const isWarning = w.kind === "warning";
-              const isNewEmployee = !w.is_read && !isManager;
+              const isNewEmployee = !w.is_read && isEmployee;
               const Icon = isWarning ? AlertTriangle : Bell;
               const cardCls = isNewEmployee
                 ? isWarning
@@ -199,7 +204,7 @@ export default async function NotificationsPage({
                           إلى الجميع
                         </span>
                       )}
-                      {isManager && w.sender ? (
+                      {!isEmployee && w.sender ? (
                         <span className="text-xs text-gray-400 dark:text-gray-500">
                           من: {w.sender.full_name}
                         </span>
@@ -217,7 +222,7 @@ export default async function NotificationsPage({
                     </div>
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
-                    {!w.is_read && !isManager ? (
+                    {!w.is_read && isEmployee ? (
                       <MarkReadButton warningId={w.id} />
                     ) : null}
                     {isManager ? <DeleteWarningButton warningId={w.id} /> : null}

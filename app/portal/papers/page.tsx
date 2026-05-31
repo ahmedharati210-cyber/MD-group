@@ -70,7 +70,7 @@ export default async function PapersPage({
   const { profile } = await requireFeature("papers");
   const { q, category, companyId, expiry } = await searchParams;
 
-  const canUpload = profile.role !== "employee";
+  const canUpload = profile.role !== "employee" && profile.role !== "owner";
 
   const effectiveCompanyId =
     companyId && companyId.length > 0 ? companyId : undefined;
@@ -95,7 +95,7 @@ export default async function PapersPage({
     <div>
       <PageHeader
         title="الأوراق الرسمية"
-        description="إدارة السجلات، الرخص، الغرف، رموز الإحصاء، العقود، والأوراق الأخرى."
+        description="إدارة السجلات، الرخص، الغرف، رمز الإحصاء، العقود، والأوراق الأخرى."
         action={
           canUpload ? (
             <Link
@@ -190,7 +190,7 @@ export default async function PapersPage({
           <option value="ok">سارية</option>
           <option value="renew">تحتاج تجديد</option>
         </select>
-        {(profile.role === "md_admin" || profile.is_super_admin) ? (
+        {(profile.role === "md_admin" || profile.role === "owner" || profile.is_super_admin) ? (
           <select
             name="companyId"
             defaultValue={companyId ?? ""}

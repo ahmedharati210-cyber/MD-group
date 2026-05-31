@@ -27,12 +27,14 @@ const roleLabels: Record<UserRole, string> = {
   md_admin: "مدير MD Group",
   company_manager: "مدير شركة",
   employee: "موظف",
+  owner: "مالك",
 };
 
 const roleColors: Record<UserRole, string> = {
   md_admin: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
   company_manager: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
   employee: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+  owner: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
 };
 
 export function UserEditForm({
@@ -136,6 +138,7 @@ export function UserEditForm({
               <option value="employee">موظف</option>
               <option value="company_manager">مدير شركة</option>
               <option value="md_admin">مدير MD Group</option>
+              <option value="owner">مالك (عرض فقط)</option>
             </select>
           </div>
 

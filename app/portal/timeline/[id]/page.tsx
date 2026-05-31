@@ -73,7 +73,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const { id } = await params;
   const { profile } = await requireUser();
   const supabase = await createSupabaseServerClient();
-  const canManage = profile.role !== "employee";
+  const canManage = profile.role !== "employee" && profile.role !== "owner";
 
   const [{ data: rawProject }, { data: rawCategories }, { data: engineers }] = await Promise.all([
     supabase

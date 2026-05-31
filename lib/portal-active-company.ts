@@ -3,7 +3,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import type { Profile } from "@/types/db";
 
-/** HTTP-only cookie: active company for MD Group managers (`md_admin` without super admin). */
+/** HTTP-only cookie: active company for MD Group managers (`md_admin`) and owners (`owner`). */
 export const PORTAL_ACTIVE_COMPANY_COOKIE = "portal_active_company_id";
 
 const UUID_RE =
@@ -21,6 +21,7 @@ export function parseValidCompanyId(
  * - Super admins: no shell (full bypass elsewhere).
  * - Company managers / employees: `profile.company_id`.
  * - MD Group managers (`md_admin`, not super): validated active-company cookie.
+ * - Owners (`owner`): same cookie-based approach as md_admin (global view, drill-down per company).
  */
 export function resolveShellCompanyIdFromSources(args: {
   profile: Pick<Profile, "role" | "company_id" | "is_super_admin">;
@@ -28,7 +29,7 @@ export function resolveShellCompanyIdFromSources(args: {
 }): string | null {
   if (args.profile.is_super_admin) return null;
   if (args.profile.company_id) return args.profile.company_id;
-  if (args.profile.role === "md_admin") {
+  if (args.profile.role === "md_admin" || args.profile.role === "owner") {
     return parseValidCompanyId(args.activeCompanyCookie);
   }
   return null;
