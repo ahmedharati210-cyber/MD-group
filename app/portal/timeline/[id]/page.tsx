@@ -38,6 +38,7 @@ type TaskRow = {
   notes: string | null;
   due_date: string | null;
   estimated_days: number | null;
+  estimated_days_set_at: string | null;
   is_completed: boolean;
   completed_by: string | null;
   completed_at: string | null;
@@ -52,6 +53,7 @@ type CategoryRow = {
   name: string;
   sort_order: number;
   estimated_days: number | null;
+  estimated_days_set_at: string | null;
   tasks: TaskRow[];
 };
 
@@ -63,6 +65,7 @@ type ProjectRow = {
   end_date: string | null;
   status: ProjectStatus;
   estimated_days: number | null;
+  estimated_days_set_at: string | null;
   location_notes: string | null;
   manager_name: string | null;
   manager_phone: string | null;
@@ -78,12 +81,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const [{ data: rawProject }, { data: rawCategories }, { data: engineers }] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, name, description, start_date, end_date, status, estimated_days, location_notes, manager_name, manager_phone, default_engineer:default_engineer_id(full_name)")
+      .select("id, name, description, start_date, end_date, status, estimated_days, estimated_days_set_at, location_notes, manager_name, manager_phone, default_engineer:default_engineer_id(full_name)")
       .eq("id", id)
       .single(),
     supabase
       .from("project_categories")
-      .select("id, name, sort_order, estimated_days, tasks:project_tasks(id, title, description, notes, due_date, estimated_days, is_completed, completed_by, completed_at, assigned_to, sort_order, assignee:assigned_to(full_name), completer:completed_by(full_name))")
+      .select("id, name, sort_order, estimated_days, estimated_days_set_at, tasks:project_tasks(id, title, description, notes, due_date, estimated_days, estimated_days_set_at, is_completed, completed_by, completed_at, assigned_to, sort_order, assignee:assigned_to(full_name), completer:completed_by(full_name))")
       .eq("project_id", id)
       .order("sort_order"),
     canManage
@@ -224,6 +227,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <ProjectEstimatedDaysField
             projectId={id}
             initialEstimatedDays={project.estimated_days}
+            estimatedDaysSetAt={project.estimated_days_set_at}
             canEdit={canManage}
             showDivider={totalTasks > 0}
           />
@@ -289,6 +293,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                       categoryId={cat.id}
                       projectId={id}
                       initialEstimatedDays={cat.estimated_days}
+                      estimatedDaysSetAt={cat.estimated_days_set_at}
                       canEdit={canManage}
                     />
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${catDone === catTotal && catTotal > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>
@@ -356,6 +361,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                               taskId={task.id}
                               projectId={id}
                               initialEstimatedDays={task.estimated_days}
+                              estimatedDaysSetAt={task.estimated_days_set_at}
                               canEdit={false}
                             />
                           ) : null}
@@ -376,6 +382,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                             taskId={task.id}
                             projectId={id}
                             initialEstimatedDays={task.estimated_days}
+                            estimatedDaysSetAt={task.estimated_days_set_at}
                             canEdit
                           />
                           <EditTaskButton

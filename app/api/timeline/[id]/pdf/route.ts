@@ -19,6 +19,7 @@ type TaskRow = {
   description: string | null;
   due_date: string | null;
   estimated_days: number | null;
+  estimated_days_set_at: string | null;
   is_completed: boolean;
   sort_order: number;
   assignee: { full_name: string } | null;
@@ -29,12 +30,24 @@ type CategoryRow = {
   name: string;
   sort_order: number;
   estimated_days: number | null;
+  estimated_days_set_at: string | null;
   tasks: TaskRow[];
 };
 
-function estimatedDaysLabel(days: number | null | undefined): string {
-  if (days == null || days < 0) return "—";
-  return days === 1 ? "يوم" : `${days} يوم`;
+function calcRemaining(days: number | null | undefined, setAt: string | null | undefined, today: string): number | null {
+  if (days == null || days < 0) return null;
+  if (!setAt) return days;
+  const elapsed = Math.floor(
+    (new Date(today).getTime() - new Date(setAt).getTime()) / (1000 * 60 * 60 * 24),
+  );
+  return Math.max(0, days - elapsed);
+}
+
+function remainingLabel(days: number | null | undefined, setAt: string | null | undefined, today: string): string {
+  const r = calcRemaining(days, setAt, today);
+  if (r == null) return "—";
+  if (r === 0) return "اليوم الأخير";
+  return r === 1 ? "يوم واحد" : `${r} يوم`;
 }
 
 function escapeHtml(str: string | null | undefined): string {
@@ -59,6 +72,7 @@ function buildHtml(
     manager_phone: string | null;
     default_engineer: { full_name: string } | null;
     estimated_days: number | null;
+    estimated_days_set_at: string | null;
   },
   categories: CategoryRow[],
   today: string,
@@ -97,7 +111,7 @@ function buildHtml(
                   ${task.description ? `<div class="sub">${escapeHtml(task.description)}</div>` : ""}
                 </td>
                 <td class="td-meta">${escapeHtml(task.assignee?.full_name) || "—"}</td>
-                <td class="td-meta">${estimatedDaysLabel(task.estimated_days)}</td>
+                <td class="td-meta">${remainingLabel(task.estimated_days, task.estimated_days_set_at, today)}</td>
                 <td class="td-meta${isOverdue ? " overdue-text" : ""}">
                   ${escapeHtml(task.due_date) || "—"}${isOverdue ? " ⚠" : ""}
                 </td>
@@ -110,7 +124,7 @@ function buildHtml(
         <div class="cat-header">
           <strong>${escapeHtml(cat.name)}</strong>
           <span>
-            ${cat.estimated_days != null ? `تقدير: ${estimatedDaysLabel(cat.estimated_days)} · ` : ""}
+            ${cat.estimated_days != null ? `متبقي: ${remainingLabel(cat.estimated_days, cat.estimated_days_set_at, today)} · ` : ""}
             ${catDone}/${cat.tasks.length} تم
           </span>
         </div>
@@ -283,7 +297,7 @@ function buildHtml(
   <div class="progress-bar-wrap">
     <div><span class="pct">${pct}%</span> مكتمل</div>
     <div>${done} / ${total} مهمة</div>
-    ${project.estimated_days != null ? `<div>تقدير المشروع: ${estimatedDaysLabel(project.estimated_days)}</div>` : ""}
+    ${project.estimated_days != null ? `<div>متبقي للمشروع: ${remainingLabel(project.estimated_days, project.estimated_days_set_at, today)}</div>` : ""}
     ${overdue > 0 ? `<div class="overdue-label">${overdue} مهمة متأخرة</div>` : ""}
     <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
   </div>
@@ -327,14 +341,14 @@ export async function GET(
     supabase
       .from("projects")
       .select(
-        "id, name, description, start_date, end_date, status, estimated_days, location_notes, manager_name, manager_phone, default_engineer:default_engineer_id(full_name)",
+        "id, name, description, start_date, end_date, status, estimated_days, estimated_days_set_at, location_notes, manager_name, manager_phone, default_engineer:default_engineer_id(full_name)",
       )
       .eq("id", id)
       .single(),
     supabase
       .from("project_categories")
       .select(
-        "id, name, sort_order, estimated_days, tasks:project_tasks(id, title, description, due_date, estimated_days, is_completed, sort_order, assignee:assigned_to(full_name))",
+        "id, name, sort_order, estimated_days, estimated_days_set_at, tasks:project_tasks(id, title, description, due_date, estimated_days, estimated_days_set_at, is_completed, sort_order, assignee:assigned_to(full_name))",
       )
       .eq("project_id", id)
       .order("sort_order"),
@@ -352,6 +366,7 @@ export async function GET(
     end_date: string | null;
     status: ProjectStatus;
     estimated_days: number | null;
+    estimated_days_set_at: string | null;
     location_notes: string | null;
     manager_name: string | null;
     manager_phone: string | null;

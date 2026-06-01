@@ -356,6 +356,8 @@ export interface Project {
   default_engineer_id: string | null;
   /** Manual client-entered estimate; not summed from tasks/categories */
   estimated_days: number | null;
+  /** Date the estimate was last set — used to calculate remaining days countdown */
+  estimated_days_set_at: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -375,6 +377,7 @@ type ProjectInsert = {
   manager_email?: string | null;
   default_engineer_id?: string | null;
   estimated_days?: number | null;
+  estimated_days_set_at?: string | null;
   created_by?: string | null;
   created_at?: string;
   updated_at?: string;
@@ -386,6 +389,7 @@ export interface ProjectCategory {
   name: string;
   sort_order: number;
   estimated_days: number | null;
+  estimated_days_set_at: string | null;
   created_at: string;
 }
 type ProjectCategoryInsert = {
@@ -394,6 +398,7 @@ type ProjectCategoryInsert = {
   name: string;
   sort_order?: number;
   estimated_days?: number | null;
+  estimated_days_set_at?: string | null;
   created_at?: string;
 };
 
@@ -427,6 +432,7 @@ export interface ProjectTask {
   assigned_to: string | null;
   due_date: string | null;
   estimated_days: number | null;
+  estimated_days_set_at: string | null;
   is_completed: boolean;
   completed_by: string | null;
   completed_at: string | null;
@@ -443,6 +449,7 @@ type ProjectTaskInsert = {
   assigned_to?: string | null;
   due_date?: string | null;
   estimated_days?: number | null;
+  estimated_days_set_at?: string | null;
   is_completed?: boolean;
   completed_by?: string | null;
   completed_at?: string | null;

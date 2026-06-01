@@ -163,11 +163,13 @@ export async function updateProjectEstimatedDaysAction(
   const parsed = estimatedDaysSchema.safeParse(estimatedDays);
   if (!parsed.success) return { error: "عدد الأيام غير صالح" };
 
+  const today = new Date().toISOString().slice(0, 10);
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("projects")
     .update({
       estimated_days: parsed.data ?? null,
+      estimated_days_set_at: parsed.data != null ? today : null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", projectId);
@@ -259,9 +261,14 @@ export async function createCategoryAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
 
   const supabase = await createSupabaseServerClient();
+  const setAt = new Date().toISOString().slice(0, 10);
   const { data: newCat, error } = await supabase
     .from("project_categories")
-    .insert({ project_id: projectId, ...parsed.data })
+    .insert({
+      project_id: projectId,
+      ...parsed.data,
+      estimated_days_set_at: parsed.data.estimated_days != null ? setAt : null,
+    })
     .select("id")
     .single<{ id: string }>();
   if (error) return { error: error.message };
@@ -313,10 +320,14 @@ export async function updateCategoryEstimatedDaysAction(
   const parsed = estimatedDaysSchema.safeParse(estimatedDays);
   if (!parsed.success) return { error: "عدد الأيام غير صالح" };
 
+  const today = new Date().toISOString().slice(0, 10);
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("project_categories")
-    .update({ estimated_days: parsed.data ?? null })
+    .update({
+      estimated_days: parsed.data ?? null,
+      estimated_days_set_at: parsed.data != null ? today : null,
+    })
     .eq("id", categoryId);
   if (error) return { error: error.message };
 
@@ -384,6 +395,7 @@ export async function createTaskAction(
   if (titles.length === 0) return { error: "عنوان المهمة مطلوب" };
 
   const supabase = await createSupabaseServerClient();
+  const today = new Date().toISOString().slice(0, 10);
   const rows = titles.map((title, idx) => ({
     category_id: categoryId,
     project_id: projectId,
@@ -391,6 +403,7 @@ export async function createTaskAction(
     assigned_to: assigned_to || null,
     due_date: due_date || null,
     estimated_days,
+    estimated_days_set_at: estimated_days != null ? today : null,
     sort_order: idx,
   }));
 
@@ -449,10 +462,14 @@ export async function updateTaskEstimatedDaysAction(
   const parsed = estimatedDaysSchema.safeParse(estimatedDays);
   if (!parsed.success) return { error: "عدد الأيام غير صالح" };
 
+  const today = new Date().toISOString().slice(0, 10);
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("project_tasks")
-    .update({ estimated_days: parsed.data ?? null })
+    .update({
+      estimated_days: parsed.data ?? null,
+      estimated_days_set_at: parsed.data != null ? today : null,
+    })
     .eq("id", taskId);
   if (error) return { error: error.message };
 
