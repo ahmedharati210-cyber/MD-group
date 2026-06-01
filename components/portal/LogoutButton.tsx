@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { LogOut } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
-import { disableWebPush } from "@/lib/push/enable-push";
+import { disableWebPush, resetPushOptInDismiss } from "@/lib/push/enable-push";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -15,6 +15,8 @@ function useLogout() {
   const [isPending, startTransition] = useTransition();
 
   async function handleLogout() {
+    // Clear dismiss so the push opt-in modal re-appears for the next account.
+    resetPushOptInDismiss();
     // Best-effort unsubscribe — errors are swallowed so logout always proceeds.
     await disableWebPush().catch(() => undefined);
     startTransition(() => {

@@ -132,6 +132,14 @@ export function dismissPushOptIn(): void {
   }
 }
 
+export function resetPushOptInDismiss(): void {
+  try {
+    localStorage.removeItem(PUSH_OPT_IN_DISMISS_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 /** Whether the standalone PWA opt-in modal should appear. */
 export async function shouldShowPushOptIn(isStandalone: boolean): Promise<boolean> {
   if (!isStandalone) return false;
@@ -141,7 +149,7 @@ export async function shouldShowPushOptIn(isStandalone: boolean): Promise<boolea
   const keyRes = await fetch("/api/push/vapid-public-key");
   if (!keyRes.ok) return false;
 
-  if (Notification.permission !== "default") return false;
+  if (Notification.permission === "denied") return false;
 
   const reg = await getPortalServiceWorkerRegistration();
   if (!reg) return false;
