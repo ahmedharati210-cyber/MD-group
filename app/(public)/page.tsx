@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   ArrowLeft,
-  Building2,
   Phone,
   Mail,
   MapPin,
@@ -9,35 +8,27 @@ import {
   Handshake,
   Sparkles,
 } from "lucide-react";
-import { cacheTag, cacheLife } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
-import type { Company } from "@/types/db";
+import { PublicCompanyCard } from "@/components/public/public-company-card";
 
-// Uses the anon Supabase client (no cookies) so 'use cache' creates a single
-// shared entry across all visitors rather than per-session.
-async function getCompanies(): Promise<Company[]> {
-  "use cache";
-  cacheTag("public-companies");
-  cacheLife("minutes");
-  try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    );
-    const { data } = await supabase
-      .from("companies")
-      .select("*")
-      .eq("active", true)
-      .order("display_order", { ascending: true })
-      .order("name_ar", { ascending: true });
-    return (data ?? []) as unknown as Company[];
-  } catch {
-    return [];
-  }
-}
+type PublicCompany = { slug: string; name_ar: string; name_en: string | null };
 
-export default async function HomePage() {
-  const companies = await getCompanies();
+/** Subsidiaries (edit manually when adding companies). Dolce is separate below the grid. */
+const DOLCE_COMPANY: PublicCompany = {
+  slug: "company-two",
+  name_ar: "شركة الطريق الصحيح",
+  name_en: "Dolce Chocolate",
+};
+
+const GROUP_COMPANIES: PublicCompany[] = [
+  { slug: "Emaar Al Youm", name_ar: "شركة إعمار اليوم", name_en: null },
+  { slug: "admin", name_ar: "شركة الأديم", name_en: null },
+  { slug: "madainti", name_ar: "شركة مدينتي", name_en: null },
+  { slug: "ajwaa", name_ar: "شركة اجواء", name_en: null },
+  { slug: "itqan", name_ar: "شركة الإتقان العالمي", name_en: null },
+  { slug: "jawda", name_ar: "شركة الجودة الاولى", name_en: null },
+];
+
+export default function HomePage() {
 
   return (
     <div>
@@ -120,38 +111,15 @@ export default async function HomePage() {
             <div className="w-24 h-1 bg-gradient-to-r from-secondary-500 to-primary-500 mx-auto rounded-full mt-4"></div>
           </div>
 
-          {companies.length === 0 ? (
-            <div className="max-w-xl mx-auto p-8 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl text-center">
-              <Building2 className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">
-                سيتم عرض شركات المجموعة قريبًا.
-              </p>
-            </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 max-w-6xl mx-auto">
-              {companies.map((c) => (
-                <div
-                  key={c.id}
-                  className="group relative bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-800 rounded-2xl p-6 md:p-7 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-primary-300 dark:hover:border-primary-700 transition-all"
-                >
-                  <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform mb-4">
-                    <Building2 className="w-6 h-6 md:w-7 md:h-7 text-white" />
-                  </div>
-                  <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-50 mb-1">
-                    {c.name_ar}
-                  </h3>
-                  {c.name_en ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                      {c.name_en}
-                    </p>
-                  ) : null}
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    عضو في مجموعة MD.
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 max-w-6xl mx-auto">
+            {GROUP_COMPANIES.map((c) => (
+              <PublicCompanyCard key={c.slug} company={c} />
+            ))}
+          </div>
+
+          <div className="mt-12 md:mt-16 max-w-md mx-auto">
+            <PublicCompanyCard company={DOLCE_COMPANY} />
+          </div>
         </div>
       </section>
 

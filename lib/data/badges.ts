@@ -103,12 +103,8 @@ export async function getBadgeCounts(params: {
           }
           return await q;
         })(),
-    params.role === "owner"
-      ? Promise.resolve(0)
-      : countUnreadWarningsForKind({ ...countArgs, kind: "warning" }),
-    params.role === "owner"
-      ? Promise.resolve(0)
-      : countUnreadWarningsForKind({ ...countArgs, kind: "notification" }),
+    countUnreadWarningsForKind({ ...countArgs, kind: "warning" }),
+    countUnreadWarningsForKind({ ...countArgs, kind: "notification" }),
     pendingSignupPromise,
     supabase.rpc("count_documents_expired"),
     supabase.rpc("count_documents_expiring_soon"),

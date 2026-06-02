@@ -26,6 +26,29 @@ const lyMobile10 = z
       ),
   );
 
+const isoDateString = z
+  .string()
+  .trim()
+  .min(1, "تاريخ الميلاد مطلوب")
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "أدخل التاريخ بصيغة 1990-05-15 (سنة-شهر-يوم)")
+  .refine((s) => {
+    const [y, m, d] = s.split("-").map(Number);
+    if (!y || m < 1 || m > 12 || d < 1 || d > 31) return false;
+    const dt = new Date(y, m - 1, d);
+    if (
+      dt.getFullYear() !== y ||
+      dt.getMonth() !== m - 1 ||
+      dt.getDate() !== d
+    ) {
+      return false;
+    }
+    const maxBirth = new Date();
+    maxBirth.setHours(0, 0, 0, 0);
+    maxBirth.setFullYear(maxBirth.getFullYear() - 16);
+    dt.setHours(0, 0, 0, 0);
+    return dt <= maxBirth;
+  }, "يجب أن يكون العمر 16 سنة على الأقل");
+
 const ALLOWED_PASSPORT_IMAGE = new Set([
   "image/jpeg",
   "image/png",
@@ -47,7 +70,7 @@ const submitSchema = z.object({
   job_title: z.string().optional().nullable(),
   /** فرع المتجر — stored in `department` column */
   branch: z.string().min(2, "الفرع مطلوب"),
-  date_of_birth: z.string().min(1, "تاريخ الميلاد مطلوب"),
+  date_of_birth: isoDateString,
   gender: z.string().optional().nullable(),
   nationality: z.string().optional().nullable(),
   address: z.string().optional().nullable(),

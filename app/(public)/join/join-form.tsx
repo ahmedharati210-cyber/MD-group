@@ -20,43 +20,29 @@ import {
 import { cn } from "@/lib/utils";
 import { DateOfBirthInput } from "@/components/forms/date-of-birth-input";
 import {
-  submitEmployeeSignupAction,
-  type SignupSubmitState,
+  submitOpenDolceSignupAction,
+  type JoinSubmitState,
 } from "./actions";
-import type { SignupAppearance } from "./signup-appearance";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 function Field({
   label,
   required,
-  appearance,
   children,
 }: {
   label: string;
   required?: boolean;
-  appearance: SignupAppearance;
   children: React.ReactNode;
 }) {
-  const dark = appearance === "dark";
   return (
     <div>
-      <label
-        className={cn(
-          "block text-sm font-semibold mb-2",
-          dark ? "text-neutral-200" : "text-gray-800",
-        )}
-      >
+      <label className="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">
         {label}{" "}
         {required ? (
-          <span className="text-red-500 dark:text-red-400">*</span>
+          <span className="text-red-500">*</span>
         ) : (
-          <span
-            className={cn(
-              "font-normal text-xs",
-              dark ? "text-neutral-500" : "text-gray-500",
-            )}
-          >
+          <span className="font-normal text-xs text-gray-500 dark:text-gray-400">
             (اختياري)
           </span>
         )}
@@ -66,57 +52,33 @@ function Field({
   );
 }
 
-function SectionTitle({
-  title,
-  appearance,
-}: {
-  title: string;
-  appearance: SignupAppearance;
-}) {
-  const dark = appearance === "dark";
+function SectionTitle({ title }: { title: string }) {
   return (
     <div className="flex items-center gap-3 pt-2">
-      <div
-        className={cn("h-px flex-1", dark ? "bg-neutral-800" : "bg-gray-200")}
-      />
-      <span
-        className={cn(
-          "text-xs font-semibold uppercase tracking-widest",
-          dark ? "text-amber-400/80" : "text-amber-700",
-        )}
-      >
+      <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+      <span className="text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">
         {title}
       </span>
-      <div
-        className={cn("h-px flex-1", dark ? "bg-neutral-800" : "bg-gray-200")}
-      />
+      <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
     </div>
   );
 }
 
-function inputClasses(appearance: SignupAppearance, iconPad?: boolean) {
-  const dark = appearance === "dark";
+function inputClasses(iconPad?: boolean) {
   return cn(
     "w-full py-3 border-2 rounded-xl outline-none transition",
     iconPad ? "pr-12 pl-4" : "px-4",
-    dark
-      ? "border-neutral-700 bg-neutral-950 text-white placeholder:text-neutral-500 focus:border-amber-500/80 focus:ring-4 focus:ring-amber-500/10"
-      : "border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 focus:border-amber-600 focus:ring-4 focus:ring-amber-500/15",
+    "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/15",
   );
 }
 
-function SubmitButton({ appearance }: { appearance: SignupAppearance }) {
+function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
       disabled={pending}
-      className={cn(
-        "w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-bold shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0",
-        appearance === "dark"
-          ? "bg-gradient-to-r from-amber-600 to-amber-700 text-black shadow-amber-900/40 hover:shadow-xl hover:-translate-y-0.5"
-          : "bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 shadow-amber-800/25 hover:shadow-xl hover:-translate-y-0.5",
-      )}
+      className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-bold bg-primary-600 text-white shadow-lg hover:bg-primary-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
     >
       {pending ? (
         <>
@@ -130,69 +92,32 @@ function SubmitButton({ appearance }: { appearance: SignupAppearance }) {
   );
 }
 
-export function EmployeeSignupForm({
-  token,
-  companyNameAr,
-  appearance,
-}: {
-  token: string;
-  companyNameAr: string;
-  appearance: SignupAppearance;
-}) {
-  const [state, formAction] = useActionState<SignupSubmitState, FormData>(
-    submitEmployeeSignupAction,
+export function JoinForm({ companyNameAr }: { companyNameAr: string }) {
+  const [state, formAction] = useActionState<JoinSubmitState, FormData>(
+    submitOpenDolceSignupAction,
     {},
   );
 
   useEffect(() => {
     if (state?.ok) {
       toast.success("تم استلام طلبك. سيتم مراجعته من قبل الإدارة.", {
-        id: "signup-ok",
+        id: "join-ok",
       });
     }
   }, [state?.ok]);
 
-  const dark = appearance === "dark";
-
   if (state?.ok) {
     return (
-      <div
-        className={cn(
-          "rounded-2xl border p-8 text-center space-y-4",
-          dark
-            ? "border-amber-500/30 bg-black/60"
-            : "border-amber-200 bg-white shadow-inner",
-        )}
-      >
-        <div
-          className={cn(
-            "inline-flex h-14 w-14 items-center justify-center rounded-full",
-            dark ? "bg-emerald-500/15 text-emerald-400" : "bg-emerald-100 text-emerald-700",
-          )}
-        >
+      <div className="rounded-2xl border border-primary-200 dark:border-primary-800 bg-white dark:bg-gray-900 p-8 text-center space-y-4 shadow-sm">
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400">
           <CheckCircle className="w-7 h-7" />
         </div>
-        <h2
-          className={cn(
-            "text-xl font-bold",
-            dark ? "text-white" : "text-gray-900",
-          )}
-        >
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-50">
           تم الإرسال بنجاح
         </h2>
-        <p
-          className={cn(
-            "text-sm leading-relaxed",
-            dark ? "text-neutral-400" : "text-gray-600",
-          )}
-        >
+        <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
           تم استلام بياناتك ضمن شركة{" "}
-          <span
-            className={cn(
-              "font-semibold",
-              dark ? "text-amber-200/90" : "text-amber-800",
-            )}
-          >
+          <span className="font-semibold text-primary-700 dark:text-primary-300">
             {companyNameAr}
           </span>
           . سيتواصل معك المسؤول بعد المراجعة.
@@ -201,12 +126,10 @@ export function EmployeeSignupForm({
     );
   }
 
-  const iconMuted = dark ? "text-neutral-500" : "text-gray-400";
+  const iconMuted = "text-gray-400 dark:text-gray-500";
 
   return (
     <form action={formAction} className="space-y-5" dir="rtl">
-      <input type="hidden" name="token" value={token} />
-
       <div className="hidden" aria-hidden="true">
         <label htmlFor="website">Website</label>
         <input
@@ -219,29 +142,15 @@ export function EmployeeSignupForm({
       </div>
 
       {state?.error ? (
-        <div
-          className={cn(
-            "flex items-start gap-3 p-4 rounded-xl border",
-            dark
-              ? "bg-red-950/50 border-red-800/60"
-              : "bg-red-50 border-red-200",
-          )}
-        >
-          <AlertCircle
-            className={cn(
-              "w-5 h-5 flex-shrink-0 mt-0.5",
-              dark ? "text-red-400" : "text-red-600",
-            )}
-          />
-          <p className={cn("text-sm", dark ? "text-red-200" : "text-red-800")}>
-            {state.error}
-          </p>
+        <div className="flex items-start gap-3 p-4 rounded-xl border bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+          <p className="text-sm text-red-800 dark:text-red-200">{state.error}</p>
         </div>
       ) : null}
 
-      <SectionTitle title="البيانات الشخصية" appearance={appearance} />
+      <SectionTitle title="البيانات الشخصية" />
 
-      <Field label="الاسم الكامل" required appearance={appearance}>
+      <Field label="الاسم الكامل" required>
         <div className="relative">
           <User
             className={cn(
@@ -253,23 +162,14 @@ export function EmployeeSignupForm({
             name="full_name"
             required
             autoComplete="name"
-            className={inputClasses(appearance, true)}
+            className={inputClasses(true)}
             placeholder="الاسم الثلاثي"
           />
         </div>
       </Field>
 
-      <Field
-        label="رقم الوظيفي (رقم البصمة)"
-        required
-        appearance={appearance}
-      >
-        <p
-          className={cn(
-            "text-xs mb-2 leading-relaxed",
-            dark ? "text-neutral-500" : "text-gray-500",
-          )}
-        >
+      <Field label="رقم الوظيفي (رقم البصمة)" required>
+        <p className="text-xs mb-2 leading-relaxed text-gray-500 dark:text-gray-400">
           الرقم المعتمد في نظام الحضور والإنصراف
         </p>
         <div className="relative">
@@ -282,7 +182,7 @@ export function EmployeeSignupForm({
           <input
             name="external_employee_number"
             required
-            className={inputClasses(appearance, true)}
+            className={inputClasses(true)}
             placeholder="مثال: 4521"
             autoComplete="off"
           />
@@ -290,7 +190,7 @@ export function EmployeeSignupForm({
       </Field>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="رقم الهاتف" required appearance={appearance}>
+        <Field label="رقم الهاتف" required>
           <div className="relative">
             <Phone
               className={cn(
@@ -308,13 +208,13 @@ export function EmployeeSignupForm({
               title="10 أرقام تبدأ بـ 09"
               autoComplete="tel"
               dir="ltr"
-              className={cn(inputClasses(appearance, true), "tracking-wide")}
+              className={cn(inputClasses(true), "tracking-wide")}
               placeholder="09xxxxxxxx"
             />
           </div>
         </Field>
 
-        <Field label="رقم الجواز أو الرخصة" required appearance={appearance}>
+        <Field label="رقم الجواز أو الرخصة" required>
           <div className="relative">
             <BookOpen
               className={cn(
@@ -325,24 +225,18 @@ export function EmployeeSignupForm({
             <input
               name="passport_number"
               required
-              className={inputClasses(appearance, true)}
+              className={inputClasses(true)}
               placeholder="A1234567"
             />
           </div>
         </Field>
       </div>
 
-      <SectionTitle title="صورة جواز السفر أو الرخصة " appearance={appearance} />
+      <SectionTitle title="صورة جواز السفر أو الرخصة" />
 
-      <Field label="رفع صورة الجواز أو الرخصة" required appearance={appearance}>
-        <p
-          className={cn(
-            "text-xs mb-2 leading-relaxed",
-            dark ? "text-neutral-500" : "text-gray-500",
-          )}
-        >
-          صورة واضحة للجواز أو الرخصة — JPG أو PNG أو WebP،
-          بحد أقصى 8 ميجابايت.
+      <Field label="رفع صورة الجواز أو الرخصة" required>
+        <p className="text-xs mb-2 leading-relaxed text-gray-500 dark:text-gray-400">
+          صورة واضحة للجواز أو الرخصة — JPG أو PNG أو WebP، بحد أقصى 8 ميجابايت.
         </p>
         <input
           type="file"
@@ -350,13 +244,13 @@ export function EmployeeSignupForm({
           required
           accept="image/jpeg,image/png,image/webp"
           className={cn(
-            inputClasses(appearance),
-            "file:rounded-lg file:border-0 file:py-2 file:px-3 file:mr-3 file:bg-amber-600 file:text-black file:text-sm file:font-semibold cursor-pointer",
+            inputClasses(),
+            "file:rounded-lg file:border-0 file:py-2 file:px-3 file:mr-3 file:bg-primary-600 file:text-white file:text-sm file:font-semibold cursor-pointer",
           )}
         />
       </Field>
 
-      <Field label="الرقم الوطني" appearance={appearance}>
+      <Field label="الرقم الوطني">
         <div className="relative">
           <CreditCard
             className={cn(
@@ -366,35 +260,31 @@ export function EmployeeSignupForm({
           />
           <input
             name="national_id"
-            className={inputClasses(appearance, true)}
+            className={inputClasses(true)}
             placeholder="123456789"
           />
         </div>
       </Field>
 
-      <Field label="تاريخ الميلاد" required appearance={appearance}>
+      <Field label="تاريخ الميلاد" required>
         <DateOfBirthInput
-          hintClassName={dark ? "text-neutral-500" : "text-gray-500"}
-          inputClassName={cn(inputClasses(appearance), "tracking-wide")}
+          inputClassName={cn(inputClasses(), "tracking-wide")}
         />
       </Field>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Field label="الجنس" appearance={appearance}>
-          <select
-            name="gender"
-            className={cn(inputClasses(appearance), "appearance-none")}
-          >
+        <Field label="الجنس">
+          <select name="gender" className={cn(inputClasses(), "appearance-none")}>
             <option value="">— اختر —</option>
             <option value="ذكر">ذكر</option>
             <option value="أنثى">أنثى</option>
           </select>
         </Field>
 
-        <Field label="فصيلة الدم" appearance={appearance}>
+        <Field label="فصيلة الدم">
           <select
             name="blood_type"
-            className={cn(inputClasses(appearance), "appearance-none")}
+            className={cn(inputClasses(), "appearance-none")}
           >
             <option value="">— اختر —</option>
             {BLOOD_TYPES.map((bt) => (
@@ -405,7 +295,7 @@ export function EmployeeSignupForm({
           </select>
         </Field>
 
-        <Field label="الجنسية" appearance={appearance}>
+        <Field label="الجنسية">
           <div className="relative">
             <Globe
               className={cn(
@@ -415,14 +305,14 @@ export function EmployeeSignupForm({
             />
             <input
               name="nationality"
-              className={inputClasses(appearance, true)}
+              className={inputClasses(true)}
               placeholder="ليبي"
             />
           </div>
         </Field>
       </div>
 
-      <Field label="العنوان" appearance={appearance}>
+      <Field label="العنوان">
         <div className="relative">
           <MapPin
             className={cn(
@@ -432,16 +322,16 @@ export function EmployeeSignupForm({
           />
           <input
             name="address"
-            className={inputClasses(appearance, true)}
+            className={inputClasses(true)}
             placeholder="المدينة، الحي"
           />
         </div>
       </Field>
 
-      <SectionTitle title="جهة الاتصال في الطوارئ" appearance={appearance} />
+      <SectionTitle title="جهة الاتصال في الطوارئ" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="الاسم" required appearance={appearance}>
+        <Field label="الاسم" required>
           <div className="relative">
             <User
               className={cn(
@@ -453,13 +343,13 @@ export function EmployeeSignupForm({
               name="emergency_contact_name"
               required
               autoComplete="name"
-              className={inputClasses(appearance, true)}
+              className={inputClasses(true)}
               placeholder="اسم كامل"
             />
           </div>
         </Field>
 
-        <Field label="رقم الهاتف" required appearance={appearance}>
+        <Field label="رقم الهاتف" required>
           <div className="relative">
             <Phone
               className={cn(
@@ -476,26 +366,26 @@ export function EmployeeSignupForm({
               pattern="09\d{8}"
               title="10 أرقام تبدأ بـ 09"
               dir="ltr"
-              className={cn(inputClasses(appearance, true), "tracking-wide")}
+              className={cn(inputClasses(true), "tracking-wide")}
               placeholder="09xxxxxxxx"
             />
           </div>
         </Field>
       </div>
 
-      <Field label="صلة القرابة" required appearance={appearance}>
+      <Field label="صلة القرابة" required>
         <input
           name="emergency_contact_relationship"
           required
-          className={inputClasses(appearance)}
+          className={inputClasses()}
           placeholder="مثال: زوجة، أخ، والد"
         />
       </Field>
 
-      <SectionTitle title="البيانات الوظيفية" appearance={appearance} />
+      <SectionTitle title="البيانات الوظيفية" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="المسمى الوظيفي" appearance={appearance}>
+        <Field label="المسمى الوظيفي">
           <div className="relative">
             <Briefcase
               className={cn(
@@ -505,13 +395,13 @@ export function EmployeeSignupForm({
             />
             <input
               name="job_title"
-              className={inputClasses(appearance, true)}
+              className={inputClasses(true)}
               placeholder="موظف مبيعات"
             />
           </div>
         </Field>
 
-        <Field label="الفرع (المحل التابع له)" required appearance={appearance}>
+        <Field label="الفرع (المحل التابع له)" required>
           <div className="relative">
             <Store
               className={cn(
@@ -522,16 +412,14 @@ export function EmployeeSignupForm({
             <input
               name="branch"
               required
-              className={inputClasses(appearance, true)}
-              placeholder=" فرع المحل"
+              className={inputClasses(true)}
+              placeholder="فرع المحل"
             />
           </div>
         </Field>
       </div>
 
-      <SubmitButton appearance={appearance} />
-
-
+      <SubmitButton />
     </form>
   );
 }

@@ -18,32 +18,22 @@ export async function countUnreadWarningsForKind(params: {
   isSuperAdmin: boolean;
   kind: WarningKind;
 }): Promise<number> {
-  const { supabase, userId, isEmployee, companyId, isSuperAdmin, kind } = params;
+  const { supabase, userId, isEmployee, kind } = params;
 
-  let q = supabase
+  // Inbox badges are for recipients only. Managers/admins send notifications;
+  // unread rows in their company are employee inbox state, not admin alerts.
+  if (!isEmployee) {
+    return 0;
+  }
+
+  const { count } = await supabase
     .from("warnings")
     .select("id", { count: "exact", head: true })
     .eq("is_read", false)
-    .eq("kind", kind);
+    .eq("kind", kind)
+    .or(`target_profile_id.eq.${userId},target_profile_id.is.null`);
 
-  if (isEmployee) {
-    const { count } = await q.or(
-      `target_profile_id.eq.${userId},target_profile_id.is.null`,
-    );
-    return count ?? 0;
-  }
-
-  if (isSuperAdmin) {
-    const { count } = await q;
-    return count ?? 0;
-  }
-
-  if (companyId) {
-    const { count } = await q.eq("company_id", companyId);
-    return count ?? 0;
-  }
-
-  return 0;
+  return count ?? 0;
 }
 
 export async function getNotificationBadgeCounts(params: {

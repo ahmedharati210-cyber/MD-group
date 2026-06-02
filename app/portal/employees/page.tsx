@@ -29,7 +29,8 @@ export default async function EmployeesPage({
   let employeesQuery = supabase
     .from("profiles")
     .select("*, companies(id, name_ar)", { count: "exact" })
-    .in("role", ["employee", "company_manager"])
+    .in("role", ["employee", "company_manager", "md_admin"])
+    .neq("is_super_admin", true)
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -116,7 +117,11 @@ export default async function EmployeesPage({
                         {e.full_name}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        {e.role === "company_manager" ? "مدير شركة" : "موظف"}
+                        {e.role === "md_admin"
+                          ? "مدير MD Group"
+                          : e.role === "company_manager"
+                            ? "مدير شركة"
+                            : "موظف"}
                       </div>
                     </div>
                     <span
@@ -185,9 +190,11 @@ export default async function EmployeesPage({
                             {e.full_name}
                           </Link>
                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {e.role === "company_manager"
-                              ? "مدير شركة"
-                              : "موظف"}
+                            {e.role === "md_admin"
+                              ? "مدير MD Group"
+                              : e.role === "company_manager"
+                                ? "مدير شركة"
+                                : "موظف"}
                           </div>
                         </td>
                         <td className="px-5 py-3 text-gray-700 dark:text-gray-300">
