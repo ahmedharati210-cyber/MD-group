@@ -2,7 +2,7 @@ import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import type { WarningKind } from "@/types/db";
+import type { UserRole, WarningKind } from "@/types/db";
 
 export type WarningRow = {
   id: string;
@@ -14,11 +14,23 @@ export type WarningRow = {
   sender: { full_name: string } | null;
 };
 
+export type NotificationRecipient = {
+  id: string;
+  full_name: string;
+  role: UserRole;
+};
+
 export type WarningsData = {
   warnings: WarningRow[];
   totalCount: number;
   engineers: { id: string; full_name: string }[] | null;
+  managers: NotificationRecipient[] | null;
   companies: { id: string; name_ar: string }[] | null;
+};
+
+export type ManagerInboxData = {
+  warnings: WarningRow[];
+  totalCount: number;
 };
 
 /**
@@ -38,7 +50,7 @@ export async function getWarningsData(params: {
   pageSize: number;
 }): Promise<WarningsData> {
   const supabase = await createSupabaseServerClient();
-  const isManager = params.role !== "employee";
+  const isManager = params.role !== "employee" && params.role !== "owner";
   const offset = (params.page - 1) * params.pageSize;
 
   let warningsQuery = supabase
@@ -57,6 +69,7 @@ export async function getWarningsData(params: {
   const { data: rawWarnings, count } = await warningsQuery;
 
   let engineers: { id: string; full_name: string }[] | null = null;
+  let managers: NotificationRecipient[] | null = null;
   let companies: { id: string; name_ar: string }[] | null = null;
 
   if (isManager) {
@@ -65,6 +78,7 @@ export async function getWarningsData(params: {
       .select("id, full_name")
       .eq("role", "employee")
       .eq("is_active", true)
+      .neq("id", params.profileId)
       .order("full_name");
 
     if (params.filterCompanyId) {
@@ -73,6 +87,30 @@ export async function getWarningsData(params: {
 
     const { data: engData } = await engQuery;
     engineers = engData;
+
+    let mgrQuery = supabase
+      .from("profiles")
+      .select("id, full_name, role")
+      .eq("is_active", true)
+      .eq("is_super_admin", false)
+      .neq("id", params.profileId)
+      .order("full_name");
+
+    if (params.role === "company_manager") {
+      mgrQuery = mgrQuery.eq("role", "company_manager");
+      if (params.filterCompanyId) {
+        mgrQuery = mgrQuery.eq("company_id", params.filterCompanyId);
+      }
+    } else if (params.role === "md_admin") {
+      mgrQuery = mgrQuery.in("role", ["company_manager", "md_admin"]);
+    } else if (params.isSuperAdmin) {
+      mgrQuery = mgrQuery.in("role", ["company_manager", "md_admin"]);
+    } else {
+      mgrQuery = mgrQuery.eq("role", "company_manager");
+    }
+
+    const { data: mgrData } = await mgrQuery;
+    managers = (mgrData ?? []) as NotificationRecipient[];
 
     if (params.isSuperAdmin || params.role === "md_admin" || params.role === "owner") {
       const { data } = await supabase
@@ -96,6 +134,32 @@ export async function getWarningsData(params: {
     warnings: (rawWarnings ?? []) as unknown as WarningRow[],
     totalCount: count ?? 0,
     engineers,
+    managers,
     companies,
+  };
+}
+
+/** Personal inbox for managers (rows addressed directly to profileId). */
+export async function getManagerInboxData(params: {
+  profileId: string;
+  page: number;
+  pageSize: number;
+}): Promise<ManagerInboxData> {
+  const supabase = await createSupabaseServerClient();
+  const offset = (params.page - 1) * params.pageSize;
+
+  const { data: rawWarnings, count } = await supabase
+    .from("warnings")
+    .select(
+      "id, message, kind, is_read, created_at, target:target_profile_id(full_name), sender:sender_id(full_name)",
+      { count: "exact" },
+    )
+    .eq("target_profile_id", params.profileId)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + params.pageSize - 1);
+
+  return {
+    warnings: (rawWarnings ?? []) as unknown as WarningRow[],
+    totalCount: count ?? 0,
   };
 }

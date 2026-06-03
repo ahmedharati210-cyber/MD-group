@@ -111,28 +111,40 @@ export async function sendWarningAction(
     return { ok: true };
   }
 
-  // Multi-recipient: one or more employees selected via checkboxes
+  // Multi-recipient: one or more profiles selected via checkboxes
   const targetIds = formData.getAll("target_profile_ids").map(String).filter(Boolean);
-  if (targetIds.length === 0) return { error: "يرجى تحديد موظف واحد على الأقل" };
+  if (targetIds.length === 0) return { error: "يرجى تحديد مستلم واحد على الأقل" };
 
-  // Validate: company_manager can only warn employees in their own company
+  const senderShellCompanyId =
+    (formData.get("sender_shell_company_id") as string | null)?.trim() || null;
+
   if (profile.role === "company_manager") {
     const { data: targetProfiles } = await supabase
       .from("profiles")
-      .select("id, company_id")
+      .select("id, company_id, role")
       .in("id", targetIds);
-    const outsider = (targetProfiles ?? []).find((p) => p.company_id !== profile.company_id);
-    if (outsider) return { error: "لا يمكنك إرسال إشعارات لموظفين خارج شركتك" };
+    const outsider = (targetProfiles ?? []).find(
+      (p) => p.company_id !== profile.company_id,
+    );
+    if (outsider) {
+      return { error: "لا يمكنك إرسال إشعارات لموظفين أو مديرين خارج شركتك" };
+    }
+    const mdAdminTarget = (targetProfiles ?? []).find((p) => p.role === "md_admin");
+    if (mdAdminTarget) {
+      return { error: "لا يمكنك إرسال إشعارات لمدير مجموعة MD" };
+    }
   }
 
-  // Resolve company_id from the first target (all should belong to same company for a manager)
   const { data: firstTarget } = await supabase
     .from("profiles")
     .select("company_id")
     .eq("id", targetIds[0])
     .single<{ company_id: string | null }>();
-  const company_id = firstTarget?.company_id ?? profile.company_id;
-  if (!company_id) return { error: "لم يتم العثور على شركة الموظف" };
+  const company_id =
+    firstTarget?.company_id ??
+    profile.company_id ??
+    senderShellCompanyId;
+  if (!company_id) return { error: "لم يتم العثور على شركة المستلم" };
 
   // Insert one warning row per recipient
   const rows = targetIds.map((target_profile_id) => ({
@@ -202,19 +214,26 @@ export async function markWarningReadAction(id: string): Promise<ActionState> {
   return { ok: true };
 }
 
-/** Employees only: mark every visible unread row (direct + company broadcast) as read. */
+/** Mark all unread inbox rows as read (employees: direct + broadcast; managers: direct only). */
 export async function markAllWarningsReadAction(): Promise<ActionState> {
   const { userId, profile } = await requireUser();
-  if (profile.role !== "employee") {
-    return { error: "هذا الإجراء متاح للموظفين فقط" };
+  if (profile.is_super_admin || profile.role === "owner") {
+    return { error: "هذا الإجراء غير متاح لهذا الحساب" };
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+
+  const updateQuery = supabase
     .from("warnings")
     .update({ is_read: true })
-    .eq("is_read", false)
-    .or(`target_profile_id.eq.${userId},target_profile_id.is.null`);
+    .eq("is_read", false);
+
+  const { error } =
+    profile.role === "employee"
+      ? await updateQuery.or(
+          `target_profile_id.eq.${userId},target_profile_id.is.null`,
+        )
+      : await updateQuery.eq("target_profile_id", userId);
 
   if (error) return { error: error.message };
 

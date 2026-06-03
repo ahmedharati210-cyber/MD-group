@@ -7,8 +7,10 @@ import toast from "react-hot-toast";
 import { sendWarningAction } from "@/app/portal/warnings/actions";
 import { syncPortalAppBadge } from "@/lib/push/sync-app-badge";
 import { cn } from "@/lib/utils";
+import type { UserRole } from "@/types/db";
 
 type Engineer = { id: string; full_name: string };
+type Manager = { id: string; full_name: string; role: UserRole };
 type Company = { id: string; name_ar: string };
 type State = { error?: string; ok?: boolean };
 const init: State = {};
@@ -16,19 +18,31 @@ const init: State = {};
 const inputCls =
   "w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none";
 
+const managerRoleLabel: Partial<Record<UserRole, string>> = {
+  company_manager: "مدير شركة",
+  md_admin: "MD Admin",
+};
+
 type Props = {
   engineers: Engineer[];
+  managers?: Manager[];
+  senderShellCompanyId?: string;
   canBroadcast: boolean;
   companies?: Company[];
 };
 
-export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Props) {
+export function SendWarningForm({
+  engineers,
+  managers = [],
+  senderShellCompanyId = "",
+  canBroadcast,
+  companies = [],
+}: Props) {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(sendWarningAction, init);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [broadcastCompany, setBroadcastCompany] = useState("");
   const [kind, setKind] = useState<"warning" | "notification">("warning");
-  /** Bump to remount textarea so defaultValue clears after each successful send */
   const [messageFieldKey, setMessageFieldKey] = useState(0);
 
   useEffect(() => {
@@ -41,7 +55,8 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
     void syncPortalAppBadge();
   }, [state, router]);
 
-  const allIds = engineers.map((e) => e.id);
+  const allRecipients = [...engineers, ...managers];
+  const allIds = allRecipients.map((r) => r.id);
   const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
   const someChecked = selected.size > 0;
 
@@ -65,6 +80,41 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
   const canSubmit =
     someChecked || (canBroadcast && broadcastCompany.trim().length > 0);
 
+  function renderRecipientList(items: { id: string; full_name: string; role?: UserRole }[]) {
+    if (items.length === 0) return null;
+
+    return (
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 max-h-52 overflow-y-auto">
+        {items.map((item) => (
+          <label
+            key={item.id}
+            className={cn(
+              "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors",
+              selected.has(item.id)
+                ? "bg-amber-50 dark:bg-amber-900/10"
+                : "bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50",
+            )}
+          >
+            <input
+              type="checkbox"
+              checked={selected.has(item.id)}
+              onChange={() => toggleOne(item.id)}
+              className="w-4 h-4 rounded accent-amber-600"
+            />
+            <span className="text-sm text-gray-800 dark:text-gray-200 flex-1">
+              {item.full_name}
+            </span>
+            {item.role && item.role !== "employee" ? (
+              <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                {managerRoleLabel[item.role] ?? item.role}
+              </span>
+            ) : null}
+          </label>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <form action={formAction} className="space-y-4">
       {state?.ok ? (
@@ -80,6 +130,9 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
       ) : null}
 
       <input type="hidden" name="kind" value={kind} />
+      {senderShellCompanyId ? (
+        <input type="hidden" name="sender_shell_company_id" value={senderShellCompanyId} />
+      ) : null}
 
       <div>
         <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -119,18 +172,16 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
         </div>
       </div>
 
-      {/* Hidden inputs — one per selected employee */}
       {[...selected].map((id) => (
         <input key={id} type="hidden" name="target_profile_ids" value={id} />
       ))}
 
-      {/* Employee multi-select */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             الموجه إلى
           </label>
-          {engineers.length > 1 ? (
+          {allIds.length > 1 ? (
             <button
               type="button"
               onClick={toggleAll}
@@ -141,39 +192,40 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
           ) : null}
         </div>
 
-        {engineers.length === 0 ? (
-          <p className="text-sm text-gray-400 dark:text-gray-500">لا يوجد موظفون في شركتك.</p>
+        {allRecipients.length === 0 ? (
+          <p className="text-sm text-gray-400 dark:text-gray-500">
+            لا يوجد مستلمون متاحون.
+          </p>
         ) : (
-          <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 max-h-52 overflow-y-auto">
-            {engineers.map((e) => (
-              <label
-                key={e.id}
-                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                  selected.has(e.id)
-                    ? "bg-amber-50 dark:bg-amber-900/10"
-                    : "bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.has(e.id)}
-                  onChange={() => toggleOne(e.id)}
-                  className="w-4 h-4 rounded accent-amber-600"
-                />
-                <span className="text-sm text-gray-800 dark:text-gray-200">{e.full_name}</span>
-              </label>
-            ))}
+          <div className="space-y-4">
+            {engineers.length > 0 ? (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+                  الموظفون
+                </p>
+                {renderRecipientList(engineers)}
+              </div>
+            ) : null}
+            {managers.length > 0 ? (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+                  المديرون
+                </p>
+                {renderRecipientList(managers)}
+              </div>
+            ) : null}
           </div>
         )}
 
         {someChecked ? (
           <p className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">
-            {selected.size === allIds.length ? "جميع الموظفين محددون" : `${selected.size} موظف محدد`}
+            {selected.size === allIds.length
+              ? "جميع المستلمين محددون"
+              : `${selected.size} مستلم محدد`}
           </p>
         ) : null}
       </div>
 
-      {/* Super admin broadcast company picker */}
       {canBroadcast ? (
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -187,7 +239,9 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
           >
             <option value="">— بدون بث عام —</option>
             {companies.map((c) => (
-              <option key={c.id} value={c.id}>{c.name_ar}</option>
+              <option key={c.id} value={c.id}>
+                {c.name_ar}
+              </option>
             ))}
           </select>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -196,7 +250,6 @@ export function SendWarningForm({ engineers, canBroadcast, companies = [] }: Pro
         </div>
       ) : null}
 
-      {/* Message */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           نص الرسالة *

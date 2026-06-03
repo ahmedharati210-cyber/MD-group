@@ -1,7 +1,9 @@
 import "server-only";
 
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
+import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { countUnreadWarningsForKind } from "@/lib/data/notification-badge-counts";
 import type { UserRole } from "@/types/db";
 
 export type BadgeCounts = {
@@ -17,6 +19,15 @@ export type BadgeCounts = {
   expiringSoonPapers: number;
 };
 
+const EMPTY_BADGES: BadgeCounts = {
+  pendingRequests: 0,
+  unreadWarningAlerts: 0,
+  unreadNotificationAlerts: 0,
+  pendingSignupRequests: 0,
+  expiredPapers: 0,
+  expiringSoonPapers: 0,
+};
+
 function parseRpcCount(data: unknown): number {
   if (data == null) return 0;
   const n =
@@ -28,16 +39,18 @@ function parseRpcCount(data: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/**
- * Sidebar notification badge counts. Always fetches fresh data per request —
- * 'use cache: private' was removed because it never cached across requests
- * (Supabase cookie rotation changes the key on every middleware refresh).
- *
- * Signature simplified: requestsVisible / warningsVisible removed so the
- * layout can call this in parallel with getCompanyData instead of waiting
- * for it. Badge display is already gated by feature visibility in PortalShell.
- */
-export async function getBadgeCounts(params: {
+function createTokenClient(accessToken: string) {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    },
+  );
+}
+
+type BadgeParams = {
   userId: string;
   isEmployee: boolean;
   role: UserRole;
@@ -47,85 +60,160 @@ export async function getBadgeCounts(params: {
   dolceSignupCompanyId: string | null;
   /** From layout: `canAccessDolceEmployeeSignup` (respects employee_signup for md_admin). */
   includeDolceSignupBadges: boolean;
-}): Promise<BadgeCounts> {
-  const supabase = await createSupabaseServerClient();
+};
 
-  const canSeeDolceSignupBadge =
-    !!params.dolceSignupCompanyId &&
-    !params.isEmployee &&
-    params.includeDolceSignupBadges;
+/**
+ * Inner cached fetcher — keyed on stable user identifiers so the
+ * Next.js data cache persists across cookie rotations. Access token
+ * is passed as a closure rather than a cache key to keep the key stable.
+ * Revalidates every 30 s; tags allow instant invalidation on mutations.
+ */
+function fetchBadgesCached(params: BadgeParams, accessToken: string): Promise<BadgeCounts> {
+  const {
+    userId,
+    isEmployee,
+    role,
+    companyId,
+    isSuperAdmin,
+    dolceSignupCompanyId,
+    includeDolceSignupBadges,
+  } = params;
 
-  const pendingSignupPromise = (async (): Promise<number> => {
-    if (!canSeeDolceSignupBadge || !params.dolceSignupCompanyId) return 0;
+  return unstable_cache(
+    async () => {
+      const supabase = createTokenClient(accessToken);
 
-    const { count } = await supabase
-      .from("employee_signup_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending")
-      .eq("company_id", params.dolceSignupCompanyId);
+      const canSeeDolceSignupBadge =
+        !!dolceSignupCompanyId && !isEmployee && includeDolceSignupBadges;
 
-    return count ?? 0;
-  })();
-
-  const countArgs = {
-    supabase,
-    userId: params.userId,
-    isEmployee: params.isEmployee,
-    companyId: params.companyId,
-    isSuperAdmin: params.isSuperAdmin,
-  };
-
-  const [
-    pendingResult,
-    unreadWarningAlerts,
-    unreadNotificationAlerts,
-    pendingSignupRequests,
-    expiredRpc,
-    expiringSoonRpc,
-  ] = await Promise.all([
-    params.isEmployee
-      ? supabase
-          .from("engineer_requests")
+      const pendingSignupPromise = (async (): Promise<number> => {
+        if (!canSeeDolceSignupBadge || !dolceSignupCompanyId) return 0;
+        const { count } = await supabase
+          .from("employee_signup_requests")
           .select("id", { count: "exact", head: true })
           .eq("status", "pending")
-          .eq("requester_id", params.userId)
-      : (async () => {
-          // Owner and md_admin without an active company show no badge
-          if ((params.role === "md_admin" || params.role === "owner") && !params.companyId) {
-            return { count: 0 };
-          }
-          let q = supabase
+          .eq("company_id", dolceSignupCompanyId);
+        return count ?? 0;
+      })();
+
+      const pendingRequestsPromise = (async (): Promise<number> => {
+        if (isEmployee) {
+          const { count } = await supabase
             .from("engineer_requests")
             .select("id", { count: "exact", head: true })
-            .eq("status", "pending");
-          if (!params.isSuperAdmin && params.companyId) {
-            q = q.eq("company_id", params.companyId);
-          }
-          return await q;
-        })(),
-    countUnreadWarningsForKind({ ...countArgs, kind: "warning" }),
-    countUnreadWarningsForKind({ ...countArgs, kind: "notification" }),
-    pendingSignupPromise,
-    supabase.rpc("count_documents_expired"),
-    supabase.rpc("count_documents_expiring_soon"),
-  ]);
+            .eq("status", "pending")
+            .eq("requester_id", userId);
+          return count ?? 0;
+        }
+        // Owner / md_admin without an active company show no badge
+        if ((role === "md_admin" || role === "owner") && !companyId) return 0;
+        let q = supabase
+          .from("engineer_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending");
+        if (!isSuperAdmin && companyId) q = q.eq("company_id", companyId);
+        const { count } = await q;
+        return count ?? 0;
+      })();
 
-  if (expiredRpc.error) {
-    console.warn("[badges] count_documents_expired:", expiredRpc.error.message);
-  }
-  if (expiringSoonRpc.error) {
-    console.warn(
-      "[badges] count_documents_expiring_soon:",
-      expiringSoonRpc.error.message,
-    );
-  }
+      // Notification-centre badges: employees (direct + broadcast) or managers (direct only).
+      const warningAlertsPromise = (async (): Promise<number> => {
+        if (isSuperAdmin || role === "owner") return 0;
+        if (isEmployee) {
+          const { count } = await supabase
+            .from("warnings")
+            .select("id", { count: "exact", head: true })
+            .eq("is_read", false)
+            .eq("kind", "warning")
+            .or(`target_profile_id.eq.${userId},target_profile_id.is.null`);
+          return count ?? 0;
+        }
+        const { count } = await supabase
+          .from("warnings")
+          .select("id", { count: "exact", head: true })
+          .eq("is_read", false)
+          .eq("kind", "warning")
+          .eq("target_profile_id", userId);
+        return count ?? 0;
+      })();
 
-  return {
-    pendingRequests: pendingResult.count ?? 0,
-    unreadWarningAlerts,
-    unreadNotificationAlerts,
-    pendingSignupRequests,
-    expiredPapers: parseRpcCount(expiredRpc.data),
-    expiringSoonPapers: parseRpcCount(expiringSoonRpc.data),
-  };
+      const notificationAlertsPromise = (async (): Promise<number> => {
+        if (isSuperAdmin || role === "owner") return 0;
+        if (isEmployee) {
+          const { count } = await supabase
+            .from("warnings")
+            .select("id", { count: "exact", head: true })
+            .eq("is_read", false)
+            .eq("kind", "notification")
+            .or(`target_profile_id.eq.${userId},target_profile_id.is.null`);
+          return count ?? 0;
+        }
+        const { count } = await supabase
+          .from("warnings")
+          .select("id", { count: "exact", head: true })
+          .eq("is_read", false)
+          .eq("kind", "notification")
+          .eq("target_profile_id", userId);
+        return count ?? 0;
+      })();
+
+      const [
+        pendingRequests,
+        unreadWarningAlerts,
+        unreadNotificationAlerts,
+        pendingSignupRequests,
+        expiredRpc,
+        expiringSoonRpc,
+      ] = await Promise.all([
+        pendingRequestsPromise,
+        warningAlertsPromise,
+        notificationAlertsPromise,
+        pendingSignupPromise,
+        supabase.rpc("count_documents_expired"),
+        supabase.rpc("count_documents_expiring_soon"),
+      ]);
+
+      if (expiredRpc.error) {
+        console.warn("[badges] count_documents_expired:", expiredRpc.error.message);
+      }
+      if (expiringSoonRpc.error) {
+        console.warn("[badges] count_documents_expiring_soon:", expiringSoonRpc.error.message);
+      }
+
+      return {
+        pendingRequests,
+        unreadWarningAlerts,
+        unreadNotificationAlerts,
+        pendingSignupRequests,
+        expiredPapers: parseRpcCount(expiredRpc.data),
+        expiringSoonPapers: parseRpcCount(expiringSoonRpc.data),
+      };
+    },
+    // Stable key: does not include the access token (which rotates on every request)
+    [`badges-${userId}-${isEmployee ? "emp" : "mgr"}-${isSuperAdmin ? "sa" : "ns"}`],
+    { revalidate: 30, tags: ["badges", `badges-user-${userId}`] },
+  )();
 }
+
+/**
+ * Sidebar notification badge counts cached for 30 s per user.
+ *
+ * Uses an access-token-authenticated client inside unstable_cache to bypass
+ * the Supabase cookie-rotation problem (rotating cookies would bust the cache
+ * on every request). React.cache() deduplicates within a single render pass.
+ *
+ * To force immediate refresh after a mutation call:
+ *   revalidateTag(`badges-user-${userId}`)  — single user
+ *   revalidateTag("badges")                 — all users
+ */
+export const getBadgeCounts = cache(
+  async (params: BadgeParams): Promise<BadgeCounts> => {
+    const cookieClient = await createSupabaseServerClient();
+    const {
+      data: { session },
+    } = await cookieClient.auth.getSession();
+    if (!session) return EMPTY_BADGES;
+
+    return fetchBadgesCached(params, session.access_token);
+  },
+);

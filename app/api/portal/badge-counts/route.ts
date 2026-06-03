@@ -30,6 +30,7 @@ export async function GET() {
       supabase,
       userId: profile.id ?? "",
       isEmployee,
+      role: profile.role,
       companyId: badgeCompanyId,
       isSuperAdmin: profile.is_super_admin ?? false,
     }),
