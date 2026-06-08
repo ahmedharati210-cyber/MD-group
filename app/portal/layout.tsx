@@ -8,7 +8,7 @@ import {
   getDolceSignupCompanyId,
   resolveDolceEmployeeSignupAccess,
 } from "@/lib/dolce-signup-company";
-import { PortalBootSplash } from "@/components/portal/PortalBootSplash";
+import { PortalShellSkeleton } from "@/components/portal/PortalShellSkeleton";
 import { PortalShell } from "@/components/portal/PortalShell";
 import type { AppFeature, RoleFeatures } from "@/types/db";
 
@@ -37,7 +37,7 @@ export default function PortalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Suspense fallback={<PortalBootSplash />}>
+    <Suspense fallback={<PortalShellSkeleton />}>
       <AuthenticatedPortal>{children}</AuthenticatedPortal>
     </Suspense>
   );

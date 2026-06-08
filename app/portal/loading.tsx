@@ -1,5 +1,5 @@
-import { PortalBootSplash } from "@/components/portal/PortalBootSplash";
+import { PortalShellSkeleton } from "@/components/portal/PortalShellSkeleton";
 
 export default function PortalLoading() {
-  return <PortalBootSplash />;
+  return <PortalShellSkeleton />;
 }
