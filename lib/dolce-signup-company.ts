@@ -1,6 +1,6 @@
 import "server-only";
 
-import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getCompanyData } from "@/lib/company";
 import { isMdManagerFeatureAllowed } from "@/lib/features";
@@ -12,7 +12,11 @@ import type { AppFeature, Profile } from "@/types/db";
  */
 export const DOLCE_EMPLOYEE_SIGNUP_COMPANY_SLUG = "company-two";
 
-export const getDolceSignupCompanyId = cache(async (): Promise<string | null> => {
+export async function getDolceSignupCompanyId(): Promise<string | null> {
+  "use cache";
+  cacheTag("dolce-company-id");
+  cacheLife({ stale: 3600, revalidate: 86400 });
+
   const admin = createSupabaseAdminClient();
   const { data } = await admin
     .from("companies")
@@ -20,19 +24,24 @@ export const getDolceSignupCompanyId = cache(async (): Promise<string | null> =>
     .eq("slug", DOLCE_EMPLOYEE_SIGNUP_COMPANY_SLUG)
     .maybeSingle<{ id: string }>();
   return data?.id ?? null;
-});
+}
 
-export const getDolceSignupCompanyDisplay = cache(
-  async (): Promise<{ id: string; name_ar: string } | null> => {
-    const admin = createSupabaseAdminClient();
-    const { data } = await admin
-      .from("companies")
-      .select("id, name_ar")
-      .eq("slug", DOLCE_EMPLOYEE_SIGNUP_COMPANY_SLUG)
-      .maybeSingle<{ id: string; name_ar: string }>();
-    return data ?? null;
-  },
-);
+export async function getDolceSignupCompanyDisplay(): Promise<{
+  id: string;
+  name_ar: string;
+} | null> {
+  "use cache";
+  cacheTag("dolce-company-display");
+  cacheLife({ stale: 3600, revalidate: 86400 });
+
+  const admin = createSupabaseAdminClient();
+  const { data } = await admin
+    .from("companies")
+    .select("id, name_ar")
+    .eq("slug", DOLCE_EMPLOYEE_SIGNUP_COMPANY_SLUG)
+    .maybeSingle<{ id: string; name_ar: string }>();
+  return data ?? null;
+}
 
 /**
  * Dolce signup UI/API: super admin; company managers of the Dolce company;

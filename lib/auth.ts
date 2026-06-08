@@ -1,9 +1,13 @@
 import "server-only";
 
 import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseAdminClient,
+  createSupabaseServerClient,
+} from "@/lib/supabase/server";
 import {
   getVisibleFeatures,
   isMdManagerFeatureAllowed,
@@ -19,6 +23,27 @@ import type { AppFeature, Profile } from "@/types/db";
 const PROFILE_SELECT =
   "id, full_name, phone, role, company_id, job_title, national_id, hired_at, is_active, avatar_url, is_super_admin, created_at";
 
+/** Cache tag for profile lookups — call revalidateTag after profile mutations. */
+export function profileCacheTag(userId: string): string {
+  return `profile:${userId}`;
+}
+
+async function fetchProfileById(userId: string): Promise<Profile | null> {
+  "use cache";
+  cacheTag(profileCacheTag(userId));
+  cacheLife({ stale: 60, revalidate: 300 });
+
+  const supabase = createSupabaseAdminClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select(PROFILE_SELECT)
+    .eq("id", userId)
+    .single();
+
+  if (!data) return null;
+  return data as Profile;
+}
+
 /**
  * Returns the current auth user + their `profiles` row, or null if signed out.
  * Wrapped in React `cache()` so duplicate calls within a single render tree
@@ -28,6 +53,7 @@ const PROFILE_SELECT =
 export const getCurrentUser = cache(async (): Promise<{
   userId: string;
   profile: Profile;
+  accessToken: string;
 } | null> => {
   // The middleware (proxy.ts) validates the session via getUser() and injects
   // the verified user ID as x-user-id into request headers before the RSC
@@ -38,14 +64,15 @@ export const getCurrentUser = cache(async (): Promise<{
   if (!userId) return null;
 
   const supabase = await createSupabaseServerClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(PROFILE_SELECT)
-    .eq("id", userId)
-    .single();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) return null;
 
+  const profile = await fetchProfileById(userId);
   if (!profile) return null;
-  return { userId, profile: profile as Profile };
+
+  return { userId, profile, accessToken: session.access_token };
 });
 
 export async function requireUser() {

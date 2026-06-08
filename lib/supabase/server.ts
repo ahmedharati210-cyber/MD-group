@@ -44,8 +44,12 @@ export async function createSupabaseServerClient() {
  * Privileged admin client bypassing RLS. Use ONLY in server-side code for
  * carefully-reviewed operations (e.g. user provisioning, audit writes).
  * Never expose the service-role key to the client.
+ *
+ * Module-level singleton: reuses the HTTPS connection pool within a warm
+ * serverless function instance. Type is inferred from the concrete factory
+ * function so the Supabase generics (Database = any) are preserved correctly.
  */
-export function createSupabaseAdminClient() {
+function _createAdminClientInstance() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceRoleKey) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
@@ -53,4 +57,13 @@ export function createSupabaseAdminClient() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+}
+
+type AdminClient = ReturnType<typeof _createAdminClientInstance>;
+let _adminClient: AdminClient | null = null;
+
+export function createSupabaseAdminClient(): AdminClient {
+  if (_adminClient) return _adminClient;
+  _adminClient = _createAdminClientInstance();
+  return _adminClient;
 }

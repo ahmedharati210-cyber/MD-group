@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
-import { requireSuperAdmin } from "@/lib/auth";
+import { profileCacheTag, requireSuperAdmin } from "@/lib/auth";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { ALL_FEATURES } from "@/types/db";
 import type { AppFeature, RoleFeatures } from "@/types/db";
@@ -191,7 +191,9 @@ export async function setSuperAdminAction(
 
   if (error) return { error: error.message };
 
+  revalidateTag(profileCacheTag(profileId), "default");
   revalidatePath("/portal/admin");
+  revalidatePath("/portal", "layout");
   return { ok: true };
 }
 
@@ -236,7 +238,9 @@ export async function setUserRoleAction(
 
   if (error) return { error: error.message };
 
+  revalidateTag(profileCacheTag(parsed.data.profile_id), "default");
   revalidatePath("/portal/admin");
+  revalidatePath("/portal", "layout");
   return { ok: true };
 }
 
@@ -287,7 +291,9 @@ export async function editProfileAction(
 
   if (error) return { error: error.message };
 
+  revalidateTag(profileCacheTag(parsed.data.profile_id), "default");
   revalidatePath("/portal/admin");
   revalidatePath("/portal/employees");
+  revalidatePath("/portal", "layout");
   return { ok: true };
 }

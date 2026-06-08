@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth";
+import { profileCacheTag, requireRole } from "@/lib/auth";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
@@ -166,6 +166,7 @@ export async function createEmployeeAction(
   });
 
   revalidatePath("/portal/employees");
+  revalidateTag(profileCacheTag(userData.user.id), "default");
   revalidateTag("employees", "default");
   revalidateTag("dashboard", "default");
   redirect("/portal/employees");
@@ -279,6 +280,7 @@ export async function updateEmployeeAction(
 
   revalidatePath(`/portal/employees/${id}`);
   revalidatePath("/portal/employees");
+  revalidateTag(profileCacheTag(id), "default");
   revalidateTag("employees", "default");
   revalidateTag("dashboard", "default");
   redirect(`/portal/employees/${id}`);
@@ -292,6 +294,7 @@ export async function deactivateEmployeeAction(formData: FormData) {
   await supabase.from("profiles").update({ is_active: false }).eq("id", id);
   revalidatePath("/portal/employees");
   revalidatePath(`/portal/employees/${id}`);
+  revalidateTag(profileCacheTag(id), "default");
   revalidateTag("employees", "default");
   revalidateTag("dashboard", "default");
 }

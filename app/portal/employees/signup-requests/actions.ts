@@ -1,9 +1,9 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth";
+import { profileCacheTag, requireRole } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import {
   canAccessDolceEmployeeSignup,
@@ -202,6 +202,9 @@ export async function approveSignupRequestAction(
 
   revalidatePath("/portal/employees/signup-requests");
   revalidatePath("/portal/employees");
+  revalidateTag(profileCacheTag(uid), "default");
+  revalidateTag("employees", "default");
+  revalidateTag("dashboard", "default");
   return { ok: true, internalAuthEmail: syntheticEmail };
 }
 

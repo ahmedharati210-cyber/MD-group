@@ -54,7 +54,7 @@ async function AuthenticatedPortal({
   children: React.ReactNode;
 }) {
   await connection();
-  const { profile } = await requireUser();
+  const { profile, accessToken } = await requireUser();
 
   const isSuperAdmin = profile.is_super_admin ?? false;
   const isEmployee = profile.role === "employee";
@@ -65,9 +65,33 @@ async function AuthenticatedPortal({
     getDolceSignupCompanyId(),
   ]);
 
-  const companyRow = shellCompanyId
-    ? await getCompanyData(shellCompanyId)
-    : null;
+  const badgeCompanyId = profile.is_super_admin
+    ? null
+    : profile.role === "md_admin" || isOwner
+      ? shellCompanyId
+      : profile.company_id;
+
+  const preliminaryDolceAccess =
+    !!profile.is_super_admin ||
+    (profile.role === "company_manager" &&
+      profile.company_id === dolceSignupCompanyId) ||
+    (profile.role === "md_admin" && shellCompanyId === dolceSignupCompanyId);
+
+  const [companyRow, badgeCounts] = await Promise.all([
+    shellCompanyId ? getCompanyData(shellCompanyId) : Promise.resolve(null),
+    getBadgeCounts(
+      {
+        userId: profile.id ?? "",
+        isEmployee,
+        role: profile.role,
+        companyId: badgeCompanyId,
+        isSuperAdmin: profile.is_super_admin ?? false,
+        dolceSignupCompanyId,
+        includeDolceSignupBadges: preliminaryDolceAccess,
+      },
+      accessToken,
+    ),
+  ]);
 
   const showDolceSignupNav = resolveDolceEmployeeSignupAccess(
     profile,
@@ -75,22 +99,6 @@ async function AuthenticatedPortal({
     shellCompanyId,
     companyRow?.enabled_features ?? null,
   );
-
-  const badgeCompanyId = profile.is_super_admin
-    ? null
-    : profile.role === "md_admin" || isOwner
-      ? shellCompanyId
-      : profile.company_id;
-
-  const badgeCounts = await getBadgeCounts({
-    userId: profile.id ?? "",
-    isEmployee,
-    role: profile.role,
-    companyId: badgeCompanyId,
-    isSuperAdmin: profile.is_super_admin ?? false,
-    dolceSignupCompanyId,
-    includeDolceSignupBadges: showDolceSignupNav,
-  });
 
   const pendingRequestsCount = badgeCounts.pendingRequests;
   const unreadWarningAlerts = badgeCounts.unreadWarningAlerts;

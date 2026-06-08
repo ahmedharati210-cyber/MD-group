@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { revalidateTag } from "next/cache";
+import { profileCacheTag, requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -43,6 +44,8 @@ export async function POST(request: NextRequest) {
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
+
+  revalidateTag(profileCacheTag(userId), "default");
 
   return NextResponse.json({ url: publicUrl });
 }

@@ -3,7 +3,6 @@ import "server-only";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { UserRole } from "@/types/db";
 
 export type BadgeCounts = {
@@ -207,13 +206,8 @@ function fetchBadgesCached(params: BadgeParams, accessToken: string): Promise<Ba
  *   revalidateTag("badges")                 — all users
  */
 export const getBadgeCounts = cache(
-  async (params: BadgeParams): Promise<BadgeCounts> => {
-    const cookieClient = await createSupabaseServerClient();
-    const {
-      data: { session },
-    } = await cookieClient.auth.getSession();
-    if (!session) return EMPTY_BADGES;
-
-    return fetchBadgesCached(params, session.access_token);
+  async (params: BadgeParams, accessToken: string): Promise<BadgeCounts> => {
+    if (!accessToken) return EMPTY_BADGES;
+    return fetchBadgesCached(params, accessToken);
   },
 );

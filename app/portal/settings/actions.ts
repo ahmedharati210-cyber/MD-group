@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
-import { requireUser } from "@/lib/auth";
+import { profileCacheTag, requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function changePasswordAction(
@@ -54,6 +54,7 @@ export async function updateSelfAction(
     .eq("id", userId);
   if (error) return { error: error.message };
 
+  revalidateTag(profileCacheTag(userId), "default");
   revalidatePath("/portal", "layout");
   return { ok: true };
 }
