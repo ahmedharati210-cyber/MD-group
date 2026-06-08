@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cairo } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider, themeInitScript } from "@/components/theme/ThemeProvider";
@@ -66,6 +67,7 @@ export default function RootLayout({
                 "!bg-white dark:!bg-gray-900 !text-gray-900 dark:!text-gray-100 !border !border-gray-200 dark:!border-gray-800",
             }}
           />
+          <Analytics />
           <SpeedInsights />
         </ThemeProvider>
       </body>
