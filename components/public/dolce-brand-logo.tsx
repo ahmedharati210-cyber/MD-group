@@ -20,6 +20,7 @@ export function DolceBrandLogo({
         src="/logos/dolce-logo-light.png"
         alt="Dolce Chocolate"
         fill
+        sizes="160px"
         className="object-contain dark:hidden"
         priority={priority}
       />
@@ -27,6 +28,7 @@ export function DolceBrandLogo({
         src="/logos/dolce-logo.png"
         alt="Dolce Chocolate"
         fill
+        sizes="160px"
         className="object-contain hidden dark:block"
         priority={priority}
       />

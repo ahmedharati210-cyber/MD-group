@@ -90,6 +90,7 @@ export function SignupInviteShell({
                   }
                   alt="Dolce Chocolate"
                   fill
+                  sizes="320px"
                   className="object-contain"
                   priority
                 />

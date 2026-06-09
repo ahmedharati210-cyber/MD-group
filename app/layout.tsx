@@ -48,7 +48,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl" suppressHydrationWarning className={cairo.variable}>
+    <html lang="ar" dir="rtl" suppressHydrationWarning data-scroll-behavior="smooth" className={cairo.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
