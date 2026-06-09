@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Loader2, Upload, CheckCircle } from "lucide-react";
+import { Loader2, Upload, CircleCheck } from "lucide-react";
 import {
   PAPER_STAT_CATEGORIES,
   paperCategoryLabel,
@@ -279,7 +279,7 @@ export function UploadPaperForm({
         )}
         {step === "done" && (
           <>
-            <CheckCircle className="w-4 h-4" />
+            <CircleCheck className="w-4 h-4" />
             تم الرفع
           </>
         )}

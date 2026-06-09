@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Pencil, CalendarDays, Phone, HardHat, MapPin, Printer, AlertCircle, ShieldCheck } from "lucide-react";
+import { Pencil, CalendarDays, Phone, HardHat, MapPin, Printer, CircleAlert, ShieldCheck } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
@@ -122,14 +122,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     if (!isToday && dt < now) {
       return (
         <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-          <AlertCircle className="w-3 h-3" /> متأخرة · {label}
+          <CircleAlert className="w-3 h-3" /> متأخرة · {label}
         </span>
       );
     }
     if (isToday) {
       return (
         <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-          <AlertCircle className="w-3 h-3" /> اليوم · {label}
+          <CircleAlert className="w-3 h-3" /> اليوم · {label}
         </span>
       );
     }

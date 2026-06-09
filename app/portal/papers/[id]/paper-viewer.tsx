@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Loader2, AlertCircle } from "lucide-react";
+import { Download, Loader2, CircleAlert } from "lucide-react";
 import toast from "react-hot-toast";
 
 type Props = {
@@ -37,7 +37,7 @@ export function PaperViewer({ id, mimeType }: Props) {
   if (error) {
     return (
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-red-200 dark:border-red-900/60 p-5 sm:p-6 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+        <CircleAlert className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
       </div>
     );

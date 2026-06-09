@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CircleCheck, CircleX } from "lucide-react";
 import { respondToRequestAction } from "@/app/portal/requests/actions";
 
 type State = { error?: string; ok?: boolean };
@@ -37,7 +37,7 @@ export function RespondForm({ requestId }: { requestId: string }) {
             disabled={isPending}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white rounded-xl font-semibold text-sm hover:bg-green-700 disabled:opacity-60 transition-colors"
           >
-            <CheckCircle className="w-4 h-4" /> موافقة
+            <CircleCheck className="w-4 h-4" /> موافقة
           </button>
           <button
             type="submit"
@@ -46,7 +46,7 @@ export function RespondForm({ requestId }: { requestId: string }) {
             disabled={isPending}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-600 text-white rounded-xl font-semibold text-sm hover:bg-red-700 disabled:opacity-60 transition-colors"
           >
-            <XCircle className="w-4 h-4" /> رفض
+            <CircleX className="w-4 h-4" /> رفض
           </button>
         </div>
       </form>

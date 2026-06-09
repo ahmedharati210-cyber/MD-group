@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { AlertCircle, CheckCircle2, ArrowRight, Loader2, Mail } from "lucide-react";
+import { CircleAlert, CircleCheckBig, ArrowRight, Loader2, Mail } from "lucide-react";
 import { forgotPasswordAction, type ForgotPasswordState } from "./actions";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
@@ -56,7 +56,7 @@ export default function ForgotPasswordPage() {
           {state?.ok ? (
             <div className="text-center space-y-4">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl mx-auto">
-                <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+                <CircleCheckBig className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-50 mb-1">تم الإرسال!</h2>
@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
             <form action={formAction} className="space-y-5">
               {state?.error ? (
                 <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <CircleAlert className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-red-700 dark:text-red-300">{state.error}</p>
                 </div>
               ) : null}

@@ -4,7 +4,7 @@ import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import toast from "react-hot-toast";
 import {
-  AlertCircle,
+  CircleAlert,
   Loader2,
   Phone,
   User,
@@ -13,7 +13,7 @@ import {
   MapPin,
   Briefcase,
   Globe,
-  CheckCircle,
+  CircleCheck,
   Store,
   Hash,
 } from "lucide-react";
@@ -170,7 +170,7 @@ export function EmployeeSignupForm({
             dark ? "bg-emerald-500/15 text-emerald-400" : "bg-emerald-100 text-emerald-700",
           )}
         >
-          <CheckCircle className="w-7 h-7" />
+          <CircleCheck className="w-7 h-7" />
         </div>
         <h2
           className={cn(
@@ -227,7 +227,7 @@ export function EmployeeSignupForm({
               : "bg-red-50 border-red-200",
           )}
         >
-          <AlertCircle
+          <CircleAlert
             className={cn(
               "w-5 h-5 flex-shrink-0 mt-0.5",
               dark ? "text-red-400" : "text-red-600",

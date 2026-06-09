@@ -7,7 +7,7 @@ import {
   CalendarDays,
   HardHat,
   MapPin,
-  AlertCircle,
+  CircleAlert,
   ChevronDown,
   Check,
 } from "lucide-react";
@@ -108,7 +108,7 @@ export function ProjectsGrid({ projects, canManage }: Props) {
                   <div className="pointer-events-auto flex items-center gap-1.5 flex-shrink-0">
                     {overdueTasks > 0 ? (
                       <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                        <AlertCircle className="w-3 h-3" /> {overdueTasks} متأخرة
+                        <CircleAlert className="w-3 h-3" /> {overdueTasks} متأخرة
                       </span>
                     ) : null}
 

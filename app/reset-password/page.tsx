@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { AlertCircle, Loader2, Lock } from "lucide-react";
+import { CircleAlert, Loader2, Lock } from "lucide-react";
 import { resetPasswordAction, type ResetPasswordState } from "./actions";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
@@ -51,7 +51,7 @@ export default function ResetPasswordPage() {
           <form action={formAction} className="space-y-5">
             {state?.error ? (
               <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <CircleAlert className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-red-700 dark:text-red-300">{state.error}</p>
               </div>
             ) : null}

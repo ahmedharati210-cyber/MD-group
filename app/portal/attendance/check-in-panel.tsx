@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import toast from "react-hot-toast";
-import { CheckCircle2, Clock, LogIn, LogOut } from "lucide-react";
+import { CircleCheckBig, Clock, LogIn, LogOut } from "lucide-react";
 import { formatTime } from "@/lib/utils";
 import { checkInAction, checkOutAction } from "./actions";
 
@@ -60,7 +60,7 @@ export function CheckInPanel({
             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 bg-primary-600 text-white rounded-xl font-semibold shadow-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
           >
             {checkedIn ? (
-              <CheckCircle2 className="w-4 h-4" />
+              <CircleCheckBig className="w-4 h-4" />
             ) : (
               <LogIn className="w-4 h-4" />
             )}

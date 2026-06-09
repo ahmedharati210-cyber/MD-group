@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
-import { KeyRound, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { KeyRound, Loader2, CircleAlert, CircleCheckBig } from "lucide-react";
 import toast from "react-hot-toast";
 import { changePasswordAction, type ActionState } from "./actions";
 
@@ -43,13 +43,13 @@ export function ChangePasswordForm() {
     <form action={action} className="space-y-4">
       {state?.error ? (
         <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <CircleAlert className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-red-700 dark:text-red-300">{state.error}</p>
         </div>
       ) : null}
       {state?.ok ? (
         <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl">
-          <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+          <CircleCheckBig className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-green-700 dark:text-green-300">تم تغيير كلمة المرور بنجاح</p>
         </div>
       ) : null}

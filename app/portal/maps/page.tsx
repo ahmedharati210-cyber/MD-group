@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Map, MapPin, ExternalLink, Pencil, Building2 } from "lucide-react";
+import { Plus, Map, MapPin, SquareArrowOutUpRight, Pencil, Building2 } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
 import { getMapsData } from "@/lib/data/maps";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
@@ -157,7 +157,7 @@ export default async function MapsPage({
                 rel="noopener noreferrer"
                 className="mt-auto flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-700 transition-colors"
               >
-                <ExternalLink className="w-4 h-4" />
+                <SquareArrowOutUpRight className="w-4 h-4" />
                 فتح الخريطة
               </a>
             </div>

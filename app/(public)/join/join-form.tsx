@@ -4,7 +4,7 @@ import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import toast from "react-hot-toast";
 import {
-  AlertCircle,
+  CircleAlert,
   Loader2,
   Phone,
   User,
@@ -13,7 +13,7 @@ import {
   MapPin,
   Briefcase,
   Globe,
-  CheckCircle,
+  CircleCheck,
   Store,
   Hash,
 } from "lucide-react";
@@ -110,7 +110,7 @@ export function JoinForm({ companyNameAr }: { companyNameAr: string }) {
     return (
       <div className="rounded-2xl border border-primary-200 dark:border-primary-800 bg-white dark:bg-gray-900 p-8 text-center space-y-4 shadow-sm">
         <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400">
-          <CheckCircle className="w-7 h-7" />
+          <CircleCheck className="w-7 h-7" />
         </div>
         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-50">
           تم الإرسال بنجاح
@@ -143,7 +143,7 @@ export function JoinForm({ companyNameAr }: { companyNameAr: string }) {
 
       {state?.error ? (
         <div className="flex items-start gap-3 p-4 rounded-xl border bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+          <CircleAlert className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
           <p className="text-sm text-red-800 dark:text-red-200">{state.error}</p>
         </div>
       ) : null}

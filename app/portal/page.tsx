@@ -10,7 +10,7 @@ import {
   FolderKanban,
   FileBarChart2,
   ClipboardEdit,
-  AlertCircle,
+  CircleAlert,
   AlertTriangle,
 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
@@ -121,7 +121,7 @@ export default async function PortalDashboard() {
           />
         ) : null}
         {hasFeature("timeline") && counts.overdueTasks > 0 ? (
-          <StatCard label="مهام متأخرة" value={counts.overdueTasks} icon={AlertCircle} tone="danger" href="/portal/timeline" />
+          <StatCard label="مهام متأخرة" value={counts.overdueTasks} icon={CircleAlert} tone="danger" href="/portal/timeline" />
         ) : null}
         {hasFeature("warnings") ? (
           <StatCard
