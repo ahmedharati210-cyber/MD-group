@@ -7,16 +7,39 @@ import type { CSSProperties } from "react";
  * Uses inline styles + a tiny embedded <style> so the shell paints on FCP
  * before the external Tailwind CSS bundle is downloaded and parsed.
  */
+/**
+ * CSS variables resolve against the .dark class that the themeInitScript
+ * applies synchronously in <head> before any paint — so dark-mode users
+ * never see a white flash from this skeleton.
+ *
+ * Light values mirror PortalShell Tailwind classes:
+ *   page    = bg-gray-50   / dark:bg-gray-950
+ *   surface = bg-white     / dark:bg-gray-900
+ *   block   = bg-gray-100  / dark:bg-gray-800
+ *   border  = border-gray-200 / dark:border-gray-800
+ */
 const colors = {
-  page: "#f9fafb",
-  surface: "#ffffff",
-  block: "#f3f4f6",
-  border: "#e5e7eb",
+  page: "var(--skel-page)",
+  surface: "var(--skel-surface)",
+  block: "var(--skel-block)",
+  border: "var(--skel-border)",
 } as const;
 
 const pulseClass = "portal-skel-pulse";
 
 const embeddedStyles = `
+:root {
+  --skel-page: #f9fafb;
+  --skel-surface: #ffffff;
+  --skel-block: #f3f4f6;
+  --skel-border: #e5e7eb;
+}
+.dark {
+  --skel-page: #030712;
+  --skel-surface: #111827;
+  --skel-block: #1f2937;
+  --skel-border: #1f2937;
+}
 @keyframes portal-skel-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }
