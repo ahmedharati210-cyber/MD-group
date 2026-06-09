@@ -2,6 +2,9 @@
   "name": "md-group-platform",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
     "build": "next build --webpack",
@@ -18,10 +21,10 @@
     "framer-motion": "^12.38.0",
     "jszip": "^3.10.1",
     "lucide-react": "^0.556.0",
-    "next": "16.0.7",
+    "next": "16.2.7",
     "pdf-parse": "^2.4.5",
-    "react": "19.0.1",
-    "react-dom": "19.0.1",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
     "react-hot-toast": "^2.6.0",
     "serwist": "^9.5.11",
     "tailwind-merge": "^3.5.0",
@@ -29,7 +32,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
+    "@types/node": "^24",
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.1",

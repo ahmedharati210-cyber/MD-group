@@ -2,6 +2,8 @@
 
 This folder holds SQL migrations for the MD Group platform database.
 
+[`config.toml`](./config.toml) configures the local Supabase stack (`supabase start`). Remote project ref: `icqooqgilkdgqxwqrvmc` (after `supabase link`).
+
 ## First-time setup
 
 1. Create a new project at [supabase.com](https://supabase.com).
