@@ -26,7 +26,7 @@ export function AddCategoryForm({ projectId }: { projectId: string }) {
         name="name"
         required
         placeholder="اسم الفئة الجديدة (مثال: كهرباء، مياه، شبكات...)"
-        className="flex-1 min-w-[200px] px-4 py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:border-solid focus:ring-4 focus:ring-primary-500/10 outline-none text-sm"
+        className="flex-1 min-w-[200px] px-4 py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:border-solid focus:ring-4 focus:ring-primary-500/10 outline-hidden text-sm"
       />
       <input
         type="number"
@@ -35,7 +35,7 @@ export function AddCategoryForm({ projectId }: { projectId: string }) {
         step={1}
         placeholder="أيام"
         title="أيام تقديرية للفئة"
-        className="w-20 px-3 py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:border-solid focus:ring-4 focus:ring-primary-500/10 outline-none text-sm tabular-nums"
+        className="w-20 px-3 py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:border-solid focus:ring-4 focus:ring-primary-500/10 outline-hidden text-sm tabular-nums"
       />
       <button
         type="submit"

@@ -7,7 +7,7 @@ import Image from "next/image";
 export function PortalBootSplash() {
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center bg-[#f5f3f0] dark:bg-gray-950 px-6"
+      className="min-h-screen flex flex-col items-center justify-center bg-primary-50 dark:bg-gray-950 px-6"
       role="status"
       aria-live="polite"
       aria-busy="true"

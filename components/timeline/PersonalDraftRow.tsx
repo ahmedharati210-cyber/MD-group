@@ -13,7 +13,7 @@ import {
 const init: DraftActionState = {};
 
 const inputCls =
-  "w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 outline-none text-sm";
+  "w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 outline-hidden text-sm";
 
 export type PersonalDraftRowProps = {
   id: string;
@@ -57,7 +57,7 @@ export function PersonalDraftRow({
   }, [delState, id, router]);
 
   return (
-    <article className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-5 shadow-sm">
+    <article className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-5 shadow-xs">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 dark:border-gray-800 pb-3 mb-3">
         <div>
           <div className="font-semibold text-gray-900 dark:text-gray-50">{projectName}</div>

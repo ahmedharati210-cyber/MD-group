@@ -18,7 +18,7 @@ export function DeleteClaimButton({ claimId }: { claimId: string }) {
   }
 
   return (
-    <button onClick={handleDelete} disabled={isPending} className="p-2 text-red-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-60 transition-colors flex-shrink-0" aria-label="حذف">
+    <button onClick={handleDelete} disabled={isPending} className="p-2 text-red-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-60 transition-colors shrink-0" aria-label="حذف">
       <Trash2 className="w-4 h-4" />
     </button>
   );

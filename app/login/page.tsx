@@ -17,7 +17,7 @@ type SearchParams = Promise<{ redirectTo?: string }>;
  */
 export default function LoginPage(props: { searchParams: SearchParams }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-primary-50 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900 px-4 py-10 sm:py-12">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-gray-50 via-white to-primary-50 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900 px-4 py-10 sm:py-12">
       <div className="absolute top-4 left-4">
         <ThemeToggle />
       </div>

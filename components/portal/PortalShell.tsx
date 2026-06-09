@@ -120,7 +120,7 @@ export function PortalShell({
             <Menu className="w-6 h-6" />
           </button>
           <Link href="/portal" className="flex items-center gap-2">
-            <span className="inline-flex rounded-lg bg-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-0.5">
+            <span className="inline-flex rounded-lg bg-white shadow-xs ring-1 ring-gray-200 dark:ring-gray-700 p-0.5">
               <Image
                 src="/Icon-MD.png"
                 alt="MD Group"
@@ -152,7 +152,7 @@ export function PortalShell({
             href="/portal"
             className="flex items-center gap-2 min-w-0 text-gray-900 dark:text-gray-100"
           >
-            <span className="inline-flex rounded-lg bg-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-0.5 flex-shrink-0">
+            <span className="inline-flex rounded-lg bg-white shadow-xs ring-1 ring-gray-200 dark:ring-gray-700 p-0.5 shrink-0">
               <Image
                 src="/Icon-MD.png"
                 alt="MD Group"
@@ -164,7 +164,7 @@ export function PortalShell({
             </span>
             <span className="font-bold truncate">لوحة التحكم</span>
           </Link>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {role === "md_admin" || isSuperAdmin ? (
               <Link
                 href="/portal/companies"

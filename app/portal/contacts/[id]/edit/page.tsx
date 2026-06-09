@@ -40,7 +40,7 @@ export default async function EditContactPage({
         العودة إلى القائمة
       </Link>
       <PageHeader title="تعديل جهة الاتصال" description={contact.full_name} />
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs">
         <ContactForm
           action={updateContactAction}
           companies={companies ?? []}

@@ -114,7 +114,7 @@ export default async function MailPage({
               className={cn(
                 "inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors",
                 active
-                  ? "bg-primary-600 text-white shadow-sm"
+                  ? "bg-primary-600 text-white shadow-xs"
                   : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800",
               )}
             >
@@ -144,13 +144,13 @@ export default async function MailPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="بحث بالموضوع..."
-          className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none"
+          className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden"
         />
         {(profile.role === "md_admin" || profile.role === "owner") ? (
           <select
             name="companyId"
             defaultValue={companyId ?? ""}
-            className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none"
+            className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden"
           >
             <option value="">كل الشركات</option>
             {companies.map((c) => (
@@ -182,7 +182,7 @@ export default async function MailPage({
         />
       ) : (
         <>
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs">
           <ul className="divide-y divide-gray-100 dark:divide-gray-800">
             {(mails as (Record<string, unknown> & { companies?: { name_ar: string } | null; direction: string; subject: string; from_name: string | null; to_name: string | null; body: string | null; created_at: string; id: string })[]).map((m) => {
               const company = m.companies;
@@ -196,7 +196,7 @@ export default async function MailPage({
                     <div className="flex items-start gap-3 sm:gap-4">
                       <div
                         className={
-                          "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 " +
+                          "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 " +
                           (inbound
                             ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300"
                             : "bg-sky-50 text-sky-600 dark:bg-sky-900/40 dark:text-sky-300")
@@ -213,7 +213,7 @@ export default async function MailPage({
                           <h3 className="font-semibold text-gray-900 dark:text-gray-50 truncate">
                             {m.subject}
                           </h3>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
                             {formatDate(m.created_at)}
                           </span>
                         </div>

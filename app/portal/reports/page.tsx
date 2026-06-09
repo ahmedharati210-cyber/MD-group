@@ -62,7 +62,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
   }
 
   const selectClasses =
-    "px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-none";
+    "px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-hidden";
 
   return (
     <div>
@@ -103,19 +103,19 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
             </select>
           ) : null}
           {projects.length > 0 ? (
-            <select name="projectId" defaultValue={sp.projectId ?? ""} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-none">
+            <select name="projectId" defaultValue={sp.projectId ?? ""} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-hidden">
               <option value="">كل المشاريع</option>
               {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           ) : null}
           {isManager && engineers ? (
-            <select name="authorId" defaultValue={sp.authorId ?? ""} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-none">
+            <select name="authorId" defaultValue={sp.authorId ?? ""} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-hidden">
               <option value="">كل المهندسين</option>
               {engineers.map((e) => <option key={e.id} value={e.id}>{e.full_name}</option>)}
             </select>
           ) : null}
-          <input type="date" name="from" defaultValue={sp.from ?? ""} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-none" />
-          <input type="date" name="to" defaultValue={sp.to ?? ""} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-none" />
+          <input type="date" name="from" defaultValue={sp.from ?? ""} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-hidden" />
+          <input type="date" name="to" defaultValue={sp.to ?? ""} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-hidden" />
           <button type="submit" className="px-4 py-2 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 text-sm font-semibold rounded-xl hover:bg-gray-700 dark:hover:bg-gray-300 transition-colors">
             تصفية
           </button>
@@ -133,8 +133,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
         <>
           <div className="space-y-3">
             {reports.map((r) => (
-              <Link key={r.id} href={`/portal/reports/${r.id}`} className="flex items-start gap-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all">
-                <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Link key={r.id} href={`/portal/reports/${r.id}`} className="flex items-start gap-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all">
+                <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center shrink-0">
                   <FileBarChart2 className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -163,7 +163,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
                   ) : null}
                   {r.notes?.trim() ? (
                     <p className="flex items-start gap-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">
-                      <StickyNote className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                      <StickyNote className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                       {r.notes}
                     </p>
                   ) : null}

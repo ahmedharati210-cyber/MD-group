@@ -68,7 +68,7 @@ export function TimelineNav({ categories }: Props) {
               type="button"
               onClick={() => scrollTo(cat.id)}
               className={cn(
-                "flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
+                "shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
                 isActive
                   ? "bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
                   : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800",

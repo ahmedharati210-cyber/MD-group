@@ -191,14 +191,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 mb-5 flex flex-col gap-2">
           {project.location_notes ? (
             <div className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-              <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+              <MapPin className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
               <span>{project.location_notes}</span>
             </div>
           ) : null}
           {(project.manager_name || project.manager_phone) ? (
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-                <ShieldCheck className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <ShieldCheck className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                 <span className="text-xs text-gray-500 dark:text-gray-500">الغفير:</span>
                 {project.manager_name ? (
                   <span className="font-medium text-gray-700 dark:text-gray-300">{project.manager_name}</span>
@@ -210,7 +210,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               {project.manager_phone ? (
                 <a
                   href={`tel:${project.manager_phone}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors flex-shrink-0"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors shrink-0"
                 >
                   <Phone className="w-3 h-3" />
                   اتصل
@@ -223,7 +223,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
       {/* Project total estimation + overall progress */}
       {(canManage || project.estimated_days != null || totalTasks > 0) ? (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 mb-5 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 mb-5 shadow-xs">
           <ProjectEstimatedDaysField
             projectId={id}
             initialEstimatedDays={project.estimated_days}
@@ -275,7 +275,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             const catPct = catTotal > 0 ? Math.round((catDone / catTotal) * 100) : 0;
 
             return (
-              <div key={cat.id} id={`cat-${cat.id}`} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+              <div key={cat.id} id={`cat-${cat.id}`} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
                 {/* Category header */}
                 <div className="flex items-center justify-between gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -288,7 +288,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                       />
                     ) : null}
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     <CategoryEstimatedDaysField
                       categoryId={cat.id}
                       projectId={id}
@@ -377,7 +377,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                         </div>
                       </div>
                       {canManage ? (
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <TaskEstimatedDaysField
                             taskId={task.id}
                             projectId={id}

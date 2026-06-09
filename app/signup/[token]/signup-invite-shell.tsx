@@ -80,7 +80,7 @@ export function SignupInviteShell({
         <div className="w-full max-w-lg">
           <div className="mb-8 text-center space-y-4">
             <div className="flex justify-center">
-              <div className="relative w-full max-w-xs aspect-[2/1] mx-auto">
+              <div className="relative w-full max-w-xs aspect-2/1 mx-auto">
                 <Image
                   key={appearance}
                   src={
@@ -117,8 +117,8 @@ export function SignupInviteShell({
             className={cn(
               "rounded-2xl border p-6 sm:p-8 shadow-2xl",
               isDark
-                ? "border-amber-600/25 bg-gradient-to-b from-neutral-900/90 to-black shadow-black/80"
-                : "border-amber-200/80 bg-gradient-to-b from-white to-amber-50/40 shadow-gray-300/40",
+                ? "border-amber-600/25 bg-linear-to-b from-neutral-900/90 to-black shadow-black/80"
+                : "border-amber-200/80 bg-linear-to-b from-white to-amber-50/40 shadow-gray-300/40",
             )}
           >
             <h1

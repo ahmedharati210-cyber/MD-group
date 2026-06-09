@@ -10,7 +10,7 @@ type EngineerOption = { id: string; full_name: string };
 type State = { error?: string; ok?: boolean };
 const init: State = {};
 
-const inputCls = "w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none";
+const inputCls = "w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden";
 const labelCls = "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1";
 const sectionCls = "border-t border-gray-100 dark:border-gray-800 pt-4";
 

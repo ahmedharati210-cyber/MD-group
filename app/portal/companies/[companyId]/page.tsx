@@ -325,7 +325,7 @@ export default async function CompanyDetailPage({
 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-linear-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-md shrink-0">
             <Building2 className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
           </div>
           <div className="min-w-0">
@@ -402,9 +402,9 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-800 transition-all flex items-center gap-3"
+      className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-xs hover:shadow-md hover:border-primary-200 dark:hover:border-primary-800 transition-all flex items-center gap-3"
     >
-      <div className="w-11 h-11 bg-primary-50 dark:bg-primary-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+      <div className="w-11 h-11 bg-primary-50 dark:bg-primary-900/40 rounded-xl flex items-center justify-center shrink-0">
         <Icon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
       </div>
       <span className="font-semibold text-gray-800 dark:text-gray-100 truncate">

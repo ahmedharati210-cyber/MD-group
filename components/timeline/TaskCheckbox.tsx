@@ -37,7 +37,7 @@ export function TaskCheckbox({
       disabled={isPending || isLocked}
       aria-label={isCompleted ? "مكتمل" : "وضع علامة مكتمل"}
       title={isLocked ? "فقط المدير يمكنه إلغاء الإتمام" : undefined}
-      className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+      className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${
         isPending
           ? "opacity-50 cursor-not-allowed"
           : isLocked

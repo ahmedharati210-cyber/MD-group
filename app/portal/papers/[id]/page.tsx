@@ -87,7 +87,7 @@ export default async function PaperPage({
         </div>
 
         <aside className="space-y-4 order-1 md:order-2">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-sm space-y-3">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-xs space-y-3">
             <Meta
               icon={Building2}
               label="الشركة"
@@ -111,7 +111,7 @@ export default async function PaperPage({
             ) : null}
           </div>
 
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-xs">
             <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
               بيانات الورقة
             </h3>
@@ -146,7 +146,7 @@ function Meta({
   return (
     <div className={plain ? "" : "flex items-center gap-3"}>
       {Icon ? (
-        <div className="w-9 h-9 bg-primary-50 dark:bg-primary-900/40 rounded-lg flex items-center justify-center flex-shrink-0">
+        <div className="w-9 h-9 bg-primary-50 dark:bg-primary-900/40 rounded-lg flex items-center justify-center shrink-0">
           <Icon className="w-4 h-4 text-primary-600 dark:text-primary-400" />
         </div>
       ) : null}

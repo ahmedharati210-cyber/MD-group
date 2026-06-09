@@ -12,7 +12,7 @@ function Submit() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 text-white font-semibold shadow-lg shadow-primary-600/25 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+      className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-linear-to-r from-primary-600 to-primary-700 text-white font-semibold shadow-lg shadow-primary-600/25 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
     >
       {pending ? (
         <>
@@ -33,7 +33,7 @@ export default function ResetPasswordPage() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-primary-50 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900 px-4 py-10">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-gray-50 via-white to-primary-50 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900 px-4 py-10">
       <div className="absolute top-4 left-4">
         <ThemeToggle />
       </div>
@@ -51,7 +51,7 @@ export default function ResetPasswordPage() {
           <form action={formAction} className="space-y-5">
             {state?.error ? (
               <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
-                <CircleAlert className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <CircleAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                 <p className="text-sm text-red-700 dark:text-red-300">{state.error}</p>
               </div>
             ) : null}
@@ -70,7 +70,7 @@ export default function ResetPasswordPage() {
                   minLength={8}
                   autoComplete="new-password"
                   placeholder="8 أحرف على الأقل"
-                  className="w-full pr-12 pl-4 py-3 border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition"
+                  className="w-full pr-12 pl-4 py-3 border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden transition"
                 />
               </div>
             </div>
@@ -88,7 +88,7 @@ export default function ResetPasswordPage() {
                   required
                   autoComplete="new-password"
                   placeholder="••••••••"
-                  className="w-full pr-12 pl-4 py-3 border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition"
+                  className="w-full pr-12 pl-4 py-3 border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden transition"
                 />
               </div>
             </div>

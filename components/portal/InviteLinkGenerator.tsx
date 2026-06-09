@@ -68,7 +68,7 @@ export function InviteLinkGenerator({
   };
 
   return (
-    <div className="mb-8 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 shadow-sm">
+    <div className="mb-8 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 shadow-xs">
       <h2 className="text-base font-bold text-gray-900 dark:text-gray-50 mb-1">
         رابط تسجيل Dolce Chocolate
       </h2>

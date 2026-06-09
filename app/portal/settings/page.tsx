@@ -18,13 +18,13 @@ export default async function SettingsPage() {
         title="الإعدادات"
         description="تعديل معلومات حسابك والمظهر."
       />
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs">
         <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 mb-4">
           الصورة الشخصية
         </h2>
         <AvatarUpload currentUrl={profile.avatar_url} fullName={profile.full_name} />
       </div>
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs">
         <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 mb-4">
           المعلومات الشخصية
         </h2>
@@ -35,7 +35,7 @@ export default async function SettingsPage() {
           jobTitle={profile.job_title}
         />
       </div>
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs">
         <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 mb-1">
           كلمة المرور
         </h2>
@@ -46,7 +46,7 @@ export default async function SettingsPage() {
       </div>
       <PushNotificationsCard />
       <AppearanceCard />
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs">
         <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 mb-1">
           تسجيل الخروج
         </h2>

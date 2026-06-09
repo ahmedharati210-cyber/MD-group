@@ -89,7 +89,7 @@ export function SignupInvitesList({ invites }: { invites: SignupInviteRow[] }) {
   }
 
   return (
-    <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 shadow-sm">
+    <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 shadow-xs">
       <h3 className="text-base font-bold text-gray-900 dark:text-gray-50 mb-1">
         روابط الدعوة الحالية
       </h3>

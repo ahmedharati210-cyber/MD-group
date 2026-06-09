@@ -36,7 +36,7 @@ export default async function NewPaperPage() {
         title="رفع ورقة جديدة"
         description="ارفع ملف PDF أو صورة. يتم استخراج النصّ تلقائياً لتمكين البحث."
       />
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs">
         <UploadPaperForm
           companies={companies ?? []}
           employees={employees ?? []}

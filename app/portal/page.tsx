@@ -154,11 +154,11 @@ export default async function PortalDashboard() {
                 <Link
                   key={p.id}
                   href={`/portal/timeline/${p.id}`}
-                  className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all"
+                  className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all"
                 >
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <h3 className="font-semibold text-gray-900 dark:text-gray-50 text-sm truncate">{p.name}</h3>
-                    <span className={`flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>{label}</span>
+                    <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>{label}</span>
                   </div>
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1.5">
                     <span>{total} مهمة</span>
@@ -234,15 +234,15 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm hover:shadow-lg hover:border-primary-200 dark:hover:border-primary-800 transition-all flex items-start gap-4"
+      className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs hover:shadow-lg hover:border-primary-200 dark:hover:border-primary-800 transition-all flex items-start gap-4"
     >
-      <div className="w-11 h-11 sm:w-12 sm:h-12 bg-primary-50 dark:bg-primary-900/40 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/60 transition-colors">
+      <div className="w-11 h-11 sm:w-12 sm:h-12 bg-primary-50 dark:bg-primary-900/40 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/60 transition-colors">
         <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600 dark:text-primary-400" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 mb-1">
           <h3 className="font-bold text-gray-900 dark:text-gray-50 truncate">{title}</h3>
-          <ArrowLeft className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-primary-600 dark:group-hover:text-primary-400 group-hover:-translate-x-1 transition-all flex-shrink-0" />
+          <ArrowLeft className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-primary-600 dark:group-hover:text-primary-400 group-hover:-translate-x-1 transition-all shrink-0" />
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{description}</p>
       </div>

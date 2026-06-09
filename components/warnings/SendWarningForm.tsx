@@ -16,7 +16,7 @@ type State = { error?: string; ok?: boolean };
 const init: State = {};
 
 const inputCls =
-  "w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none";
+  "w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden";
 
 const managerRoleLabel: Partial<Record<UserRole, string>> = {
   company_manager: "مدير شركة",
@@ -99,7 +99,7 @@ export function SendWarningForm({
               type="checkbox"
               checked={selected.has(item.id)}
               onChange={() => toggleOne(item.id)}
-              className="w-4 h-4 rounded accent-amber-600"
+              className="w-4 h-4 rounded-xs accent-amber-600"
             />
             <span className="text-sm text-gray-800 dark:text-gray-200 flex-1">
               {item.full_name}
@@ -149,7 +149,7 @@ export function SendWarningForm({
             className={cn(
               "flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors",
               kind === "warning"
-                ? "bg-white dark:bg-gray-900 text-red-700 dark:text-red-300 shadow-sm ring-1 ring-red-200 dark:ring-red-800"
+                ? "bg-white dark:bg-gray-900 text-red-700 dark:text-red-300 shadow-xs ring-1 ring-red-200 dark:ring-red-800"
                 : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/80",
             )}
           >
@@ -162,7 +162,7 @@ export function SendWarningForm({
             className={cn(
               "flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors",
               kind === "notification"
-                ? "bg-white dark:bg-gray-900 text-orange-700 dark:text-orange-300 shadow-sm ring-1 ring-orange-200 dark:ring-orange-800"
+                ? "bg-white dark:bg-gray-900 text-orange-700 dark:text-orange-300 shadow-xs ring-1 ring-orange-200 dark:ring-orange-800"
                 : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/80",
             )}
           >

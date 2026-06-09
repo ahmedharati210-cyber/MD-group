@@ -42,7 +42,7 @@ export function StatCard({
       </div>
       <div
         className={cn(
-          "w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shadow-sm bg-gradient-to-br flex-shrink-0",
+          "w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shadow-xs bg-linear-to-br shrink-0",
           toneStyles[tone],
         )}
       >
@@ -52,7 +52,7 @@ export function StatCard({
   );
 
   const base =
-    "bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-sm transition-all";
+    "bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-xs transition-all";
   const interactive =
     "hover:shadow-md dark:hover:shadow-black/40 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer";
 

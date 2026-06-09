@@ -90,13 +90,13 @@ export default async function ContactsPage({ searchParams }: { searchParams: Sea
           name="q"
           defaultValue={q ?? ""}
           placeholder="بحث بالاسم..."
-          className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none"
+          className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden"
         />
         {showTradeFilter ? (
           <select
             name="trade"
             defaultValue={trade ?? ""}
-            className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none"
+            className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden"
           >
             <option value="">كل التخصصات</option>
             {(Object.entries(tradeLabels) as [TradeCategory, string][]).map(([v, l]) => (
@@ -108,7 +108,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Sea
           <select
             name="companyId"
             defaultValue={companyId ?? ""}
-            className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none"
+            className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden"
           >
             <option value="">الكل</option>
             {companies.map((c) => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
@@ -128,9 +128,9 @@ export default async function ContactsPage({ searchParams }: { searchParams: Sea
             const company = c.companies;
             const tradeKey = (c.trade_category as TradeCategory | null);
             return (
-              <div key={c.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div key={c.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-xs hover:shadow-md transition-shadow">
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 bg-linear-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0">
                     {c.full_name.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -152,19 +152,19 @@ export default async function ContactsPage({ searchParams }: { searchParams: Sea
                 <ul className="space-y-1.5 text-sm">
                   {c.phone ? (
                     <li className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                      <Phone className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                      <Phone className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
                       <a href={`tel:${c.phone}`} className="hover:text-primary-700 dark:hover:text-primary-400 truncate" dir="ltr">{c.phone}</a>
                     </li>
                   ) : null}
                   {c.email ? (
                     <li className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                      <MailIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                      <MailIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
                       <a href={`mailto:${c.email}`} className="hover:text-primary-700 dark:hover:text-primary-400 truncate">{c.email}</a>
                     </li>
                   ) : null}
                   {company ? (
                     <li className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs pt-2 border-t border-gray-100 dark:border-gray-800 mt-2">
-                      <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
+                      <Building2 className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{company.name_ar}</span>
                     </li>
                   ) : null}

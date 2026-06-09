@@ -16,7 +16,7 @@ type Props = {
 };
 
 const inputClasses =
-  "w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none disabled:bg-gray-50 dark:disabled:bg-gray-900";
+  "w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden disabled:bg-gray-50 dark:disabled:bg-gray-900";
 const labelClasses =
   "block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5";
 const sectionClasses =
@@ -241,7 +241,7 @@ export function EditEmployeeForm({
                 type="checkbox"
                 name="is_active"
                 defaultChecked={profile.is_active}
-                className="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
+                className="w-4 h-4 rounded-xs border-gray-300 dark:border-gray-600"
               />
               المستخدم نشط
             </label>
@@ -324,7 +324,7 @@ export function EditEmployeeForm({
             rows={4}
             defaultValue={profile.hr_notes ?? ""}
             placeholder="ملاحظات خاصة بالـ HR — غير مرئية للموظف"
-            className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none resize-none"
+            className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden resize-none"
           />
         </section>
       ) : null}

@@ -33,13 +33,13 @@ export function PublicNav() {
         "sticky top-0 z-50 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-700 transition-shadow",
         scrolled
           ? "shadow-md dark:shadow-black/50"
-          : "shadow-sm dark:shadow-black/30",
+          : "shadow-xs dark:shadow-black/30",
       )}
     >
       <div className="container-custom">
         <div className="flex items-center justify-between h-16 md:h-20">
           <Link href="/" className="flex items-center gap-3 md:gap-4 group min-w-0">
-            <span className="flex-shrink-0 rounded-xl bg-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-1 transition-transform group-hover:scale-105 inline-flex">
+            <span className="shrink-0 rounded-xl bg-white shadow-xs ring-1 ring-gray-200 dark:ring-gray-700 p-1 transition-transform group-hover:scale-105 inline-flex">
               <img
                 src="/Icon-MD.png"
                 alt="MD Group"

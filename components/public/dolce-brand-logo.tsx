@@ -12,7 +12,7 @@ export function DolceBrandLogo({
   return (
     <div
       className={cn(
-        "relative w-full max-w-[160px] aspect-[2/1] mx-auto",
+        "relative w-full max-w-[160px] aspect-2/1 mx-auto",
         className,
       )}
     >

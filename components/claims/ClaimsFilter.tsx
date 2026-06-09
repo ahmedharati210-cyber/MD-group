@@ -7,7 +7,7 @@ import { useRef } from "react";
 type ProjectOption = { id: string; name: string };
 
 const selectCls =
-  "px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none";
+  "px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden";
 
 export function ClaimsFilter({
   projects = [],
@@ -75,7 +75,7 @@ export function ClaimsFilter({
             type="text"
             defaultValue={currentQuery}
             placeholder="ابحث في المطالبات..."
-            className="pr-9 pl-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 placeholder:text-gray-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none w-52"
+            className="pr-9 pl-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 placeholder:text-gray-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden w-52"
           />
         </div>
         <button type="submit" className="px-4 py-2 text-sm bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-colors">

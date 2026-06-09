@@ -38,7 +38,7 @@ function FeatureGrid({
               type="checkbox"
               name={`${namePrefix}${f}`}
               defaultChecked={on}
-              className="w-4 h-4 rounded accent-primary-600"
+              className="w-4 h-4 rounded-xs accent-primary-600"
             />
             <span
               className={`text-sm font-medium ${

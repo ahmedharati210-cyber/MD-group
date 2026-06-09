@@ -82,7 +82,7 @@ export function DailyGrid({ date, employees, records }: Props) {
           return (
             <div
               key={e.id}
-              className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm"
+              className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs"
             >
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="min-w-0">
@@ -127,7 +127,7 @@ export function DailyGrid({ date, employees, records }: Props) {
       </div>
 
       {/* Desktop table */}
-      <div className="hidden md:block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+      <div className="hidden md:block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">
@@ -206,7 +206,7 @@ function RowActions({
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-1 flex-shrink-0">
+    <div className="flex items-center gap-1 shrink-0">
       <Link
         href={`/portal/attendance/new?date=${date}&profileId=${employeeId}`}
         aria-label="تعديل الأوقات"

@@ -97,7 +97,7 @@ function SectionTitle({
 function inputClasses(appearance: SignupAppearance, iconPad?: boolean) {
   const dark = appearance === "dark";
   return cn(
-    "w-full py-3 border-2 rounded-xl outline-none transition",
+    "w-full py-3 border-2 rounded-xl outline-hidden transition",
     iconPad ? "pr-12 pl-4" : "px-4",
     dark
       ? "border-neutral-700 bg-neutral-950 text-white placeholder:text-neutral-500 focus:border-amber-500/80 focus:ring-4 focus:ring-amber-500/10"
@@ -114,8 +114,8 @@ function SubmitButton({ appearance }: { appearance: SignupAppearance }) {
       className={cn(
         "w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-bold shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0",
         appearance === "dark"
-          ? "bg-gradient-to-r from-amber-600 to-amber-700 text-black shadow-amber-900/40 hover:shadow-xl hover:-translate-y-0.5"
-          : "bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 shadow-amber-800/25 hover:shadow-xl hover:-translate-y-0.5",
+          ? "bg-linear-to-r from-amber-600 to-amber-700 text-black shadow-amber-900/40 hover:shadow-xl hover:-translate-y-0.5"
+          : "bg-linear-to-r from-amber-500 to-amber-600 text-gray-900 shadow-amber-800/25 hover:shadow-xl hover:-translate-y-0.5",
       )}
     >
       {pending ? (
@@ -229,7 +229,7 @@ export function EmployeeSignupForm({
         >
           <CircleAlert
             className={cn(
-              "w-5 h-5 flex-shrink-0 mt-0.5",
+              "w-5 h-5 shrink-0 mt-0.5",
               dark ? "text-red-400" : "text-red-600",
             )}
           />

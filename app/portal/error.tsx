@@ -16,7 +16,7 @@ export default function PortalError({
 
   return (
     <div className="min-h-[50vh] flex items-center justify-center p-4 sm:p-6">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-red-200 dark:border-red-900/60 p-6 sm:p-8 shadow-sm max-w-md text-center">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-red-200 dark:border-red-900/60 p-6 sm:p-8 shadow-xs max-w-md text-center">
         <div className="w-14 h-14 bg-red-50 dark:bg-red-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <CircleAlert className="w-7 h-7 text-red-600 dark:text-red-400" />
         </div>

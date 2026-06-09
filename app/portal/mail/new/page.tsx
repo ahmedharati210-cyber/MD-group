@@ -34,7 +34,7 @@ export default async function NewMailPage() {
         title="إضافة بريد"
         description="سجّل رسالة واردة أو صادرة في سجل الشركة."
       />
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs">
         <MailForm
           action={createMailAction}
           companies={companies ?? []}

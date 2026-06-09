@@ -6,7 +6,7 @@ export default function OfflinePage() {
   return (
     <div
       dir="rtl"
-      className="min-h-screen bg-[#f5f3f0] flex flex-col items-center justify-center px-6 text-center"
+      className="min-h-screen bg-primary-50 flex flex-col items-center justify-center px-6 text-center"
     >
       {/* Logo */}
       <div className="mb-8">
@@ -20,8 +20,8 @@ export default function OfflinePage() {
       </div>
 
       {/* Icon */}
-      <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg mb-6 ring-4 ring-[#8c6032]/10">
-        <WifiOff className="w-9 h-9 text-[#8c6032]" />
+      <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg mb-6 ring-4 ring-primary-500/10">
+        <WifiOff className="w-9 h-9 text-primary-500" />
       </div>
 
       {/* Heading */}
@@ -37,7 +37,7 @@ export default function OfflinePage() {
       {/* Retry button */}
       <button
         onClick={() => window.location.reload()}
-        className="inline-flex items-center gap-2.5 px-6 py-3 bg-[#8c6032] text-white rounded-xl font-semibold text-sm shadow-md hover:bg-[#704d28] active:scale-95 transition-all"
+        className="inline-flex items-center gap-2.5 px-6 py-3 bg-primary-500 text-white rounded-xl font-semibold text-sm shadow-md hover:bg-primary-600 active:scale-95 transition-all"
         style={{ fontFamily: "Cairo, sans-serif" }}
       >
         <RefreshCw className="w-4 h-4" />

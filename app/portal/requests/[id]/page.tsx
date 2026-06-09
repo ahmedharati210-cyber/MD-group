@@ -51,11 +51,11 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
         </Link>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
         <div className="p-6 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <div className="w-11 h-11 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+            <div className="w-11 h-11 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center shrink-0">
               <ClipboardEdit className="w-6 h-6 text-primary-600 dark:text-primary-400" />
             </div>
             <div>

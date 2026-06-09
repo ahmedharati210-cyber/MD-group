@@ -60,7 +60,7 @@ export default async function MailDetailPage({
         <div className="flex items-start gap-3 min-w-0">
           <div
             className={
-              "w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 " +
+              "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 " +
               (inbound
                 ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300"
                 : "bg-sky-50 text-sky-600 dark:bg-sky-900/40 dark:text-sky-300")
@@ -121,7 +121,7 @@ export default async function MailDetailPage({
         ) : null}
         {doc ? (
           <div className="sm:col-span-2 md:col-span-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3 sm:p-4 flex items-center gap-3">
-            <div className="w-9 h-9 bg-primary-50 dark:bg-primary-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 bg-primary-50 dark:bg-primary-900/40 rounded-xl flex items-center justify-center shrink-0">
               <FileText className="w-4 h-4 text-primary-600 dark:text-primary-400" />
             </div>
             <div className="min-w-0">
@@ -140,7 +140,7 @@ export default async function MailDetailPage({
       </div>
 
       {mail.body ? (
-        <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+        <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 sm:p-6 shadow-xs">
           <h2 className="text-base font-bold text-gray-900 dark:text-gray-50 mb-3">
             المحتوى
           </h2>

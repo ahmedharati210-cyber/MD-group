@@ -182,7 +182,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Sea
     .order("full_name");
 
   const selectCls =
-    "px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-none";
+    "px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-hidden";
 
   return (
     <div>
@@ -245,7 +245,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Sea
         <EmptyState icon={ScrollText} title="لا توجد سجلات" description="لم تُجرَ أي عمليات مطابقة بعد." />
       ) : (
         <>
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">
@@ -291,7 +291,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Sea
                         </td>
                         <td className="px-4 py-3">
                           <span className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
-                            <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                            <Calendar className="w-3.5 h-3.5 shrink-0" />
                             {formatDateTime(row.created_at)}
                           </span>
                         </td>
@@ -301,7 +301,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Sea
                               {payloadEntries.map(([k, v]) => (
                                 <span
                                   key={k}
-                                  className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5"
+                                  className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-xs px-1.5 py-0.5"
                                 >
                                   <span className="text-gray-400 dark:text-gray-500">
                                     {payloadKeyLabels[k] ?? k}:

@@ -65,13 +65,13 @@ function NotificationCard({
   return (
     <div
       className={cn(
-        "flex items-start gap-4 rounded-2xl border p-4 shadow-sm transition-all",
+        "flex items-start gap-4 rounded-2xl border p-4 shadow-xs transition-all",
         cardCls,
       )}
     >
       <div
         className={cn(
-          "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+          "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
           iconWrapCls,
         )}
       >
@@ -115,7 +115,7 @@ function NotificationCard({
           ) : null}
         </div>
       </div>
-      <div className="flex gap-1 flex-shrink-0">
+      <div className="flex gap-1 shrink-0">
         {!w.is_read && isRecipientView ? <MarkReadButton warningId={w.id} /> : null}
         {showDelete ? <DeleteWarningButton warningId={w.id} /> : null}
       </div>
@@ -203,7 +203,7 @@ export default async function NotificationsPage({
   };
 
   const selectClasses =
-    "px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none";
+    "px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden";
 
   return (
     <div>
@@ -232,7 +232,7 @@ export default async function NotificationsPage({
             className={cn(
               "flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors",
               activeTab === "inbox"
-                ? "bg-white dark:bg-gray-900 text-primary-700 dark:text-primary-300 shadow-sm"
+                ? "bg-white dark:bg-gray-900 text-primary-700 dark:text-primary-300 shadow-xs"
                 : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/80",
             )}
           >
@@ -249,7 +249,7 @@ export default async function NotificationsPage({
             className={cn(
               "flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors",
               activeTab === "manage"
-                ? "bg-white dark:bg-gray-900 text-primary-700 dark:text-primary-300 shadow-sm"
+                ? "bg-white dark:bg-gray-900 text-primary-700 dark:text-primary-300 shadow-xs"
                 : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/80",
             )}
           >
@@ -272,7 +272,7 @@ export default async function NotificationsPage({
           <select
             name="companyId"
             defaultValue={companyIdParam ?? ""}
-            className={`flex-1 min-w-[12rem] ${selectClasses}`}
+            className={`flex-1 min-w-48 ${selectClasses}`}
           >
             <option value="">كل الشركات</option>
             {(companies ?? []).map((c) => (
@@ -291,7 +291,7 @@ export default async function NotificationsPage({
       ) : null}
 
       {isManager && activeTab === "manage" ? (
-        <div className="mb-8 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+        <div className="mb-8 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-xs">
           <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
             <Plus className="w-4 h-4" /> إرسال جديد
           </h2>

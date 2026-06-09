@@ -53,7 +53,7 @@ export function AvatarUpload({ currentUrl, fullName }: Props) {
 
   return (
     <div className="flex items-center gap-5">
-      <div className="relative flex-shrink-0">
+      <div className="relative shrink-0">
         {previewUrl ? (
           <img
             src={previewUrl}
@@ -61,7 +61,7 @@ export function AvatarUpload({ currentUrl, fullName }: Props) {
             className="w-20 h-20 rounded-2xl object-cover border-2 border-gray-200 dark:border-gray-700"
           />
         ) : (
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold text-2xl border-2 border-gray-200 dark:border-gray-700">
+          <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold text-2xl border-2 border-gray-200 dark:border-gray-700">
             {initials || <User className="w-8 h-8" />}
           </div>
         )}

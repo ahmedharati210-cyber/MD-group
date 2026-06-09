@@ -11,13 +11,13 @@ export async function PublicFooter() {
   "use cache";
   cacheLife("max");
   return (
-    <footer className="bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white border-t border-gray-800">
+    <footer className="bg-linear-to-br from-gray-900 via-gray-900 to-gray-800 text-white border-t border-gray-800">
       <div className="container-custom">
         <div className="py-14">
           <div className="grid md:grid-cols-3 gap-12 mb-10">
             <div>
               <div className="mb-5">
-                <span className="inline-flex rounded-xl bg-white shadow-sm p-2">
+                <span className="inline-flex rounded-xl bg-white shadow-xs p-2">
                   <img
                     src="/Logo-MD.png"
                     alt="MD Group Holding Company"

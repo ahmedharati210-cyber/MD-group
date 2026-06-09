@@ -47,7 +47,7 @@ export function PwaSwUpdateBanner() {
 
   return (
     <div
-      className="print:hidden w-full bg-gray-900 text-white px-4 py-3 z-[60] pt-[max(0.75rem,env(safe-area-inset-top))]"
+      className="print:hidden w-full bg-gray-900 text-white px-4 py-3 z-60 pt-[max(0.75rem,env(safe-area-inset-top))]"
       dir="rtl"
       role="status"
     >

@@ -75,7 +75,7 @@ export default async function NewAttendancePage({
         title={existing ? "تعديل سجل حضور" : "إضافة سجل حضور"}
         description="أضف أو حدّث سجل حضور موظف لتاريخ محدد."
       />
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs">
         <AttendanceForm
           companies={companies ?? []}
           employees={employees ?? []}

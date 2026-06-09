@@ -30,7 +30,7 @@ export default async function NewContactPage() {
         العودة إلى القائمة
       </Link>
       <PageHeader title="إضافة جهة اتصال" />
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs">
         <ContactForm
           action={createContactAction}
           companies={companies ?? []}

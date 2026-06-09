@@ -40,9 +40,9 @@ function formatRemaining(remaining: number | null): { text: string; isLastDay: b
 
 const inputCls: Record<Size, string> = {
   default:
-    "w-24 px-3 py-2 text-sm font-semibold tabular-nums border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none disabled:opacity-60",
+    "w-24 px-3 py-2 text-sm font-semibold tabular-nums border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-hidden disabled:opacity-60",
   compact:
-    "w-14 px-2 py-1 text-xs font-medium tabular-nums border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none disabled:opacity-60",
+    "w-14 px-2 py-1 text-xs font-medium tabular-nums border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-hidden disabled:opacity-60",
 };
 
 export function InlineEstimatedDaysField({
@@ -118,7 +118,7 @@ export function InlineEstimatedDaysField({
     }
     return (
       <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-        <Clock className="w-4 h-4 flex-shrink-0 text-gray-400" />
+        <Clock className="w-4 h-4 shrink-0 text-gray-400" />
         <span>
           <span className="text-gray-500 dark:text-gray-400">{heading ?? "متبقي"}: </span>
           <span
@@ -160,7 +160,7 @@ export function InlineEstimatedDaysField({
   );
 
   const row = (
-    <div className="flex items-center gap-1.5 flex-shrink-0">
+    <div className="flex items-center gap-1.5 shrink-0">
       <span
         className={`whitespace-nowrap ${
           size === "compact" ? "text-xs" : "text-sm"
@@ -193,7 +193,7 @@ export function InlineEstimatedDaysField({
     >
       {heading ? (
         <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-          <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <Clock className="w-4 h-4 text-gray-400 shrink-0" />
           <span>{heading}</span>
         </div>
       ) : null}

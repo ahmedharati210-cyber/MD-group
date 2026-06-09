@@ -307,7 +307,7 @@ export function Sidebar({
           type="button"
           aria-label="إغلاق القائمة"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs md:hidden"
         />
       ) : null}
 
@@ -323,7 +323,7 @@ export function Sidebar({
         {/* Logo */}
         <div className="px-5 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <Link href="/portal" className="flex items-center gap-3 group">
-            <span className="flex-shrink-0 inline-flex rounded-xl bg-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-1 transition-transform group-hover:scale-105">
+            <span className="shrink-0 inline-flex rounded-xl bg-white shadow-xs ring-1 ring-gray-200 dark:ring-gray-700 p-1 transition-transform group-hover:scale-105">
               <Image
                 src="/Icon-MD.png"
                 alt="MD Group"
@@ -402,7 +402,7 @@ export function Sidebar({
                   >
                     <Icon
                       className={cn(
-                        "w-5 h-5 flex-shrink-0",
+                        "w-5 h-5 shrink-0",
                         active
                           ? "text-primary-600 dark:text-primary-400"
                           : "text-gray-400 dark:text-gray-500",
@@ -411,7 +411,7 @@ export function Sidebar({
                     <span className="flex-1 truncate">{label}</span>
                     {item.href === "/portal/papers" &&
                     (expiredPapersCount > 0 || expiringSoonPapersCount > 0) ? (
-                      <span className="flex items-center gap-1 flex-shrink-0">
+                      <span className="flex items-center gap-1 shrink-0">
                         {expiredPapersCount > 0 ? (
                           <span className="min-w-5 h-5 px-1.5 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center tabular-nums">
                             {expiredPapersCount > 99 ? "99+" : expiredPapersCount}
@@ -427,7 +427,7 @@ export function Sidebar({
                       </span>
                     ) : item.href === "/portal/notifications" &&
                       (unreadWarningAlerts > 0 || unreadNotificationAlerts > 0) ? (
-                      <span className="flex items-center gap-1 flex-shrink-0">
+                      <span className="flex items-center gap-1 shrink-0">
                         {unreadWarningAlerts > 0 ? (
                           <span className="min-w-5 h-5 px-1.5 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center tabular-nums">
                             {unreadWarningAlerts > 99 ? "99+" : unreadWarningAlerts}
@@ -442,7 +442,7 @@ export function Sidebar({
                         ) : null}
                       </span>
                     ) : badge ? (
-                      <span className={cn("flex-shrink-0 min-w-5 h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center tabular-nums", badge.cls)}>
+                      <span className={cn("shrink-0 min-w-5 h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center tabular-nums", badge.cls)}>
                         {badge.count > 99 ? "99+" : badge.count}
                       </span>
                     ) : null}

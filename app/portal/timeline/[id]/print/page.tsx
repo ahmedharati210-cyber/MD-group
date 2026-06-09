@@ -131,7 +131,7 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
               <p className="text-sm text-gray-600 mt-1">{project.description}</p>
             ) : null}
           </div>
-          <div className="text-left text-sm text-gray-600 flex-shrink-0">
+          <div className="text-left text-sm text-gray-600 shrink-0">
             <div className="font-semibold">{statusLabels[project.status]}</div>
             <div>{printDate}</div>
           </div>
@@ -219,7 +219,7 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
                           <tr key={task.id} className="border-b border-gray-100">
                             <td className="py-2 px-2 w-6 text-center">
                               {/* Checkbox */}
-                              <span className={`inline-block w-4 h-4 border-2 rounded align-middle ${task.is_completed ? "bg-gray-900 border-gray-900" : "border-gray-400"}`}>
+                              <span className={`inline-block w-4 h-4 border-2 rounded-xs align-middle ${task.is_completed ? "bg-gray-900 border-gray-900" : "border-gray-400"}`}>
                                 {task.is_completed ? (
                                   <svg viewBox="0 0 12 10" className="w-full h-full text-white" fill="none" stroke="currentColor" strokeWidth="2">
                                     <polyline points="1,5 4,8 11,1" />

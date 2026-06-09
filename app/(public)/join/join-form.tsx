@@ -66,7 +66,7 @@ function SectionTitle({ title }: { title: string }) {
 
 function inputClasses(iconPad?: boolean) {
   return cn(
-    "w-full py-3 border-2 rounded-xl outline-none transition",
+    "w-full py-3 border-2 rounded-xl outline-hidden transition",
     iconPad ? "pr-12 pl-4" : "px-4",
     "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/15",
   );
@@ -108,7 +108,7 @@ export function JoinForm({ companyNameAr }: { companyNameAr: string }) {
 
   if (state?.ok) {
     return (
-      <div className="rounded-2xl border border-primary-200 dark:border-primary-800 bg-white dark:bg-gray-900 p-8 text-center space-y-4 shadow-sm">
+      <div className="rounded-2xl border border-primary-200 dark:border-primary-800 bg-white dark:bg-gray-900 p-8 text-center space-y-4 shadow-xs">
         <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400">
           <CircleCheck className="w-7 h-7" />
         </div>
@@ -143,7 +143,7 @@ export function JoinForm({ companyNameAr }: { companyNameAr: string }) {
 
       {state?.error ? (
         <div className="flex items-start gap-3 p-4 rounded-xl border bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800">
-          <CircleAlert className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+          <CircleAlert className="w-5 h-5 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
           <p className="text-sm text-red-800 dark:text-red-200">{state.error}</p>
         </div>
       ) : null}

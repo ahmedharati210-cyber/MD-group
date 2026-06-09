@@ -32,7 +32,7 @@ export function PushNotificationsCard() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs">
       <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 mb-1">
         إشعارات الجهاز
       </h2>
@@ -95,7 +95,7 @@ export function PushNotificationsCard() {
       {status === "on" ? (
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <p className="text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
-            <Bell className="w-4 h-4 flex-shrink-0" />
+            <Bell className="w-4 h-4 shrink-0" />
             الإشعارات مفعّلة على هذا الجهاز
           </p>
           <button

@@ -52,11 +52,11 @@ export default async function ClaimDetailPage({
       </Link>
 
       {/* Card */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 p-6 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+            <div className="w-11 h-11 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center shrink-0">
               <Receipt className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
             <div>
@@ -86,7 +86,7 @@ export default async function ClaimDetailPage({
           {/* Amount */}
           {claim.amount != null ? (
             <div className="flex items-center gap-3 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl">
-              <Banknote className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
+              <Banknote className="w-5 h-5 text-primary-600 dark:text-primary-400 shrink-0" />
               <div>
                 <p className="text-xs text-primary-600 dark:text-primary-400 font-medium mb-0.5">المبلغ</p>
                 <p className="text-2xl font-bold text-primary-700 dark:text-primary-300">
@@ -112,7 +112,7 @@ export default async function ClaimDetailPage({
           {/* PDF download */}
           {claim.file_url ? (
             <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <FileText className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <FileText className="w-5 h-5 text-gray-400 shrink-0" />
               <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300">المستند المرفق</span>
               {signedFileUrl ? (
                 <a

@@ -89,7 +89,7 @@ export default async function PapersPage({
     category && category !== "all" ? category : undefined;
 
   const selectClasses =
-    "px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none";
+    "px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden";
 
   return (
     <div>
@@ -167,7 +167,7 @@ export default async function PapersPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="بحث في العنوان والمحتوى..."
-          className="sm:col-span-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none"
+          className="sm:col-span-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden"
         />
         <select
           name="category"
@@ -233,10 +233,10 @@ export default async function PapersPage({
                 <Link
                   key={d.id}
                   href={`/portal/papers/${d.id}`}
-                  className="block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm hover:shadow-md transition-shadow"
+                  className="block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start gap-3 mb-2">
-                    <FileText className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
+                    <FileText className="w-5 h-5 text-primary-600 dark:text-primary-400 shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <div className="font-semibold text-gray-900 dark:text-gray-50 line-clamp-2">
                         {d.title}
@@ -287,7 +287,7 @@ export default async function PapersPage({
           </div>
 
           {/* Desktop table */}
-          <div className="hidden md:block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+          <div className="hidden md:block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">

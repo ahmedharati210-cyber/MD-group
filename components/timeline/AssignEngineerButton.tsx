@@ -61,11 +61,11 @@ export function AssignEngineerButton({
         } disabled:opacity-50`}
         aria-label="تعيين مهندس"
       >
-        <HardHat className="w-3 h-3 flex-shrink-0" />
+        <HardHat className="w-3 h-3 shrink-0" />
         <span className="max-w-[120px] truncate">
           {isPending ? "..." : currentAssigneeName ?? "تعيين"}
         </span>
-        <ChevronDown className="w-3 h-3 flex-shrink-0" />
+        <ChevronDown className="w-3 h-3 shrink-0" />
       </button>
 
       {open ? (
@@ -80,7 +80,7 @@ export function AssignEngineerButton({
                 onClick={() => assign(null)}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-right"
               >
-                <X className="w-3.5 h-3.5 flex-shrink-0" />
+                <X className="w-3.5 h-3.5 shrink-0" />
                 إزالة التعيين
               </button>
             ) : null}
@@ -95,7 +95,7 @@ export function AssignEngineerButton({
                     : "text-gray-700 dark:text-gray-300"
                 }`}
               >
-                <HardHat className="w-3.5 h-3.5 flex-shrink-0 text-amber-500 dark:text-amber-400" />
+                <HardHat className="w-3.5 h-3.5 shrink-0 text-amber-500 dark:text-amber-400" />
                 {e.full_name}
               </button>
             ))}

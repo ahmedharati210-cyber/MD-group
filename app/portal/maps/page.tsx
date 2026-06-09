@@ -62,7 +62,7 @@ export default async function MapsPage({
   }
 
   const selectClasses =
-    "px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none";
+    "px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden";
 
   return (
     <div>
@@ -95,7 +95,7 @@ export default async function MapsPage({
           <select
             name="companyId"
             defaultValue={companyIdParam}
-            className={`flex-1 min-w-[12rem] ${selectClasses}`}
+            className={`flex-1 min-w-48 ${selectClasses}`}
           >
             <option value="">كل الشركات</option>
             {companiesForFilter.map((c) => (
@@ -125,16 +125,16 @@ export default async function MapsPage({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {maps.map((m) => (
-            <div key={m.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm flex flex-col gap-3">
+            <div key={m.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-xs flex flex-col gap-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-9 h-9 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <div className="w-9 h-9 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center shrink-0">
                     <Map className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <h3 className="font-bold text-gray-900 dark:text-gray-50 truncate">{m.name}</h3>
                 </div>
                 {canManage ? (
-                  <div className="flex gap-1 flex-shrink-0">
+                  <div className="flex gap-1 shrink-0">
                     <Link href={`/portal/maps/${m.id}/edit`} className="p-2 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="تعديل">
                       <Pencil className="w-4 h-4" />
                     </Link>

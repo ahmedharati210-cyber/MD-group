@@ -8,7 +8,7 @@ type Engineer = { id: string; full_name: string };
 type State = { error?: string; ok?: boolean };
 const init: State = {};
 
-const inputCls = "px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none text-sm";
+const inputCls = "px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-hidden text-sm";
 
 export function AddTaskForm({
   categoryId,
@@ -83,7 +83,7 @@ export function AddTaskForm({
               <button
                 type="button"
                 onClick={() => removeRow(i)}
-                className="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex-shrink-0"
+                className="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors shrink-0"
                 aria-label="حذف الصف"
               >
                 <Minus className="w-4 h-4" />
@@ -94,7 +94,7 @@ export function AddTaskForm({
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">أيام تقديرية:</label>
+        <label className="text-xs text-gray-500 dark:text-gray-400 shrink-0">أيام تقديرية:</label>
         <input
           type="number"
           min={0}
@@ -117,7 +117,7 @@ export function AddTaskForm({
 
       {/* Due date shared for all tasks in this batch */}
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">تاريخ ووقت الاستحقاق:</label>
+        <label className="text-xs text-gray-500 dark:text-gray-400 shrink-0">تاريخ ووقت الاستحقاق:</label>
         <input
           type="datetime-local"
           value={dueDate}

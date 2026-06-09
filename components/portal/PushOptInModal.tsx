@@ -62,13 +62,13 @@ export function PushOptInModal() {
 
   return (
     <div
-      className="print:hidden fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
+      className="print:hidden fixed inset-0 z-70 flex items-end sm:items-center justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
       role="presentation"
     >
       <button
         type="button"
         aria-label="إغلاق"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs"
         onClick={handleDismiss}
       />
       <div

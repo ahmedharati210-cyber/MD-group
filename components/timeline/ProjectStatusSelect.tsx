@@ -54,7 +54,7 @@ export function ProjectStatusSelect({ projectId, currentStatus }: Props) {
       onChange={handleChange}
       onClick={(e) => e.stopPropagation()}
       disabled={isPending}
-      className={`text-xs font-semibold px-2.5 py-1 rounded-full border cursor-pointer appearance-none outline-none transition-opacity disabled:opacity-60 ${statusCls[status]}`}
+      className={`text-xs font-semibold px-2.5 py-1 rounded-full border cursor-pointer appearance-none outline-hidden transition-opacity disabled:opacity-60 ${statusCls[status]}`}
       style={{ backgroundImage: "none" }}
       aria-label="تغيير الحالة"
     >

@@ -15,7 +15,7 @@ type ProjectOption = { id: string; name: string; categories: Category[] };
 const init: DraftActionState = {};
 
 const inputCls =
-  "w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none";
+  "w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden";
 
 export function PersonalDraftsCreateForm({ projects }: { projects: ProjectOption[] }) {
   const router = useRouter();

@@ -39,7 +39,7 @@ export default async function EditCompanyPage({
         title="تعديل الشركة"
         description={company.name_ar}
       />
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm max-w-3xl">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs max-w-3xl">
         <CompanyForm
           action={updateCompanyAction}
           initial={company}

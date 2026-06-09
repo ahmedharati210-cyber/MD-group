@@ -34,7 +34,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
         </Link>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
         <div className="p-6 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">

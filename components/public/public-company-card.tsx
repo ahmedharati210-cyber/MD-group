@@ -19,7 +19,7 @@ export function PublicCompanyCard({
   const isDolce = company.slug === DOLCE_EMPLOYEE_SIGNUP_COMPANY_SLUG;
 
   return (
-    <div className="group relative flex flex-col items-center text-center bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-800 rounded-2xl p-6 md:p-7 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-primary-300 dark:hover:border-primary-700 transition-all">
+    <div className="group relative flex flex-col items-center text-center bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-800 rounded-2xl p-6 md:p-7 shadow-xs hover:shadow-xl hover:-translate-y-1 hover:border-primary-300 dark:hover:border-primary-700 transition-all">
       <div className="mb-4 flex w-full justify-center">
         {isDolce ? (
           <DolceBrandLogo className="max-w-[120px] md:max-w-[140px]" />
@@ -33,7 +33,7 @@ export function PublicCompanyCard({
             />
           </div>
         ) : (
-          <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+          <div className="w-12 h-12 md:w-14 md:h-14 bg-linear-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
             <Building2 className="w-6 h-6 md:w-7 md:h-7 text-white" />
           </div>
         )}
@@ -47,7 +47,7 @@ export function PublicCompanyCard({
           {company.name_en}
         </p>
       ) : (
-        <div className="flex-1 min-h-[0.25rem]" />
+        <div className="flex-1 min-h-1" />
       )}
 
       {isDolce ? (

@@ -159,7 +159,7 @@ export default async function AdminPage() {
       {/* ================================================================== */}
       <section>
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-9 h-9 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center shrink-0">
             <UserCog className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
@@ -173,7 +173,7 @@ export default async function AdminPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
           {roleSection(
             "مدراء عامون",
             admins,
@@ -218,7 +218,7 @@ export default async function AdminPage() {
       {/* ================================================================== */}
       <section>
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-9 h-9 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center shrink-0">
             <Building2 className="w-5 h-5 text-primary-600 dark:text-primary-400" />
           </div>
           <div>
@@ -236,7 +236,7 @@ export default async function AdminPage() {
           {(companies ?? []).map((company) => (
             <div
               key={company.id}
-              className={`bg-white dark:bg-gray-900 rounded-2xl border p-5 shadow-sm ${
+              className={`bg-white dark:bg-gray-900 rounded-2xl border p-5 shadow-xs ${
                 company.active
                   ? "border-gray-200 dark:border-gray-800"
                   : "border-gray-100 dark:border-gray-800 opacity-60"
@@ -278,7 +278,7 @@ export default async function AdminPage() {
       {admins.length > 0 ? (
         <section>
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 bg-violet-50 dark:bg-violet-900/20 rounded-xl flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 bg-violet-50 dark:bg-violet-900/20 rounded-xl flex items-center justify-center shrink-0">
               <ShieldCheck className="w-5 h-5 text-violet-600 dark:text-violet-400" />
             </div>
             <div>
@@ -292,7 +292,7 @@ export default async function AdminPage() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">
                 <tr className="text-right text-gray-600 dark:text-gray-400">

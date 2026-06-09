@@ -95,11 +95,11 @@ export function PwaInstallBanner() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -80, opacity: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="print:hidden w-full bg-gradient-to-l from-[#8c6032] to-[#704d28] text-white px-4 py-3 z-50 pt-[max(0.75rem,env(safe-area-inset-top))]"
+          className="print:hidden w-full bg-linear-to-l from-primary-500 to-primary-600 text-white px-4 py-3 z-50 pt-[max(0.75rem,env(safe-area-inset-top))]"
           dir="rtl"
         >
           <div className="max-w-7xl mx-auto flex items-center gap-3">
-            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
               <Smartphone className="w-5 h-5 text-white" />
             </div>
 
@@ -116,12 +116,12 @@ export function PwaInstallBanner() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               {!isIos && deferredPrompt ? (
                 <button
                   type="button"
                   onClick={() => void install()}
-                  className="inline-flex items-center gap-1.5 min-h-11 px-3.5 py-2 bg-white text-[#8c6032] rounded-lg text-sm font-bold hover:bg-white/90 active:scale-95 transition-all"
+                  className="inline-flex items-center gap-1.5 min-h-11 px-3.5 py-2 bg-white text-primary-500 rounded-lg text-sm font-bold hover:bg-white/90 active:scale-95 transition-all"
                 >
                   <Download className="w-3.5 h-3.5" />
                   تثبيت

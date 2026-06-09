@@ -197,7 +197,7 @@ export default async function EmployeeProfilePage({
 
         {/* ── Activity ─────────────────────────────────────── */}
         <div className="grid md:grid-cols-2 gap-4">
-          <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm">
+          <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
             <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 flex items-center gap-2 mb-4">
               <CalendarCheck className="w-5 h-5 text-primary-600 dark:text-primary-400" />
               آخر سجلات الحضور
@@ -242,7 +242,7 @@ export default async function EmployeeProfilePage({
             )}
           </section>
 
-          <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm">
+          <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
             <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 flex items-center gap-2 mb-4">
               <FileText className="w-5 h-5 text-primary-600 dark:text-primary-400" />
               الملفات الشخصية
@@ -305,7 +305,7 @@ function ProfileSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm">
+    <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
       <h2 className="flex items-center gap-2 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
         <Icon className="w-4 h-4" />
         {title}

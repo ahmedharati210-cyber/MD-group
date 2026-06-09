@@ -25,7 +25,7 @@ export function Pagination({ page, totalCount, pageSize, baseUrl, extraParams = 
   const btnBase =
     "inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-colors";
   const activeBtn =
-    "bg-primary-600 text-white hover:bg-primary-700 shadow-sm";
+    "bg-primary-600 text-white hover:bg-primary-700 shadow-xs";
   const inactiveBtn =
     "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800";
   const disabledBtn =

@@ -38,7 +38,7 @@ export function CheckInPanel({
   }
 
   return (
-    <div className="bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-primary-900/30 dark:via-gray-900 dark:to-secondary-900/30 border border-primary-100 dark:border-primary-900/60 rounded-2xl p-5 sm:p-6 md:p-7 shadow-sm">
+    <div className="bg-linear-to-br from-primary-50 via-white to-secondary-50 dark:from-primary-900/30 dark:via-gray-900 dark:to-secondary-900/30 border border-primary-100 dark:border-primary-900/60 rounded-2xl p-5 sm:p-6 md:p-7 shadow-xs">
       <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-50 mb-1">

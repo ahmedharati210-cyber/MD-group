@@ -13,7 +13,7 @@ const DOLCE_NAME_EN = "Dolce Chocolate";
 
 export default function JoinPage() {
   return (
-    <div className="section-padding bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950">
+    <div className="section-padding bg-linear-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950">
       <div className="container-custom max-w-2xl mx-auto">
         <header className="text-center mb-8 md:mb-10">
           <DolceBrandLogo className="max-w-[200px] mb-6" priority />
@@ -30,10 +30,10 @@ export default function JoinPage() {
             املأ النموذج أدناه لتقديم طلب انضمام. سيتم مراجعة طلبك من قبل
             إدارة الشركة قبل تفعيل حسابك.
           </p>
-          <div className="w-20 h-1 bg-gradient-to-r from-secondary-500 to-primary-500 mx-auto rounded-full mt-5" />
+          <div className="w-20 h-1 bg-linear-to-r from-secondary-500 to-primary-500 mx-auto rounded-full mt-5" />
         </header>
 
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-5 sm:p-8">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs p-5 sm:p-8">
           <JoinForm companyNameAr={DOLCE_NAME_AR} />
         </div>
       </div>

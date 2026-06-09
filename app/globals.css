@@ -1,6 +1,122 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans:
+    var(--font-cairo), -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
+
+  --color-primary-50: #f5f3f0;
+  --color-primary-100: #e8e0d6;
+  --color-primary-200: #d1c0ad;
+  --color-primary-300: #baa084;
+  --color-primary-400: #a3805b;
+  --color-primary-500: #8c6032;
+  --color-primary-600: #704d28;
+  --color-primary-700: #543a1e;
+  --color-primary-800: #382714;
+  --color-primary-900: #1c140a;
+
+  --color-secondary-50: #fef2f2;
+  --color-secondary-100: #fee2e2;
+  --color-secondary-200: #fecaca;
+  --color-secondary-300: #fca5a5;
+  --color-secondary-400: #f87171;
+  --color-secondary-500: #ef4444;
+  --color-secondary-600: #dc2626;
+  --color-secondary-700: #b91c1c;
+  --color-secondary-800: #991b1b;
+  --color-secondary-900: #7f1d1d;
+
+  --color-accent-light: #d1d5db;
+  --color-accent: #4b5563;
+  --color-accent-dark: #1f2937;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility container-custom {
+  @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+}
+
+@utility section-padding {
+  @apply py-16 md:py-24 lg:py-32;
+}
+
+@utility card {
+  @apply bg-white dark:bg-gray-900 rounded-2xl shadow-xs border border-gray-100 dark:border-gray-800 transition-all duration-300;
+}
+
+@utility card-hover {
+  @apply hover:shadow-xl hover:-translate-y-1 hover:border-gray-200 dark:hover:border-gray-700;
+}
+
+@utility btn-primary {
+  @apply inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-semibold text-white bg-linear-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg shadow-primary-600/25 hover:shadow-xl hover:shadow-primary-600/30 transition-all duration-300 hover:-translate-y-0.5 focus:outline-hidden focus:ring-4 focus:ring-primary-600/20;
+}
+
+@utility btn-secondary {
+  @apply inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-semibold text-primary-700 dark:text-primary-300 bg-white dark:bg-gray-900 border-2 border-primary-600 dark:border-primary-500 rounded-xl hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-all duration-300 focus:outline-hidden focus:ring-4 focus:ring-primary-600/20;
+}
+
+@utility gradient-text {
+  @apply bg-linear-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent;
+}
+
+@utility section-title {
+  @apply text-center mb-4;
+}
+
+@utility section-subtitle {
+  @apply text-center text-base md:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-12 md:mb-16;
+}
+
+@utility bg-grid-pattern {
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+  background-size: 40px 40px;
+
+  .dark & {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  }
+}
+
+@utility form-input {
+  /* Shared form controls */
+  @apply w-full px-4 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:border-transparent transition;
+}
+
+@utility form-label {
+  @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5;
+}
+
+@utility no-scrollbar {
+  /* Hide scrollbar but keep scrolling on horizontal scroll areas */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 @layer base {
   html {
@@ -49,70 +165,4 @@
     -webkit-box-shadow: 0 0 0 1000px #111827 inset;
     caret-color: #f3f4f6;
   }
-}
-
-@layer components {
-  .container-custom {
-    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
-  }
-
-  .section-padding {
-    @apply py-16 md:py-24 lg:py-32;
-  }
-
-  .card {
-    @apply bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 transition-all duration-300;
-  }
-
-  .card-hover {
-    @apply hover:shadow-xl hover:-translate-y-1 hover:border-gray-200 dark:hover:border-gray-700;
-  }
-
-  .btn-primary {
-    @apply inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg shadow-primary-600/25 hover:shadow-xl hover:shadow-primary-600/30 transition-all duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-primary-600/20;
-  }
-
-  .btn-secondary {
-    @apply inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-semibold text-primary-700 dark:text-primary-300 bg-white dark:bg-gray-900 border-2 border-primary-600 dark:border-primary-500 rounded-xl hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-primary-600/20;
-  }
-
-  .gradient-text {
-    @apply bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent;
-  }
-
-  .section-title {
-    @apply text-center mb-4;
-  }
-
-  .section-subtitle {
-    @apply text-center text-base md:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-12 md:mb-16;
-  }
-
-  .bg-grid-pattern {
-    background-image:
-      linear-gradient(to right, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
-    background-size: 40px 40px;
-  }
-
-  .dark .bg-grid-pattern {
-    background-image:
-      linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  }
-
-  /* Shared form controls */
-  .form-input {
-    @apply w-full px-4 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition;
-  }
-
-  .form-label {
-    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5;
-  }
-}
-
-@layer utilities {
-  /* Hide scrollbar but keep scrolling on horizontal scroll areas */
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }

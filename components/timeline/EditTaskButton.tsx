@@ -19,7 +19,7 @@ interface Props {
 }
 
 const inputCls =
-  "w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none";
+  "w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-hidden";
 
 /** Converts an ISO/timestamptz string to the "YYYY-MM-DDTHH:MM" format for datetime-local inputs. */
 function toDatetimeLocal(value: string | null): string {
@@ -86,7 +86,7 @@ export function EditTaskButton({
 
       {isOpen ? (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-4"
           onClick={handleBackdropClick}
           role="dialog"
           aria-modal="true"
