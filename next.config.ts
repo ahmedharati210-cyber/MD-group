@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 import { networkInterfaces } from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import withSerwistInit from "@serwist/next";
+
+const projectDir = path.dirname(fileURLToPath(import.meta.url));
 
 // Collect every private LAN IPv4 on this machine so Next 16's cross-origin
 // dev-asset check (`allowedDevOrigins`) doesn't block phones/laptops that
@@ -93,6 +97,24 @@ const nextConfig: NextConfig = {
   // Empty turbopack config acknowledges that Turbopack is used for `next dev`
   // while `next build --webpack` is used for production (required by @serwist/next).
   turbopack: {},
+  webpack(config, options) {
+    // Strip @serwist/window from the client bundle — we register the SW manually
+    // via navigator.serviceWorker.register() in lib/push/portal-sw.ts.
+    if (!options.isServer) {
+      const { webpack } = options;
+      config.plugins?.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /^@serwist\/window$/,
+          path.resolve(projectDir, "lib/noop-serwist-window.ts"),
+        ),
+        new webpack.NormalModuleReplacementPlugin(
+          /^@serwist\/window\/internal$/,
+          path.resolve(projectDir, "lib/noop-serwist-window-internal.ts"),
+        ),
+      );
+    }
+    return config;
+  },
 };
 
 // Serwist builds the service worker from app/sw.ts → public/sw.js.
