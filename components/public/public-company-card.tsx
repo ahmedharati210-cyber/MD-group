@@ -29,6 +29,7 @@ export function PublicCompanyCard({
               src={company.logo_url}
               alt={company.name_ar}
               fill
+              sizes="(max-width: 768px) 48px, 56px"
               className="object-contain p-1"
             />
           </div>

@@ -1,39 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Download, Loader2, CircleAlert } from "lucide-react";
+import { Download, CircleAlert } from "lucide-react";
 import toast from "react-hot-toast";
 
 type Props = {
-  id: string;
+  signedUrl: string | null;
   mimeType: string | null;
+  error?: string | null;
 };
 
-export function PaperViewer({ id, mimeType }: Props) {
-  const [url, setUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/papers/${id}/signed-url`, {
-          cache: "no-store",
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error ?? "فشل جلب الرابط");
-        if (!cancelled) setUrl(json.url);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "خطأ غير معروف");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
-
+export function PaperViewer({ signedUrl, mimeType, error }: Props) {
   if (error) {
     return (
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-red-200 dark:border-red-900/60 p-5 sm:p-6 flex items-start gap-3">
@@ -43,10 +19,11 @@ export function PaperViewer({ id, mimeType }: Props) {
     );
   }
 
-  if (!url) {
+  if (!signedUrl) {
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-10 sm:p-12 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-gray-400 dark:text-gray-500 animate-spin" />
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-red-200 dark:border-red-900/60 p-5 sm:p-6 flex items-start gap-3">
+        <CircleAlert className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+        <p className="text-sm text-red-700 dark:text-red-300">فشل جلب رابط المعاينة</p>
       </div>
     );
   }
@@ -61,7 +38,7 @@ export function PaperViewer({ id, mimeType }: Props) {
           رابط صالح لمدة 5 دقائق فقط
         </span>
         <a
-          href={url}
+          href={signedUrl}
           download
           onClick={() => toast.success("بدء التنزيل")}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 shrink-0"
@@ -72,14 +49,14 @@ export function PaperViewer({ id, mimeType }: Props) {
       </div>
       {isPdf ? (
         <iframe
-          src={url}
+          src={signedUrl}
           className="w-full h-[60vh] sm:h-[70vh] bg-white"
           title="Paper preview"
         />
       ) : isImage ? (
         <div className="p-4 sm:p-6 flex items-center justify-center bg-gray-50 dark:bg-gray-800/60">
           <img
-            src={url}
+            src={signedUrl}
             alt="Paper"
             className="max-h-[60vh] sm:max-h-[70vh] w-auto rounded-lg shadow-xs"
           />
@@ -90,7 +67,7 @@ export function PaperViewer({ id, mimeType }: Props) {
             لا يمكن معاينة هذا النوع من الملفات.
           </p>
           <a
-            href={url}
+            href={signedUrl}
             download
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl font-semibold text-sm"
           >

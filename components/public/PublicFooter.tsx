@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cacheLife } from "next/cache";
 import {
@@ -9,7 +10,7 @@ import {
 
 export async function PublicFooter() {
   "use cache";
-  cacheLife("max");
+  cacheLife("days");
   return (
     <footer className="bg-linear-to-br from-gray-900 via-gray-900 to-gray-800 text-white border-t border-gray-800">
       <div className="container-custom">
@@ -18,12 +19,13 @@ export async function PublicFooter() {
             <div>
               <div className="mb-5">
                 <span className="inline-flex rounded-xl bg-white shadow-xs p-2">
-                  <img
+                  <Image
                     src="/Logo-MD.png"
                     alt="MD Group Holding Company"
                     className="h-20 w-auto object-contain"
                     width={160}
                     height={80}
+                    sizes="160px"
                   />
                 </span>
               </div>

@@ -2,7 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Building2, Calendar, User } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseAdminClient,
+  createSupabaseServerClient,
+} from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { DeleteButton } from "@/components/portal/DeleteButton";
 import { bytesToReadable, formatDate } from "@/lib/utils";
@@ -51,6 +54,22 @@ export default async function PaperPage({
   const expiryNotifiedAt =
     (doc as { expiry_notified_at?: string | null }).expiry_notified_at ?? null;
 
+  let signedUrl: string | null = null;
+  let signedUrlError: string | null = null;
+
+  if (doc.storage_path) {
+    const admin = createSupabaseAdminClient();
+    const { data: signed, error: signErr } = await admin.storage
+      .from("documents")
+      .createSignedUrl(doc.storage_path, 300);
+
+    if (signErr || !signed) {
+      signedUrlError = signErr?.message ?? "فشل جلب رابط المعاينة";
+    } else {
+      signedUrl = signed.signedUrl;
+    }
+  }
+
   return (
     <div>
       <Link
@@ -83,7 +102,11 @@ export default async function PaperPage({
 
       <div className="grid md:grid-cols-3 gap-4 md:gap-6">
         <div className="md:col-span-2 order-2 md:order-1">
-          <PaperViewer id={doc.id} mimeType={doc.mime_type} />
+          <PaperViewer
+            signedUrl={signedUrl}
+            mimeType={doc.mime_type}
+            error={signedUrlError}
+          />
         </div>
 
         <aside className="space-y-4 order-1 md:order-2">

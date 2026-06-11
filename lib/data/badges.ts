@@ -61,13 +61,14 @@ type BadgeParams = {
   includeDolceSignupBadges: boolean;
 };
 
-/**
- * Inner cached fetcher — keyed on stable user identifiers so the
- * Next.js data cache persists across cookie rotations. Access token
- * is passed as a closure rather than a cache key to keep the key stable.
- * Revalidates every 30 s; tags allow instant invalidation on mutations.
- */
-function fetchBadgesCached(params: BadgeParams, accessToken: string): Promise<BadgeCounts> {
+function badgeCacheKey(params: BadgeParams): string {
+  return `badges-${params.userId}-${params.isEmployee ? "emp" : "mgr"}-${params.isSuperAdmin ? "sa" : "ns"}`;
+}
+
+async function fetchBadgeCountsData(
+  params: BadgeParams,
+  accessToken: string,
+): Promise<BadgeCounts> {
   const {
     userId,
     isEmployee,
@@ -78,120 +79,135 @@ function fetchBadgesCached(params: BadgeParams, accessToken: string): Promise<Ba
     includeDolceSignupBadges,
   } = params;
 
-  return unstable_cache(
-    async () => {
-      const supabase = createTokenClient(accessToken);
+  const supabase = createTokenClient(accessToken);
 
-      const canSeeDolceSignupBadge =
-        !!dolceSignupCompanyId && !isEmployee && includeDolceSignupBadges;
+  const canSeeDolceSignupBadge =
+    !!dolceSignupCompanyId && !isEmployee && includeDolceSignupBadges;
 
-      const pendingSignupPromise = (async (): Promise<number> => {
-        if (!canSeeDolceSignupBadge || !dolceSignupCompanyId) return 0;
-        const { count } = await supabase
-          .from("employee_signup_requests")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending")
-          .eq("company_id", dolceSignupCompanyId);
-        return count ?? 0;
-      })();
+  const pendingSignupPromise = (async (): Promise<number> => {
+    if (!canSeeDolceSignupBadge || !dolceSignupCompanyId) return 0;
+    const { count } = await supabase
+      .from("employee_signup_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+      .eq("company_id", dolceSignupCompanyId);
+    return count ?? 0;
+  })();
 
-      const pendingRequestsPromise = (async (): Promise<number> => {
-        if (isEmployee) {
-          const { count } = await supabase
-            .from("engineer_requests")
-            .select("id", { count: "exact", head: true })
-            .eq("status", "pending")
-            .eq("requester_id", userId);
-          return count ?? 0;
-        }
-        // Owner / md_admin without an active company show no badge
-        if ((role === "md_admin" || role === "owner") && !companyId) return 0;
-        let q = supabase
-          .from("engineer_requests")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending");
-        if (!isSuperAdmin && companyId) q = q.eq("company_id", companyId);
-        const { count } = await q;
-        return count ?? 0;
-      })();
+  const pendingRequestsPromise = (async (): Promise<number> => {
+    if (isEmployee) {
+      const { count } = await supabase
+        .from("engineer_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+        .eq("requester_id", userId);
+      return count ?? 0;
+    }
+    // Owner / md_admin without an active company show no badge
+    if ((role === "md_admin" || role === "owner") && !companyId) return 0;
+    let q = supabase
+      .from("engineer_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending");
+    if (!isSuperAdmin && companyId) q = q.eq("company_id", companyId);
+    const { count } = await q;
+    return count ?? 0;
+  })();
 
-      // Notification-centre badges: employees (direct + broadcast) or managers (direct only).
-      const warningAlertsPromise = (async (): Promise<number> => {
-        if (isSuperAdmin || role === "owner") return 0;
-        if (isEmployee) {
-          const { count } = await supabase
-            .from("warnings")
-            .select("id", { count: "exact", head: true })
-            .eq("is_read", false)
-            .eq("kind", "warning")
-            .or(`target_profile_id.eq.${userId},target_profile_id.is.null`);
-          return count ?? 0;
-        }
-        const { count } = await supabase
-          .from("warnings")
-          .select("id", { count: "exact", head: true })
-          .eq("is_read", false)
-          .eq("kind", "warning")
-          .eq("target_profile_id", userId);
-        return count ?? 0;
-      })();
+  // Notification-centre badges: employees (direct + broadcast) or managers (direct only).
+  const warningAlertsPromise = (async (): Promise<number> => {
+    if (isSuperAdmin || role === "owner") return 0;
+    if (isEmployee) {
+      const { count } = await supabase
+        .from("warnings")
+        .select("id", { count: "exact", head: true })
+        .eq("is_read", false)
+        .eq("kind", "warning")
+        .or(`target_profile_id.eq.${userId},target_profile_id.is.null`);
+      return count ?? 0;
+    }
+    const { count } = await supabase
+      .from("warnings")
+      .select("id", { count: "exact", head: true })
+      .eq("is_read", false)
+      .eq("kind", "warning")
+      .eq("target_profile_id", userId);
+    return count ?? 0;
+  })();
 
-      const notificationAlertsPromise = (async (): Promise<number> => {
-        if (isSuperAdmin || role === "owner") return 0;
-        if (isEmployee) {
-          const { count } = await supabase
-            .from("warnings")
-            .select("id", { count: "exact", head: true })
-            .eq("is_read", false)
-            .eq("kind", "notification")
-            .or(`target_profile_id.eq.${userId},target_profile_id.is.null`);
-          return count ?? 0;
-        }
-        const { count } = await supabase
-          .from("warnings")
-          .select("id", { count: "exact", head: true })
-          .eq("is_read", false)
-          .eq("kind", "notification")
-          .eq("target_profile_id", userId);
-        return count ?? 0;
-      })();
+  const notificationAlertsPromise = (async (): Promise<number> => {
+    if (isSuperAdmin || role === "owner") return 0;
+    if (isEmployee) {
+      const { count } = await supabase
+        .from("warnings")
+        .select("id", { count: "exact", head: true })
+        .eq("is_read", false)
+        .eq("kind", "notification")
+        .or(`target_profile_id.eq.${userId},target_profile_id.is.null`);
+      return count ?? 0;
+    }
+    const { count } = await supabase
+      .from("warnings")
+      .select("id", { count: "exact", head: true })
+      .eq("is_read", false)
+      .eq("kind", "notification")
+      .eq("target_profile_id", userId);
+    return count ?? 0;
+  })();
 
-      const [
-        pendingRequests,
-        unreadWarningAlerts,
-        unreadNotificationAlerts,
-        pendingSignupRequests,
-        expiredRpc,
-        expiringSoonRpc,
-      ] = await Promise.all([
-        pendingRequestsPromise,
-        warningAlertsPromise,
-        notificationAlertsPromise,
-        pendingSignupPromise,
-        supabase.rpc("count_documents_expired"),
-        supabase.rpc("count_documents_expiring_soon"),
-      ]);
+  const [
+    pendingRequests,
+    unreadWarningAlerts,
+    unreadNotificationAlerts,
+    pendingSignupRequests,
+    expiredRpc,
+    expiringSoonRpc,
+  ] = await Promise.all([
+    pendingRequestsPromise,
+    warningAlertsPromise,
+    notificationAlertsPromise,
+    pendingSignupPromise,
+    supabase.rpc("count_documents_expired"),
+    supabase.rpc("count_documents_expiring_soon"),
+  ]);
 
-      if (expiredRpc.error) {
-        console.warn("[badges] count_documents_expired:", expiredRpc.error.message);
-      }
-      if (expiringSoonRpc.error) {
-        console.warn("[badges] count_documents_expiring_soon:", expiringSoonRpc.error.message);
-      }
+  if (expiredRpc.error) {
+    console.warn("[badges] count_documents_expired:", expiredRpc.error.message);
+  }
+  if (expiringSoonRpc.error) {
+    console.warn("[badges] count_documents_expiring_soon:", expiringSoonRpc.error.message);
+  }
 
-      return {
-        pendingRequests,
-        unreadWarningAlerts,
-        unreadNotificationAlerts,
-        pendingSignupRequests,
-        expiredPapers: parseRpcCount(expiredRpc.data),
-        expiringSoonPapers: parseRpcCount(expiringSoonRpc.data),
-      };
-    },
-    // Stable key: does not include the access token (which rotates on every request)
-    [`badges-${userId}-${isEmployee ? "emp" : "mgr"}-${isSuperAdmin ? "sa" : "ns"}`],
-    { revalidate: 30, tags: ["badges", `badges-user-${userId}`] },
-  )();
+  return {
+    pendingRequests,
+    unreadWarningAlerts,
+    unreadNotificationAlerts,
+    pendingSignupRequests,
+    expiredPapers: parseRpcCount(expiredRpc.data),
+    expiringSoonPapers: parseRpcCount(expiringSoonRpc.data),
+  };
+}
+
+const badgeCacheRunners = new Map<string, (accessToken: string) => Promise<BadgeCounts>>();
+
+function getBadgeCacheRunner(params: BadgeParams): (accessToken: string) => Promise<BadgeCounts> {
+  const cacheKey = badgeCacheKey(params);
+  let runner = badgeCacheRunners.get(cacheKey);
+  if (!runner) {
+    const frozenParams = params;
+    runner = (accessToken: string) =>
+      unstable_cache(
+        () => fetchBadgeCountsData(frozenParams, accessToken),
+        [cacheKey],
+        { revalidate: 30, tags: ["badges", `badges-user-${params.userId}`] },
+      )();
+    badgeCacheRunners.set(cacheKey, runner);
+  }
+  return runner;
+}
+
+function fetchBadgesCached(params: BadgeParams, accessToken: string): Promise<BadgeCounts> {
+  return getBadgeCacheRunner(params)(accessToken);
 }
 
 /**
