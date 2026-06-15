@@ -512,6 +512,7 @@ export async function toggleTaskAction(taskId: string, projectId: string, curren
     is_completed: !currentlyCompleted,
     completed_by: !currentlyCompleted ? userId : null,
     completed_at: !currentlyCompleted ? now : null,
+    ...(!currentlyCompleted ? { task_status: null } : {}),
   }).eq("id", taskId);
 
   if (error) return { error: error.message };

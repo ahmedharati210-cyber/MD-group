@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition, useRef, useState, useEffect } from "react";
-import { CircleDot, ChevronDown } from "lucide-react";
+import { CircleDot, ChevronDown, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { updateTaskStatusAction } from "@/app/portal/timeline/actions";
 import type { TaskWorkStatus } from "@/types/db";
@@ -15,11 +15,13 @@ export function TaskStatusButton({
   taskId,
   projectId,
   initialStatus,
+  isCompleted = false,
   canEdit = true,
 }: {
   taskId: string;
   projectId: string;
   initialStatus: TaskWorkStatus;
+  isCompleted?: boolean;
   canEdit?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -54,6 +56,15 @@ export function TaskStatusButton({
         setStatus(prev);
       }
     });
+  }
+
+  if (isCompleted) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+        <CheckCircle2 className="w-3 h-3" />
+        تم الانتهاء
+      </span>
+    );
   }
 
   if (!canEdit) {

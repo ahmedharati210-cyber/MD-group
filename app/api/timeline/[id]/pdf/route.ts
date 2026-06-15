@@ -109,7 +109,7 @@ function buildHtml(
                   ? `<span class="cb cb-done">✓</span>`
                   : `<span class="cb cb-empty"></span>`;
                 const dueLabel = task.due_date ? formatDate(task.due_date) : "—";
-                const statusLabel = task.task_status === "in_progress" ? "قيد العمل" : "—";
+                const statusLabel = task.is_completed ? "تم الانتهاء" : task.task_status === "in_progress" ? "قيد العمل" : "—";
                 return `
               <tr class="${task.is_completed ? "done" : ""}${isOverdue ? " overdue" : ""}">
                 <td class="td-cb">${checkbox}</td>

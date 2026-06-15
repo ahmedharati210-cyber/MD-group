@@ -241,7 +241,7 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
                               ) : null}
                             </td>
                             <td className="py-2 px-2 text-gray-500 text-xs whitespace-nowrap">
-                              {task.task_status === "in_progress" ? "قيد العمل" : "—"}
+                              {task.is_completed ? "تم الانتهاء" : task.task_status === "in_progress" ? "قيد العمل" : "—"}
                             </td>
                             <td className="py-2 px-2 text-gray-600 text-xs whitespace-nowrap tabular-nums">
                               {remainingLabel(task.estimated_days, task.estimated_days_set_at, today)}

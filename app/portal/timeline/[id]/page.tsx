@@ -347,9 +347,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                             taskId={task.id}
                             projectId={id}
                             initialStatus={task.task_status ?? null}
+                            isCompleted={task.is_completed}
                             canEdit
                           />
-                          {canManage ? (
+                          {canManage && !task.is_completed ? (
                             <AssignEngineerButton
                               taskId={task.id}
                               projectId={id}
@@ -364,7 +365,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                             </span>
                           ) : null}
                           {dueDateChip(task.due_date, task.is_completed)}
-                          {!canManage ? (
+                          {!canManage && !task.is_completed ? (
                             <TaskEstimatedDaysField
                               taskId={task.id}
                               projectId={id}
@@ -386,13 +387,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                       </div>
                       {canManage ? (
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <TaskEstimatedDaysField
-                            taskId={task.id}
-                            projectId={id}
-                            initialEstimatedDays={task.estimated_days}
-                            estimatedDaysSetAt={task.estimated_days_set_at}
-                            canEdit
-                          />
+                          {!task.is_completed ? (
+                            <TaskEstimatedDaysField
+                              taskId={task.id}
+                              projectId={id}
+                              initialEstimatedDays={task.estimated_days}
+                              estimatedDaysSetAt={task.estimated_days_set_at}
+                              canEdit
+                            />
+                          ) : null}
                           <EditTaskButton
                             taskId={task.id}
                             projectId={id}
