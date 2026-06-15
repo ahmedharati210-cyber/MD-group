@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { profileCacheTag, requireSuperAdmin } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 import { isPlatformFeatureEnabled } from "@/lib/features";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { ALL_FEATURES } from "@/types/db";
@@ -22,7 +23,7 @@ export async function setCompanyFeaturesAction(
   companyId: string,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireSuperAdmin();
+  const { userId } = await requireSuperAdmin();
 
   const selected = ALL_FEATURES.filter(
     (f) =>
@@ -40,6 +41,8 @@ export async function setCompanyFeaturesAction(
     .eq("id", companyId);
 
   if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "company", companyId, { features: selected });
 
   revalidatePath("/portal/admin");
   revalidatePath("/portal");
@@ -64,7 +67,7 @@ export async function setRoleFeaturesAction(
   role: "company_manager" | "employee",
   formData: FormData,
 ): Promise<ActionState> {
-  await requireSuperAdmin();
+  const { userId } = await requireSuperAdmin();
 
   const parsed = roleFeaturesSchema.safeParse({ company_id: companyId, role });
   if (!parsed.success) return { error: "بيانات غير صالحة" };
@@ -113,6 +116,8 @@ export async function setRoleFeaturesAction(
 
   if (error) return { error: error.message };
 
+  void logAudit(userId, "update", "company", companyId, { role, features: selected });
+
   revalidatePath("/portal/admin");
   revalidatePath("/portal");
   return { ok: true };
@@ -126,7 +131,7 @@ export async function updateUserAuthAction(
   _prev: ActionState | undefined,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireSuperAdmin();
+  const { userId } = await requireSuperAdmin();
 
   const profileId = formData.get("auth_profile_id") as string;
   const email = (formData.get("new_email") as string)?.trim().toLowerCase() || null;
@@ -145,6 +150,10 @@ export async function updateUserAuthAction(
   const admin = createSupabaseAdminClient();
   const { error } = await admin.auth.admin.updateUserById(profileId, updates);
   if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "profile", profileId, {
+    changed: Object.keys(updates),
+  });
 
   revalidatePath("/portal/admin");
   return { ok: true };
@@ -197,6 +206,8 @@ export async function setSuperAdminAction(
 
   if (error) return { error: error.message };
 
+  void logAudit(userId, "update", "profile", profileId, { granted: grant });
+
   revalidateTag(profileCacheTag(profileId), "default");
   revalidatePath("/portal/admin");
   revalidatePath("/portal", "layout");
@@ -243,6 +254,10 @@ export async function setUserRoleAction(
     .eq("id", parsed.data.profile_id);
 
   if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "profile", parsed.data.profile_id, {
+    role: parsed.data.role,
+  });
 
   revalidateTag(profileCacheTag(parsed.data.profile_id), "default");
   revalidatePath("/portal/admin");
@@ -296,6 +311,11 @@ export async function editProfileAction(
     .eq("id", parsed.data.profile_id);
 
   if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "profile", parsed.data.profile_id, {
+    full_name: parsed.data.full_name,
+    role: parsed.data.role,
+  });
 
   revalidateTag(profileCacheTag(parsed.data.profile_id), "default");
   revalidatePath("/portal/admin");

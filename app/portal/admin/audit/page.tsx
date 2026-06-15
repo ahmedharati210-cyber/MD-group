@@ -53,6 +53,12 @@ const payloadKeyLabels: Record<string, string> = {
   full_name: "الاسم",
   request_type: "نوع الطلب",
   responded_at: "تاريخ الرد",
+  is_active: "الحالة النشاط",
+  role: "الدور",
+  granted: "منح صلاحية سوبر أدمن",
+  changed: "الحقول المُعدَّلة",
+  features: "الميزات المُفعَّلة",
+  company_id_changed: "تغيير الشركة",
 };
 
 export const metadata = { title: "سجل التدقيق" };
@@ -135,6 +141,7 @@ const KNOWN_ENTITIES: { value: string; label: string }[] = [
   { value: "mail",             label: "بريد" },
   { value: "attendance",       label: "حضور" },
   { value: "profile",          label: "مستخدم" },
+  { value: "company",          label: "شركة" },
   { value: "document",         label: "وثيقة" },
   { value: "employee_signup_invite",   label: "رابط تسجيل موظف" },
   { value: "employee_signup_invites",  label: "رابط تسجيل موظف" },

@@ -236,15 +236,19 @@ export async function updateEmployeeAction(
   const { id, role, company_id, hr_notes, ...rest } = parsed.data;
   const admin = createSupabaseAdminClient();
 
-  // Fetch the target to enforce scoping rules.
+  // Fetch the target to enforce scoping rules and capture before-state for audit.
   const { data: target } = await admin
     .from("profiles")
-    .select("id, role, company_id")
+    .select("id, full_name, role, company_id, is_active, job_title, department")
     .eq("id", id)
     .single<{
       id: string;
+      full_name: string;
       role: "md_admin" | "company_manager" | "employee";
       company_id: string | null;
+      is_active: boolean;
+      job_title: string | null;
+      department: string | null;
     }>();
   if (!target) return { error: "الموظف غير موجود" };
 
@@ -277,6 +281,24 @@ export async function updateEmployeeAction(
   const { error } = await admin.from("profiles").update(payload).eq("id", id);
   if (error) return { error: error.message };
 
+  const effectiveCompanyId =
+    current.profile.role === "md_admin" && company_id !== undefined
+      ? company_id || null
+      : target.company_id;
+  const effectiveRole =
+    current.profile.role === "md_admin" && role ? role : target.role;
+
+  void logAudit(current.userId, "update", "profile", id, {
+    full_name: parsed.data.full_name,
+    ...(effectiveRole !== target.role ? { role: effectiveRole } : {}),
+    ...(effectiveCompanyId !== target.company_id
+      ? { company_id_changed: true }
+      : {}),
+    ...(parsed.data.is_active !== target.is_active
+      ? { is_active: parsed.data.is_active }
+      : {}),
+  });
+
   revalidatePath(`/portal/employees/${id}`);
   revalidatePath("/portal/employees");
   revalidateTag(profileCacheTag(id), "default");
@@ -286,11 +308,24 @@ export async function updateEmployeeAction(
 }
 
 export async function deactivateEmployeeAction(formData: FormData) {
-  await requireRole(["md_admin", "company_manager"]);
+  const current = await requireRole(["md_admin", "company_manager"]);
   const id = formData.get("id");
   if (typeof id !== "string") return;
+
+  const admin = createSupabaseAdminClient();
+  const { data: emp } = await admin
+    .from("profiles")
+    .select("full_name")
+    .eq("id", id)
+    .maybeSingle<{ full_name: string }>();
+
   const supabase = await createSupabaseServerClient();
   await supabase.from("profiles").update({ is_active: false }).eq("id", id);
+
+  void logAudit(current.userId, "update", "profile", id, {
+    full_name: emp?.full_name,
+    is_active: false,
+  });
   revalidatePath("/portal/employees");
   revalidatePath(`/portal/employees/${id}`);
   revalidateTag(profileCacheTag(id), "default");
