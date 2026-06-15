@@ -534,3 +534,30 @@ export async function updateTaskNotesAction(taskId: string, projectId: string, n
   revalidateTimeline(projectId);
   return { ok: true };
 }
+
+export async function updateTaskStatusAction(
+  taskId: string,
+  projectId: string,
+  status: "in_progress" | null,
+): Promise<ActionState> {
+  const { userId } = await requireUser();
+  const parsed = z.enum(["in_progress"]).nullable().safeParse(status);
+  if (!parsed.success) return { error: "حالة المهمة غير صالحة" };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("project_tasks")
+    .update({ task_status: parsed.data })
+    .eq("id", taskId);
+
+  if (error) return { error: error.message };
+
+  const project_name = await projectNameById(supabase, projectId);
+  void logAudit(userId, "update", "project_task", taskId, {
+    task_status: parsed.data,
+    ...(project_name ? { project_name } : {}),
+  });
+
+  revalidateTimeline(projectId);
+  return { ok: true };
+}

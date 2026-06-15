@@ -15,11 +15,12 @@ import { DeleteTaskButton } from "@/components/timeline/DeleteTaskButton";
 import { EditTaskButton } from "@/components/timeline/EditTaskButton";
 import { EditCategoryButton } from "@/components/timeline/EditCategoryButton";
 import { AssignEngineerButton } from "@/components/timeline/AssignEngineerButton";
+import { TaskStatusButton } from "@/components/timeline/TaskStatusButton";
 import { TimelineNav } from "@/components/timeline/TimelineNav";
 import { ProjectEstimatedDaysField } from "@/components/timeline/ProjectEstimatedDaysField";
 import { CategoryEstimatedDaysField } from "@/components/timeline/CategoryEstimatedDaysField";
 import { TaskEstimatedDaysField } from "@/components/timeline/TaskEstimatedDaysField";
-import type { ProjectStatus } from "@/types/db";
+import type { ProjectStatus, TaskWorkStatus } from "@/types/db";
 
 const statusMap: Record<ProjectStatus, { label: string; cls: string }> = {
   planning:    { label: "تصميم",                cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
@@ -43,6 +44,7 @@ type TaskRow = {
   completed_by: string | null;
   completed_at: string | null;
   assigned_to: string | null;
+  task_status: TaskWorkStatus;
   sort_order: number;
   assignee: { full_name: string } | null;
   completer: { full_name: string } | null;
@@ -86,7 +88,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       .single(),
     supabase
       .from("project_categories")
-      .select("id, name, sort_order, estimated_days, estimated_days_set_at, tasks:project_tasks(id, title, description, notes, due_date, estimated_days, estimated_days_set_at, is_completed, completed_by, completed_at, assigned_to, sort_order, assignee:assigned_to(full_name), completer:completed_by(full_name))")
+      .select("id, name, sort_order, estimated_days, estimated_days_set_at, tasks:project_tasks(id, title, description, notes, due_date, estimated_days, estimated_days_set_at, task_status, is_completed, completed_by, completed_at, assigned_to, sort_order, assignee:assigned_to(full_name), completer:completed_by(full_name))")
       .eq("project_id", id)
       .order("sort_order"),
     canManage
@@ -341,6 +343,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{task.description}</p>
                         ) : null}
                         <div className="flex flex-wrap items-center gap-2 mt-1">
+                          <TaskStatusButton
+                            taskId={task.id}
+                            projectId={id}
+                            initialStatus={task.task_status ?? null}
+                            canEdit
+                          />
                           {canManage ? (
                             <AssignEngineerButton
                               taskId={task.id}

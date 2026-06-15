@@ -2,9 +2,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
+import { toDateOnlyIso } from "@/lib/paper-expiry";
 import { PrintButton } from "@/components/timeline/PrintButton";
 import { SaveAsPdfButton } from "@/components/timeline/SaveAsPdfButton";
-import type { ProjectStatus } from "@/types/db";
+import type { ProjectStatus, TaskWorkStatus } from "@/types/db";
 
 const statusLabels: Record<ProjectStatus, string> = {
   planning:    "تصميم",
@@ -40,6 +42,7 @@ type TaskRow = {
   estimated_days: number | null;
   estimated_days_set_at: string | null;
   is_completed: boolean;
+  task_status: TaskWorkStatus;
   sort_order: number;
   assignee: { full_name: string } | null;
 };
@@ -81,7 +84,7 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
       .single(),
     supabase
       .from("project_categories")
-      .select("id, name, sort_order, estimated_days, estimated_days_set_at, tasks:project_tasks(id, title, description, due_date, estimated_days, estimated_days_set_at, is_completed, sort_order, assignee:assigned_to(full_name))")
+      .select("id, name, sort_order, estimated_days, estimated_days_set_at, tasks:project_tasks(id, title, description, due_date, estimated_days, estimated_days_set_at, task_status, is_completed, sort_order, assignee:assigned_to(full_name))")
       .eq("project_id", id)
       .order("sort_order"),
   ]);
@@ -98,7 +101,10 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
   const allTasks = categories.flatMap((c) => c.tasks);
   const totalTasks = allTasks.length;
   const completedTasks = allTasks.filter((t) => t.is_completed).length;
-  const overdueTasks = allTasks.filter((t) => !t.is_completed && t.due_date && t.due_date < today).length;
+  const overdueTasks = allTasks.filter((t) => {
+    const due = toDateOnlyIso(t.due_date);
+    return !t.is_completed && due && due < today;
+  }).length;
   const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   const printDate = new Date().toLocaleDateString("ar-LY", { year: "numeric", month: "long", day: "numeric" });
@@ -202,22 +208,23 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
                 {cat.tasks.length === 0 ? (
                   <p className="text-sm text-gray-400 px-4 py-2">لا توجد مهام.</p>
                 ) : (
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm table-fixed">
                     <thead>
                       <tr className="text-xs text-gray-500 border-b border-gray-200">
-                        <th className="py-1 px-2 w-6" />
+                        <th className="py-1 px-2 w-7" />
                         <th className="py-1 px-2 text-right">المهمة</th>
-                        <th className="py-1 px-2 text-right">المسؤول</th>
-                        <th className="py-1 px-2 text-right whitespace-nowrap">أيام متبقية</th>
-                        <th className="py-1 px-2 text-right whitespace-nowrap">الاستحقاق</th>
+                        <th className="py-1 px-2 text-right w-20 whitespace-nowrap">الحالة</th>
+                        <th className="py-1 px-2 text-right w-[88px] whitespace-nowrap">أيام متبقية</th>
+                        <th className="py-1 px-2 text-right w-24 whitespace-nowrap">الاستحقاق</th>
                       </tr>
                     </thead>
                     <tbody>
                       {cat.tasks.map((task) => {
-                        const isOverdue = !task.is_completed && task.due_date && task.due_date < today;
+                        const dueDateOnly = toDateOnlyIso(task.due_date);
+                        const isOverdue = !task.is_completed && dueDateOnly && dueDateOnly < today;
                         return (
                           <tr key={task.id} className="border-b border-gray-100">
-                            <td className="py-2 px-2 w-6 text-center">
+                            <td className="py-2 px-2 w-7 text-center">
                               {/* Checkbox */}
                               <span className={`inline-block w-4 h-4 border-2 rounded-xs align-middle ${task.is_completed ? "bg-gray-900 border-gray-900" : "border-gray-400"}`}>
                                 {task.is_completed ? (
@@ -227,20 +234,20 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
                                 ) : null}
                               </span>
                             </td>
-                            <td className={`py-2 px-2 flex-1 ${task.is_completed ? "line-through text-gray-400" : ""}`}>
-                              {task.title}
+                            <td className={`py-2 px-2 truncate ${task.is_completed ? "line-through text-gray-400" : ""}`}>
+                              <span className="block truncate">{task.title}</span>
                               {task.description ? (
-                                <span className="block text-xs text-gray-500">{task.description}</span>
+                                <span className="block text-xs text-gray-500 truncate">{task.description}</span>
                               ) : null}
                             </td>
                             <td className="py-2 px-2 text-gray-500 text-xs whitespace-nowrap">
-                              {task.assignee?.full_name ?? "—"}
+                              {task.task_status === "in_progress" ? "قيد العمل" : "—"}
                             </td>
                             <td className="py-2 px-2 text-gray-600 text-xs whitespace-nowrap tabular-nums">
                               {remainingLabel(task.estimated_days, task.estimated_days_set_at, today)}
                             </td>
                             <td className={`py-2 px-2 text-xs whitespace-nowrap ${isOverdue ? "text-red-600 font-semibold" : "text-gray-500"}`}>
-                              {task.due_date ?? "—"}
+                              {task.due_date ? formatDate(task.due_date) : "—"}
                               {isOverdue ? " ⚠" : ""}
                             </td>
                           </tr>

@@ -422,6 +422,8 @@ type ProjectPersonalDraftInsert = {
   updated_at?: string;
 };
 
+export type TaskWorkStatus = "in_progress" | null;
+
 export interface ProjectTask {
   id: string;
   category_id: string;
@@ -433,6 +435,7 @@ export interface ProjectTask {
   due_date: string | null;
   estimated_days: number | null;
   estimated_days_set_at: string | null;
+  task_status: TaskWorkStatus;
   is_completed: boolean;
   completed_by: string | null;
   completed_at: string | null;
@@ -450,6 +453,7 @@ type ProjectTaskInsert = {
   due_date?: string | null;
   estimated_days?: number | null;
   estimated_days_set_at?: string | null;
+  task_status?: TaskWorkStatus;
   is_completed?: boolean;
   completed_by?: string | null;
   completed_at?: string | null;

@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { ProjectStatus } from "@/types/db";
+import { formatDate } from "@/lib/utils";
+import { toDateOnlyIso } from "@/lib/paper-expiry";
+import type { ProjectStatus, TaskWorkStatus } from "@/types/db";
 
 const statusLabels: Record<ProjectStatus, string> = {
   planning:    "تصميم",
@@ -21,6 +23,7 @@ type TaskRow = {
   estimated_days: number | null;
   estimated_days_set_at: string | null;
   is_completed: boolean;
+  task_status: TaskWorkStatus;
   sort_order: number;
   assignee: { full_name: string } | null;
 };
@@ -80,9 +83,10 @@ function buildHtml(
   const allTasks = categories.flatMap((c) => c.tasks);
   const total = allTasks.length;
   const done = allTasks.filter((t) => t.is_completed).length;
-  const overdue = allTasks.filter(
-    (t) => !t.is_completed && t.due_date && t.due_date < today,
-  ).length;
+  const overdue = allTasks.filter((t) => {
+    const due = toDateOnlyIso(t.due_date);
+    return !t.is_completed && due && due < today;
+  }).length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const printDate = new Date().toLocaleDateString("ar-LY", {
     year: "numeric",
@@ -98,11 +102,14 @@ function buildHtml(
           ? `<tr><td colspan="5" style="color:#999;padding:8px 12px;">لا توجد مهام</td></tr>`
           : cat.tasks
               .map((task) => {
+                const dueDateOnly = toDateOnlyIso(task.due_date);
                 const isOverdue =
-                  !task.is_completed && task.due_date && task.due_date < today;
+                  !task.is_completed && dueDateOnly && dueDateOnly < today;
                 const checkbox = task.is_completed
                   ? `<span class="cb cb-done">✓</span>`
                   : `<span class="cb cb-empty"></span>`;
+                const dueLabel = task.due_date ? formatDate(task.due_date) : "—";
+                const statusLabel = task.task_status === "in_progress" ? "قيد العمل" : "—";
                 return `
               <tr class="${task.is_completed ? "done" : ""}${isOverdue ? " overdue" : ""}">
                 <td class="td-cb">${checkbox}</td>
@@ -110,10 +117,10 @@ function buildHtml(
                   ${escapeHtml(task.title)}
                   ${task.description ? `<div class="sub">${escapeHtml(task.description)}</div>` : ""}
                 </td>
-                <td class="td-meta">${escapeHtml(task.assignee?.full_name) || "—"}</td>
+                <td class="td-meta">${escapeHtml(statusLabel)}</td>
                 <td class="td-meta">${remainingLabel(task.estimated_days, task.estimated_days_set_at, today)}</td>
                 <td class="td-meta${isOverdue ? " overdue-text" : ""}">
-                  ${escapeHtml(task.due_date) || "—"}${isOverdue ? " ⚠" : ""}
+                  ${escapeHtml(dueLabel)}${isOverdue ? " ⚠" : ""}
                 </td>
               </tr>`;
               })
@@ -128,7 +135,14 @@ function buildHtml(
             ${catDone}/${cat.tasks.length} تم
           </span>
         </div>
-        <table>
+        <table style="table-layout:fixed;width:100%">
+          <colgroup>
+            <col style="width:28px">
+            <col>
+            <col style="width:80px">
+            <col style="width:88px">
+            <col style="width:96px">
+          </colgroup>
           <tbody>${tasksHtml}</tbody>
         </table>
       </div>`;
@@ -232,12 +246,16 @@ function buildHtml(
       font-size: 11pt;
     }
     .cat-header span { font-size: 9pt; color: #666; }
-    table { width: 100%; border-collapse: collapse; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     tr { border-bottom: 1px solid #f0f0f0; }
     tr.done .td-title { color: #aaa; text-decoration: line-through; }
     td { padding: 6px 10px; vertical-align: middle; font-size: 10pt; }
     .td-cb { width: 28px; text-align: center; }
-    .td-title { flex: 1; }
+    .td-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .td-meta { white-space: nowrap; color: #666; font-size: 9pt; text-align: left; }
     .sub { font-size: 8.5pt; color: #888; margin-top: 2px; }
 
@@ -348,7 +366,7 @@ export async function GET(
     supabase
       .from("project_categories")
       .select(
-        "id, name, sort_order, estimated_days, estimated_days_set_at, tasks:project_tasks(id, title, description, due_date, estimated_days, estimated_days_set_at, is_completed, sort_order, assignee:assigned_to(full_name))",
+        "id, name, sort_order, estimated_days, estimated_days_set_at, tasks:project_tasks(id, title, description, due_date, estimated_days, estimated_days_set_at, task_status, is_completed, sort_order, assignee:assigned_to(full_name))",
       )
       .eq("project_id", id)
       .order("sort_order"),
