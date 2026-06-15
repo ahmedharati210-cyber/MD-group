@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { requireRole } from "@/lib/auth";
+import { requireFeature, requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { formatTime } from "@/lib/utils";
@@ -15,6 +15,7 @@ export default async function NewAttendancePage({
 }: {
   searchParams: SearchParams;
 }) {
+  await requireFeature("attendance");
   const { profile } = await requireRole(["md_admin", "company_manager"]);
   const { date, profileId } = await searchParams;
   const today = new Date().toISOString().slice(0, 10);

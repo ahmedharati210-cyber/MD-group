@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { passportStorageFileName } from "@/lib/passport-archive-name";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
@@ -211,5 +212,6 @@ export async function submitOpenDolceSignupAction(
     return { error: insErr.message ?? "تعذّر حفظ الطلب." };
   }
 
+  revalidateTag("badges", "default");
   return { ok: true };
 }

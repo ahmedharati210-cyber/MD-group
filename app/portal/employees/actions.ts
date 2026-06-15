@@ -13,10 +13,9 @@ import {
   DOLCE_SIGNUP_INVITE_MAX_USES,
   DOLCE_SIGNUP_INVITE_VALIDITY_DAYS,
 } from "@/lib/dolce-signup-invite-config";
-import { getDolceSignupCompanyId } from "@/lib/dolce-signup-company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { getCompanyData } from "@/lib/company";
-import { isMdManagerFeatureAllowed } from "@/lib/features";
+import { canAccessDolceEmployeeSignup } from "@/lib/dolce-signup-company";
 import { logAudit } from "@/lib/audit";
 
 const createSchema = z.object({
@@ -306,8 +305,7 @@ export type InviteTokenState = {
 };
 
 /**
- * Creates a reusable signup invite for Dolce employees under «الطريق الصحيح» only
- * (seed company slug `company-two`). Cap and validity are defined on the invite row.
+ * Creates a reusable signup invite for employees. Cap and validity are defined on the invite row.
  */
 export async function generateInviteTokenAction(
   _prev: InviteTokenState | undefined,
@@ -315,49 +313,39 @@ export async function generateInviteTokenAction(
 ): Promise<InviteTokenState> {
   const current = await requireRole(["md_admin", "company_manager"]);
 
-  const dolceCompanyId = await getDolceSignupCompanyId();
-  if (!dolceCompanyId) {
-    return {
-      error:
-        "لم يتم العثور على شركة الطريق الصحيح في النظام. اتصل بالدعم الفني.",
-    };
-  }
+  let company_id: string | null = null;
 
   if (current.profile.role === "company_manager") {
     if (!current.profile.company_id) {
       return { error: "لم يتم ربط حسابك بشركة." };
     }
-    if (current.profile.company_id !== dolceCompanyId) {
+    const company = await getCompanyData(current.profile.company_id);
+    if (!company?.enabled_features?.includes("employee_signup")) {
       return {
         error:
-          "رابط تسجيل Dolce متاح لمديري شركة الطريق الصحيح فقط.",
+          "طلبات التوظيف غير مفعّلة لشركتك. يفعّلها Super Admin من لوحة الإدارة.",
       };
     }
+    company_id = current.profile.company_id;
   }
 
   if (current.profile.role === "md_admin") {
     const shellId = await getShellCompanyIdForProfile(current.profile);
-    if (!shellId || shellId !== dolceCompanyId) {
-      return {
-        error:
-          "رابط تسجيل Dolce متاح عند اختيار شركة الطريق الصحيح كنشطة فقط.",
-      };
+    if (!shellId) {
+      return { error: "اختر شركة نشطة من القائمة أولاً." };
     }
-    const shellCompany = await getCompanyData(shellId);
-    if (
-      !isMdManagerFeatureAllowed(
-        "employee_signup",
-        shellCompany?.enabled_features ?? null,
-      )
-    ) {
+    if (!(await canAccessDolceEmployeeSignup(current.profile, shellId))) {
       return {
         error:
           "طلبات التوظيف غير مفعّلة لشركتك النشطة. يفعّلها Super Admin من لوحة الإدارة.",
       };
     }
+    company_id = shellId;
   }
 
-  const company_id = dolceCompanyId;
+  if (!company_id) {
+    return { error: "لم يتم تحديد الشركة." };
+  }
 
   const token = crypto.randomUUID();
   const expires = new Date(
@@ -420,7 +408,7 @@ export type DeleteSignupInviteState = {
 
 /**
  * Removes an invite campaign row; the URL stops working. Linked signup rows keep
- * `invite_id` null (on delete set null). Dolce company access only.
+ * `invite_id` null (on delete set null).
  */
 export async function deleteSignupInviteAction(
   _prev: DeleteSignupInviteState | undefined,
@@ -433,46 +421,38 @@ export async function deleteSignupInviteAction(
     return { error: "معرف الرابط غير صالح." };
   }
 
-  const dolceCompanyId = await getDolceSignupCompanyId();
-  if (!dolceCompanyId) {
-    return {
-      error:
-        "لم يتم العثور على شركة الطريق الصحيح في النظام. اتصل بالدعم الفني.",
-    };
-  }
+  let allowedCompanyId: string | null = null;
 
   if (current.profile.role === "company_manager") {
     if (!current.profile.company_id) {
       return { error: "لم يتم ربط حسابك بشركة." };
     }
-    if (current.profile.company_id !== dolceCompanyId) {
+    const company = await getCompanyData(current.profile.company_id);
+    if (!company?.enabled_features?.includes("employee_signup")) {
       return {
         error:
-          "روابط تسجيل Dolce متاحة لمديري شركة الطريق الصحيح فقط.",
+          "طلبات التوظيف غير مفعّلة لشركتك. يفعّلها Super Admin من لوحة الإدارة.",
       };
     }
+    allowedCompanyId = current.profile.company_id;
   }
 
   if (current.profile.role === "md_admin") {
     const shellId = await getShellCompanyIdForProfile(current.profile);
-    if (!shellId || shellId !== dolceCompanyId) {
-      return {
-        error:
-          "روابط تسجيل Dolce متاحة عند اختيار شركة الطريق الصحيح كنشطة فقط.",
-      };
+    if (!shellId) {
+      return { error: "اختر شركة نشطة من القائمة أولاً." };
     }
-    const shellCompany = await getCompanyData(shellId);
-    if (
-      !isMdManagerFeatureAllowed(
-        "employee_signup",
-        shellCompany?.enabled_features ?? null,
-      )
-    ) {
+    if (!(await canAccessDolceEmployeeSignup(current.profile, shellId))) {
       return {
         error:
           "طلبات التوظيف غير مفعّلة لشركتك النشطة. يفعّلها Super Admin من لوحة الإدارة.",
       };
     }
+    allowedCompanyId = shellId;
+  }
+
+  if (!allowedCompanyId) {
+    return { error: "صلاحيات غير كافية." };
   }
 
   const admin = createSupabaseAdminClient();
@@ -482,7 +462,7 @@ export async function deleteSignupInviteAction(
     .eq("id", rawId)
     .maybeSingle<{ id: string; company_id: string }>();
 
-  if (!row || row.company_id !== dolceCompanyId) {
+  if (!row || row.company_id !== allowedCompanyId) {
     return { error: "الرابط غير موجود أو غير مصرّح بحذفه." };
   }
 

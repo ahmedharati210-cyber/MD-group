@@ -55,14 +55,12 @@ type BadgeParams = {
   role: UserRole;
   companyId: string | null;
   isSuperAdmin: boolean;
-  /** Dolce employee signup (slug `company-two` / الطريق الصحيح); signup badges scoped to this company */
-  dolceSignupCompanyId: string | null;
-  /** From layout: `canAccessDolceEmployeeSignup` (respects employee_signup for md_admin). */
+  /** From layout: `resolveDolceEmployeeSignupAccess` (respects employee_signup). */
   includeDolceSignupBadges: boolean;
 };
 
 function badgeCacheKey(params: BadgeParams): string {
-  return `badges-${params.userId}-${params.isEmployee ? "emp" : "mgr"}-${params.isSuperAdmin ? "sa" : "ns"}`;
+  return `badges-${params.userId}-${params.isEmployee ? "emp" : "mgr"}-${params.isSuperAdmin ? "sa" : "ns"}-${params.companyId ?? "all"}-${params.includeDolceSignupBadges ? "signup" : "nosignup"}`;
 }
 
 async function fetchBadgeCountsData(
@@ -75,22 +73,25 @@ async function fetchBadgeCountsData(
     role,
     companyId,
     isSuperAdmin,
-    dolceSignupCompanyId,
     includeDolceSignupBadges,
   } = params;
 
   const supabase = createTokenClient(accessToken);
 
   const canSeeDolceSignupBadge =
-    !!dolceSignupCompanyId && !isEmployee && includeDolceSignupBadges;
+    !isEmployee && includeDolceSignupBadges;
 
   const pendingSignupPromise = (async (): Promise<number> => {
-    if (!canSeeDolceSignupBadge || !dolceSignupCompanyId) return 0;
-    const { count } = await supabase
+    if (!canSeeDolceSignupBadge) return 0;
+    let q = supabase
       .from("employee_signup_requests")
       .select("id", { count: "exact", head: true })
-      .eq("status", "pending")
-      .eq("company_id", dolceSignupCompanyId);
+      .eq("status", "pending");
+    // Company managers only see their company; md_admin / super_admin see all pending (RLS-scoped).
+    if (role === "company_manager" && companyId) {
+      q = q.eq("company_id", companyId);
+    }
+    const { count } = await q;
     return count ?? 0;
   })();
 

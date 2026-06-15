@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { requireRole } from "@/lib/auth";
+import { requireFeature } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function csvEscape(value: unknown): string {
@@ -12,7 +12,7 @@ function csvEscape(value: unknown): string {
 }
 
 export async function GET(req: NextRequest) {
-  await requireRole(["md_admin", "company_manager"]);
+  await requireFeature("attendance", ["md_admin", "company_manager"]);
 
   const { searchParams } = new URL(req.url);
   const date = searchParams.get("date");

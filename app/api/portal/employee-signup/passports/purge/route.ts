@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
-import {
-  canAccessDolceEmployeeSignup,
-  getDolceSignupCompanyId,
-} from "@/lib/dolce-signup-company";
+import { canAccessDolceEmployeeSignup } from "@/lib/dolce-signup-company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
@@ -13,21 +10,28 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
  */
 export async function POST() {
   const current = await requireRole(["md_admin", "company_manager"]);
-  const dolceId = await getDolceSignupCompanyId();
   const shellId = await getShellCompanyIdForProfile(current.profile);
-  if (
-    !dolceId ||
-    !(await canAccessDolceEmployeeSignup(current.profile, dolceId, shellId))
-  ) {
+  if (!(await canAccessDolceEmployeeSignup(current.profile, shellId))) {
     return NextResponse.json({ error: "غير مصرّح" }, { status: 403 });
   }
 
+  const queryCompanyId = current.profile.is_super_admin
+    ? null
+    : current.profile.role === "md_admin"
+      ? shellId
+      : current.profile.company_id;
+
   const admin = createSupabaseAdminClient();
-  const { data: rows, error: qErr } = await admin
+  let query = admin
     .from("employee_signup_requests")
     .select("id, passport_image_path")
-    .eq("company_id", dolceId)
     .not("passport_image_path", "is", null);
+
+  if (queryCompanyId) {
+    query = query.eq("company_id", queryCompanyId);
+  }
+
+  const { data: rows, error: qErr } = await query;
 
   if (qErr) {
     return NextResponse.json({ error: qErr.message }, { status: 500 });
@@ -49,21 +53,30 @@ export async function POST() {
     );
   }
 
-  const { error: upErr } = await admin
+  let updateQuery = admin
     .from("employee_signup_requests")
     .update({ passport_image_path: null })
-    .eq("company_id", dolceId)
     .not("passport_image_path", "is", null);
+
+  if (queryCompanyId) {
+    updateQuery = updateQuery.eq("company_id", queryCompanyId);
+  }
+
+  const { error: upErr } = await updateQuery;
 
   if (upErr) {
     return NextResponse.json({ error: upErr.message }, { status: 500 });
   }
 
-  const { data: dolceCo } = await admin
-    .from("companies")
-    .select("name")
-    .eq("id", dolceId)
-    .maybeSingle<{ name: string }>();
+  let company_name: string | null = null;
+  if (queryCompanyId) {
+    const { data: companyRow } = await admin
+      .from("companies")
+      .select("name")
+      .eq("id", queryCompanyId)
+      .maybeSingle<{ name: string }>();
+    company_name = companyRow?.name ?? null;
+  }
 
   await admin.from("audit_log").insert({
     actor_id: current.userId,
@@ -71,7 +84,7 @@ export async function POST() {
     entity: "employee_signup_requests",
     entity_id: null,
     payload: {
-      ...(dolceCo?.name ? { company_name: dolceCo.name } : {}),
+      ...(company_name ? { company_name } : {}),
       removed_paths: paths.length,
     },
   });

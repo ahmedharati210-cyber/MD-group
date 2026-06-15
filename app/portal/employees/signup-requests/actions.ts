@@ -7,7 +7,6 @@ import { profileCacheTag, requireRole } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import {
   canAccessDolceEmployeeSignup,
-  getDolceSignupCompanyId,
 } from "@/lib/dolce-signup-company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import type { BloodType, Gender } from "@/types/db";
@@ -82,29 +81,23 @@ export async function approveSignupRequestAction(
     return { error: "الطلب غير موجود أو تمت معالجته." };
   }
 
-  const dolceCompanyIdApprove = await getDolceSignupCompanyId();
-  if (dolceCompanyIdApprove && row.company_id !== dolceCompanyIdApprove) {
-    return { error: "هذا الطلب لا يخص شركة الطريق الصحيح." };
-  }
-
-  if (
-    current.profile.role === "company_manager" &&
-    row.company_id !== current.profile.company_id
-  ) {
-    return { error: "صلاحيات غير كافية." };
-  }
-
-  if (current.profile.role === "md_admin") {
-    const shellId = await getShellCompanyIdForProfile(current.profile);
+  if (!current.profile.is_super_admin) {
     if (
-      !dolceCompanyIdApprove ||
-      !(await canAccessDolceEmployeeSignup(
-        current.profile,
-        dolceCompanyIdApprove,
-        shellId,
-      ))
+      current.profile.role === "company_manager" &&
+      row.company_id !== current.profile.company_id
     ) {
       return { error: "صلاحيات غير كافية." };
+    }
+
+    if (current.profile.role === "md_admin") {
+      const shellId = await getShellCompanyIdForProfile(current.profile);
+      if (
+        !shellId ||
+        row.company_id !== shellId ||
+        !(await canAccessDolceEmployeeSignup(current.profile, shellId))
+      ) {
+        return { error: "صلاحيات غير كافية." };
+      }
     }
   }
 
@@ -205,6 +198,7 @@ export async function approveSignupRequestAction(
   revalidateTag(profileCacheTag(uid), "default");
   revalidateTag("employees", "default");
   revalidateTag("dashboard", "default");
+  revalidateTag("badges", "default");
   return { ok: true, internalAuthEmail: syntheticEmail };
 }
 
@@ -244,29 +238,23 @@ export async function rejectSignupRequestAction(
     return { error: "الطلب غير موجود أو تمت معالجته." };
   }
 
-  const dolceCompanyIdReject = await getDolceSignupCompanyId();
-  if (dolceCompanyIdReject && row.company_id !== dolceCompanyIdReject) {
-    return { error: "هذا الطلب لا يخص شركة الطريق الصحيح." };
-  }
-
-  if (
-    current.profile.role === "company_manager" &&
-    row.company_id !== current.profile.company_id
-  ) {
-    return { error: "صلاحيات غير كافية." };
-  }
-
-  if (current.profile.role === "md_admin") {
-    const shellId = await getShellCompanyIdForProfile(current.profile);
+  if (!current.profile.is_super_admin) {
     if (
-      !dolceCompanyIdReject ||
-      !(await canAccessDolceEmployeeSignup(
-        current.profile,
-        dolceCompanyIdReject,
-        shellId,
-      ))
+      current.profile.role === "company_manager" &&
+      row.company_id !== current.profile.company_id
     ) {
       return { error: "صلاحيات غير كافية." };
+    }
+
+    if (current.profile.role === "md_admin") {
+      const shellId = await getShellCompanyIdForProfile(current.profile);
+      if (
+        !shellId ||
+        row.company_id !== shellId ||
+        !(await canAccessDolceEmployeeSignup(current.profile, shellId))
+      ) {
+        return { error: "صلاحيات غير كافية." };
+      }
     }
   }
 
@@ -300,5 +288,6 @@ export async function rejectSignupRequestAction(
   });
 
   revalidatePath("/portal/employees/signup-requests");
+  revalidateTag("badges", "default");
   return { ok: true };
 }

@@ -11,6 +11,7 @@ import {
   User,
 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
+import { isAttendanceEnabled } from "@/lib/features";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { DeleteButton } from "@/components/portal/DeleteButton";
@@ -68,13 +69,17 @@ export default async function EmployeeProfilePage({
 
   if (!person) notFound();
 
+  const showAttendance = isAttendanceEnabled();
+
   const [{ data: attendance }, { data: docs }] = await Promise.all([
-    supabase
-      .from("attendance")
-      .select("*")
-      .eq("profile_id", id)
-      .order("date", { ascending: false })
-      .limit(20),
+    showAttendance
+      ? supabase
+          .from("attendance")
+          .select("*")
+          .eq("profile_id", id)
+          .order("date", { ascending: false })
+          .limit(20)
+      : Promise.resolve({ data: null }),
     supabase
       .from("documents")
       .select("id, title, category, created_at, issued_on, expires_on")
@@ -197,6 +202,7 @@ export default async function EmployeeProfilePage({
 
         {/* ── Activity ─────────────────────────────────────── */}
         <div className="grid md:grid-cols-2 gap-4">
+          {showAttendance ? (
           <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
             <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 flex items-center gap-2 mb-4">
               <CalendarCheck className="w-5 h-5 text-primary-600 dark:text-primary-400" />
@@ -241,6 +247,7 @@ export default async function EmployeeProfilePage({
               </ul>
             )}
           </section>
+          ) : null}
 
           <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
             <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 flex items-center gap-2 mb-4">

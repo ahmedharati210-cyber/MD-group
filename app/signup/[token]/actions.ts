@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { passportStorageFileName } from "@/lib/passport-archive-name";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
@@ -233,6 +234,7 @@ export async function submitEmployeeSignupAction(
       return { error: insErr.message ?? "تعذّر حفظ الطلب." };
     }
 
+    revalidateTag("badges", "default");
     return { ok: true };
   }
 
@@ -315,5 +317,6 @@ export async function submitEmployeeSignupAction(
     return { error: updErr.message ?? "تعذّر حفظ الطلب." };
   }
 
+  revalidateTag("badges", "default");
   return { ok: true };
 }

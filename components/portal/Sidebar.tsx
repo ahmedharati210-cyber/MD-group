@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import {
   getVisibleFeatures,
   isMdManagerFeatureAllowed,
+  isPlatformFeatureEnabled,
   MD_MANAGER_CORE_FEATURES,
   OWNER_FEATURES,
 } from "@/lib/features";
@@ -237,6 +238,7 @@ export function Sidebar({
       return false;
     }
     if (!item.feature) return true;
+    if (!isPlatformFeatureEnabled(item.feature)) return false;
     if (isSuperAdmin) return true;
     if (role === "md_admin" && !isSuperAdmin) {
       // Optional company modules (projects, reports, …) are reached from the company hub only,

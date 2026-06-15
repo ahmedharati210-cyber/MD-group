@@ -1,5 +1,4 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getDolceSignupCompanyId } from "@/lib/dolce-signup-company";
 import { InviteLinkGenerator } from "@/components/portal/InviteLinkGenerator";
 import {
   SignupInvitesList,
@@ -7,20 +6,19 @@ import {
 } from "@/components/portal/SignupInvitesList";
 
 export async function DolceSignupInvitesSection({
+  companyId,
   companyNameAr,
 }: {
+  companyId: string;
   companyNameAr: string;
 }) {
-  const dolceId = await getDolceSignupCompanyId();
-  if (!dolceId) return null;
-
   const supabase = await createSupabaseServerClient();
   const { data: rows } = await supabase
     .from("employee_signup_invites")
     .select(
       "id, invite_token, token_expires_at, max_uses, use_count, created_at",
     )
-    .eq("company_id", dolceId)
+    .eq("company_id", companyId)
     .order("created_at", { ascending: false });
 
   const base =

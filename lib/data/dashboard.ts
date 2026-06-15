@@ -4,6 +4,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isAttendanceEnabled } from "@/lib/features";
 import type { ProjectStatus } from "@/types/db";
 
 export type DashboardCounts = {
@@ -98,7 +99,9 @@ async function fetchDashboardData(
   ] = await Promise.all([
     supabase.from("companies").select("id", { count: "exact", head: true }),
     supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "employee"),
-    supabase.from("attendance").select("id", { count: "exact", head: true }).eq("date", today),
+    isAttendanceEnabled()
+      ? supabase.from("attendance").select("id", { count: "exact", head: true }).eq("date", today)
+      : Promise.resolve({ count: 0 }),
     supabase.from("documents").select("id", { count: "exact", head: true }),
     supabase.from("mail").select("id", { count: "exact", head: true }),
     supabase.from("contacts").select("id", { count: "exact", head: true }),

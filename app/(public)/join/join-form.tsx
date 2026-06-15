@@ -170,7 +170,7 @@ export function JoinForm({ companyNameAr }: { companyNameAr: string }) {
 
       <Field label="رقم الوظيفي (رقم البصمة)" required>
         <p className="text-xs mb-2 leading-relaxed text-gray-500 dark:text-gray-400">
-          الرقم المعتمد في نظام الحضور والإنصراف
+          رقم الموظف الخارجي
         </p>
         <div className="relative">
           <Hash

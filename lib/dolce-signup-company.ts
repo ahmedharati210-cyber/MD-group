@@ -3,7 +3,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getCompanyData } from "@/lib/company";
-import { isMdManagerFeatureAllowed } from "@/lib/features";
+import { isFeatureEnabled, isMdManagerFeatureAllowed } from "@/lib/features";
 import type { AppFeature, Profile } from "@/types/db";
 
 /**
@@ -44,8 +44,8 @@ export async function getDolceSignupCompanyDisplay(): Promise<{
 }
 
 /**
- * Dolce signup UI/API: super admin; company managers of the Dolce company;
- * MD Group managers only when their active shell is Dolce **and** the company
+ * Employee signup UI/API: super admin; company managers when their company has
+ * `employee_signup` enabled; MD Group managers when their active shell company
  * has `employee_signup` in `enabled_features`.
  *
  * Pass `shellEnabledFeatures` when the shell company row is already loaded
@@ -53,54 +53,45 @@ export async function getDolceSignupCompanyDisplay(): Promise<{
  */
 export function resolveDolceEmployeeSignupAccess(
   profile: Pick<Profile, "role" | "company_id" | "is_super_admin">,
-  dolceCompanyId: string | null,
   shellCompanyId?: string | null,
   shellEnabledFeatures?: AppFeature[] | null,
 ): boolean {
-  if (!dolceCompanyId) return false;
   if (profile.is_super_admin) return true;
   if (profile.role === "md_admin") {
-    if (shellCompanyId == null || shellCompanyId !== dolceCompanyId) {
-      return false;
-    }
+    if (shellCompanyId == null) return false;
     return isMdManagerFeatureAllowed(
       "employee_signup",
       shellEnabledFeatures ?? null,
     );
   }
-  if (
-    profile.role === "company_manager" &&
-    profile.company_id === dolceCompanyId
-  ) {
-    return true;
+  if (profile.role === "company_manager") {
+    return isFeatureEnabled("employee_signup", shellEnabledFeatures);
   }
   return false;
 }
 
 export async function canAccessDolceEmployeeSignup(
   profile: Pick<Profile, "role" | "company_id" | "is_super_admin">,
-  dolceCompanyId: string | null,
   /** Active portal company (cookie for MD Group managers). */
   shellCompanyId?: string | null,
 ): Promise<boolean> {
-  if (!dolceCompanyId) return false;
   if (profile.is_super_admin) return true;
   if (profile.role === "md_admin") {
-    if (shellCompanyId == null || shellCompanyId !== dolceCompanyId) {
-      return false;
-    }
+    if (shellCompanyId == null) return false;
     const row = await getCompanyData(shellCompanyId);
     return resolveDolceEmployeeSignupAccess(
       profile,
-      dolceCompanyId,
       shellCompanyId,
       row?.enabled_features ?? null,
     );
   }
-  return resolveDolceEmployeeSignupAccess(
-    profile,
-    dolceCompanyId,
-    shellCompanyId,
-    null,
-  );
+  if (profile.role === "company_manager" && profile.company_id) {
+    const row = await getCompanyData(profile.company_id);
+    return resolveDolceEmployeeSignupAccess(
+      profile,
+      profile.company_id,
+      row?.enabled_features ?? null,
+    );
+  }
+  return false;
 }

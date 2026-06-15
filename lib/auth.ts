@@ -11,6 +11,7 @@ import {
 import {
   getVisibleFeatures,
   isMdManagerFeatureAllowed,
+  isPlatformFeatureEnabled,
   OWNER_FEATURES,
 } from "@/lib/features";
 import { getCompanyData } from "@/lib/company";
@@ -115,6 +116,10 @@ export async function requireFeature(
   roles?: Profile["role"][],
 ) {
   const current = await requireUser();
+
+  if (!isPlatformFeatureEnabled(feature)) {
+    redirect("/portal");
+  }
 
   if (roles && !current.profile.is_super_admin && !roles.includes(current.profile.role)) {
     redirect("/portal");

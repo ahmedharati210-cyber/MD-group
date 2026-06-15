@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
-import {
-  canAccessDolceEmployeeSignup,
-  getDolceSignupCompanyId,
-} from "@/lib/dolce-signup-company";
+import { canAccessDolceEmployeeSignup } from "@/lib/dolce-signup-company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
@@ -16,14 +13,16 @@ export async function GET(
   ctx: { params: Promise<{ requestId: string }> },
 ) {
   const current = await requireRole(["md_admin", "company_manager"]);
-  const dolceId = await getDolceSignupCompanyId();
   const shellId = await getShellCompanyIdForProfile(current.profile);
-  if (
-    !dolceId ||
-    !(await canAccessDolceEmployeeSignup(current.profile, dolceId, shellId))
-  ) {
+  if (!(await canAccessDolceEmployeeSignup(current.profile, shellId))) {
     return NextResponse.json({ error: "غير مصرّح" }, { status: 403 });
   }
+
+  const queryCompanyId = current.profile.is_super_admin
+    ? null
+    : current.profile.role === "md_admin"
+      ? shellId
+      : current.profile.company_id;
 
   const { requestId } = await ctx.params;
   const admin = createSupabaseAdminClient();
@@ -36,7 +35,12 @@ export async function GET(
       passport_image_path: string | null;
     }>();
 
-  if (qErr || !row || row.company_id !== dolceId || !row.passport_image_path) {
+  if (
+    qErr ||
+    !row ||
+    !row.passport_image_path ||
+    (queryCompanyId && row.company_id !== queryCompanyId)
+  ) {
     return NextResponse.json({ error: "غير موجود" }, { status: 404 });
   }
 

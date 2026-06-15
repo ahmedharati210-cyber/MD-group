@@ -2,7 +2,7 @@
   "id": "/portal",
   "name": "MD Group — الإدارة الداخلية",
   "short_name": "MD Group",
-  "description": "منصة الإدارة الداخلية لمجموعة MD: الموظفون، الحضور، المشاريع، الطلبات، والمراسلات.",
+  "description": "منصة الإدارة الداخلية لمجموعة MD: الموظفون، المشاريع، الطلبات، والمراسلات.",
   "start_url": "/portal",
   "scope": "/portal",
   "display": "standalone",

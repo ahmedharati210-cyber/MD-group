@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: "%s | MD Group",
   },
   description:
-    "MD Group — منصة إدارة الشركات الداخلية: الموظفون، الحضور، الأوراق الرسمية، البريد، وجهات الاتصال.",
+    "MD Group — منصة إدارة الشركات الداخلية: الموظفون، الأوراق الرسمية، البريد، وجهات الاتصال.",
   keywords: "MD Group, إدارة, موارد بشرية, أوراق رسمية, شركات",
   manifest: "/portal-manifest.json",
   icons: {

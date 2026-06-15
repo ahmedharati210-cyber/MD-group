@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import JSZip from "jszip";
 import { requireRole } from "@/lib/auth";
-import {
-  canAccessDolceEmployeeSignup,
-  getDolceSignupCompanyId,
-} from "@/lib/dolce-signup-company";
+import { canAccessDolceEmployeeSignup } from "@/lib/dolce-signup-company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { passportZipEntryFileName } from "@/lib/passport-archive-name";
@@ -25,21 +22,28 @@ function missingPassportNoteName(
  */
 export async function GET() {
   const current = await requireRole(["md_admin", "company_manager"]);
-  const dolceId = await getDolceSignupCompanyId();
   const shellId = await getShellCompanyIdForProfile(current.profile);
-  if (
-    !dolceId ||
-    !(await canAccessDolceEmployeeSignup(current.profile, dolceId, shellId))
-  ) {
+  if (!(await canAccessDolceEmployeeSignup(current.profile, shellId))) {
     return NextResponse.json({ error: "غير مصرّح" }, { status: 403 });
   }
 
+  const queryCompanyId = current.profile.is_super_admin
+    ? null
+    : current.profile.role === "md_admin"
+      ? shellId
+      : current.profile.company_id;
+
   const admin = createSupabaseAdminClient();
-  const { data: rows, error: qErr } = await admin
+  let query = admin
     .from("employee_signup_requests")
     .select("id, full_name, phone, passport_image_path")
-    .eq("company_id", dolceId)
     .not("passport_image_path", "is", null);
+
+  if (queryCompanyId) {
+    query = query.eq("company_id", queryCompanyId);
+  }
+
+  const { data: rows, error: qErr } = await query;
 
   if (qErr) {
     return NextResponse.json({ error: qErr.message }, { status: 500 });
@@ -95,7 +99,7 @@ export async function GET() {
     status: 200,
     headers: {
       "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename="dolce-passports-${stamp}.zip"`,
+      "Content-Disposition": `attachment; filename="employee-passports-${stamp}.zip"`,
       "Cache-Control": "no-store",
     },
   });

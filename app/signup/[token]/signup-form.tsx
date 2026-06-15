@@ -270,7 +270,7 @@ export function EmployeeSignupForm({
             dark ? "text-neutral-500" : "text-gray-500",
           )}
         >
-          الرقم المعتمد في نظام الحضور والإنصراف
+          رقم الموظف الخارجي
         </p>
         <div className="relative">
           <Hash

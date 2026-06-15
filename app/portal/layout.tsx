@@ -4,10 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { getCompanyData } from "@/lib/company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { getBadgeCounts } from "@/lib/data/badges";
-import {
-  getDolceSignupCompanyId,
-  resolveDolceEmployeeSignupAccess,
-} from "@/lib/dolce-signup-company";
+import { resolveDolceEmployeeSignupAccess } from "@/lib/dolce-signup-company";
 import { PortalShellSkeleton } from "@/components/portal/PortalShellSkeleton";
 import { PortalShell } from "@/components/portal/PortalShell";
 import type { AppFeature, RoleFeatures } from "@/types/db";
@@ -60,9 +57,17 @@ async function AuthenticatedPortal({
   const isEmployee = profile.role === "employee";
   const isOwner = profile.role === "owner";
 
-  const [shellCompanyId, dolceSignupCompanyId] = await Promise.all([
+  const [shellCompanyId, companyRow] = await Promise.all([
     getShellCompanyIdForProfile(profile),
-    getDolceSignupCompanyId(),
+    (async () => {
+      const featuresCompanyId =
+        profile.role === "company_manager"
+          ? profile.company_id
+          : await getShellCompanyIdForProfile(profile);
+      return featuresCompanyId
+        ? getCompanyData(featuresCompanyId)
+        : Promise.resolve(null);
+    })(),
   ]);
 
   const badgeCompanyId = profile.is_super_admin
@@ -71,31 +76,26 @@ async function AuthenticatedPortal({
       ? shellCompanyId
       : profile.company_id;
 
-  const preliminaryDolceAccess =
-    !!profile.is_super_admin ||
-    (profile.role === "company_manager" &&
-      profile.company_id === dolceSignupCompanyId) ||
-    (profile.role === "md_admin" && shellCompanyId === dolceSignupCompanyId);
+  const preliminaryDolceAccess = resolveDolceEmployeeSignupAccess(
+    profile,
+    shellCompanyId,
+    companyRow?.enabled_features ?? null,
+  );
 
-  const [companyRow, badgeCounts] = await Promise.all([
-    shellCompanyId ? getCompanyData(shellCompanyId) : Promise.resolve(null),
-    getBadgeCounts(
-      {
-        userId: profile.id ?? "",
-        isEmployee,
-        role: profile.role,
-        companyId: badgeCompanyId,
-        isSuperAdmin: profile.is_super_admin ?? false,
-        dolceSignupCompanyId,
-        includeDolceSignupBadges: preliminaryDolceAccess,
-      },
-      accessToken,
-    ),
-  ]);
+  const badgeCounts = await getBadgeCounts(
+    {
+      userId: profile.id ?? "",
+      isEmployee,
+      role: profile.role,
+      companyId: badgeCompanyId,
+      isSuperAdmin: profile.is_super_admin ?? false,
+      includeDolceSignupBadges: preliminaryDolceAccess,
+    },
+    accessToken,
+  );
 
   const showDolceSignupNav = resolveDolceEmployeeSignupAccess(
     profile,
-    dolceSignupCompanyId,
     shellCompanyId,
     companyRow?.enabled_features ?? null,
   );

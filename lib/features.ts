@@ -1,6 +1,21 @@
 import type { AppFeature, RoleFeatures, UserRole } from "@/types/db";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+/** Platform-wide kill switch — clear when a module is ready for production. */
+export const PLATFORM_DISABLED_FEATURES: AppFeature[] = ["attendance"];
+
+export function isPlatformFeatureEnabled(feature: AppFeature): boolean {
+  return !PLATFORM_DISABLED_FEATURES.includes(feature);
+}
+
+export function isAttendanceEnabled(): boolean {
+  return isPlatformFeatureEnabled("attendance");
+}
+
+function withoutPlatformDisabled(features: AppFeature[]): AppFeature[] {
+  return features.filter(isPlatformFeatureEnabled);
+}
+
 /**
  * Returns true if the given feature is enabled for a company.
  * null/undefined enabled_features means ALL features are on (default).
@@ -11,6 +26,7 @@ export function isFeatureEnabled(
   enabledFeatures: AppFeature[] | null | undefined,
   isSuperAdmin = false,
 ): boolean {
+  if (!isPlatformFeatureEnabled(feature)) return false;
   if (isSuperAdmin) return true;
   if (enabledFeatures == null) return true; // null = all enabled
   return enabledFeatures.includes(feature);
@@ -93,6 +109,7 @@ export function isMdManagerFeatureAllowed(
   feature: AppFeature,
   enabledFeatures: AppFeature[] | null,
 ): boolean {
+  if (!isPlatformFeatureEnabled(feature)) return false;
   if (MD_MANAGER_CORE_FEATURES.includes(feature)) return true;
   if (!MD_MANAGER_PANEL_FEATURES.includes(feature)) return false;
   if (enabledFeatures == null || enabledFeatures.length === 0) return false;
@@ -122,20 +139,27 @@ export function getVisibleFeatures(
 
   if (role === "md_admin") {
     if (enabledFeatures == null || enabledFeatures.length === 0) return [];
-    return enabledFeatures.filter((f) => MD_MANAGER_PANEL_FEATURES.includes(f));
+    return withoutPlatformDisabled(
+      enabledFeatures.filter((f) => MD_MANAGER_PANEL_FEATURES.includes(f)),
+    );
   }
 
   // Owners have a fixed feature set — not driven by company feature flags.
-  if (role === "owner") return OWNER_FEATURES;
+  if (role === "owner") return withoutPlatformDisabled(OWNER_FEATURES);
 
   const roleOverride =
     roleFeatures?.[role as "company_manager" | "employee"];
 
   if (roleOverride !== undefined) {
     // Intersect role override with the company's enabled features
-    if (enabledFeatures === null) return roleOverride;
-    return roleOverride.filter((f) => enabledFeatures.includes(f));
+    if (enabledFeatures === null) {
+      return withoutPlatformDisabled(roleOverride);
+    }
+    return withoutPlatformDisabled(
+      roleOverride.filter((f) => enabledFeatures.includes(f)),
+    );
   }
 
-  return enabledFeatures;
+  if (enabledFeatures === null) return null;
+  return withoutPlatformDisabled(enabledFeatures);
 }

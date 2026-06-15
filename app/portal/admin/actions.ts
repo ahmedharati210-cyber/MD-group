@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { profileCacheTag, requireSuperAdmin } from "@/lib/auth";
+import { isPlatformFeatureEnabled } from "@/lib/features";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { ALL_FEATURES } from "@/types/db";
 import type { AppFeature, RoleFeatures } from "@/types/db";
@@ -24,7 +25,8 @@ export async function setCompanyFeaturesAction(
   await requireSuperAdmin();
 
   const selected = ALL_FEATURES.filter(
-    (f) => formData.get(`feature_${f}`) === "on",
+    (f) =>
+      isPlatformFeatureEnabled(f) && formData.get(`feature_${f}`) === "on",
   ) as AppFeature[];
 
   /** Always persist an array so MD Group managers can rely on explicit toggles; `null` is legacy only. */
@@ -68,7 +70,9 @@ export async function setRoleFeaturesAction(
   if (!parsed.success) return { error: "بيانات غير صالحة" };
 
   const selected = ALL_FEATURES.filter(
-    (f) => formData.get(`role_feature_${f}`) === "on",
+    (f) =>
+      isPlatformFeatureEnabled(f) &&
+      formData.get(`role_feature_${f}`) === "on",
   ) as AppFeature[];
 
   const supabase = await createSupabaseServerClient();
@@ -84,7 +88,9 @@ export async function setRoleFeaturesAction(
   const enabledFeatures = company?.enabled_features;
 
   // Determine the effective "all available" set for this company
-  const available = enabledFeatures ?? ALL_FEATURES;
+  const available = (enabledFeatures ?? ALL_FEATURES).filter(
+    isPlatformFeatureEnabled,
+  );
 
   // If the user checked everything that's available, remove the override (null = unrestricted)
   const allAvailableSelected = available.every((f) => selected.includes(f));

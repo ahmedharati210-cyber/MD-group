@@ -4,14 +4,27 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole, requireUser } from "@/lib/auth";
+import { isPlatformFeatureEnabled } from "@/lib/features";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ActionState = { error?: string; ok?: boolean };
+
+const FEATURE_UNAVAILABLE: ActionState = {
+  error: "الميزة غير متاحة حالياً",
+};
+
+function guardAttendance(): ActionState | null {
+  if (!isPlatformFeatureEnabled("attendance")) return FEATURE_UNAVAILABLE;
+  return null;
+}
 
 /**
  * Employee self-check-in: upserts today's row, sets `check_in` if empty.
  */
 export async function checkInAction(): Promise<ActionState> {
+  const blocked = guardAttendance();
+  if (blocked) return blocked;
+
   const { userId, profile } = await requireUser();
   if (!profile.company_id) {
     return { error: "لا توجد شركة مرتبطة بحسابك" };
@@ -60,6 +73,9 @@ export async function checkInAction(): Promise<ActionState> {
  * Employee self-check-out for today.
  */
 export async function checkOutAction(): Promise<ActionState> {
+  const blocked = guardAttendance();
+  if (blocked) return blocked;
+
   const { userId } = await requireUser();
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date().toISOString();
@@ -100,6 +116,8 @@ const markSchema = z.object({
  * Manager marks attendance status for an employee on a given day.
  */
 export async function markAttendanceAction(formData: FormData) {
+  if (!isPlatformFeatureEnabled("attendance")) return;
+
   const parsed = markSchema.safeParse({
     profile_id: formData.get("profile_id"),
     company_id: formData.get("company_id"),
@@ -167,6 +185,9 @@ export async function createAttendanceAction(
   _prev: ActionState | undefined,
   formData: FormData,
 ): Promise<ActionState> {
+  const blocked = guardAttendance();
+  if (blocked) return blocked;
+
   const current = await requireRole(["md_admin", "company_manager"]);
 
   const parsed = createSchema.safeParse({
@@ -243,6 +264,8 @@ export async function createAttendanceAction(
 }
 
 export async function deleteAttendanceAction(formData: FormData) {
+  if (!isPlatformFeatureEnabled("attendance")) return;
+
   const current = await requireRole(["md_admin", "company_manager"]);
   const id = formData.get("id");
   if (typeof id !== "string") return;

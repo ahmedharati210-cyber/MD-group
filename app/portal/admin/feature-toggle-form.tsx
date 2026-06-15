@@ -4,7 +4,7 @@ import { useTransition, useState } from "react";
 import toast from "react-hot-toast";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { setCompanyFeaturesAction, setRoleFeaturesAction } from "./actions";
-import { featureLabels } from "@/lib/features";
+import { featureLabels, isPlatformFeatureEnabled } from "@/lib/features";
 import { ALL_FEATURES } from "@/types/db";
 import type { AppFeature, RoleFeatures } from "@/types/db";
 
@@ -87,7 +87,7 @@ function CompanyFeaturesSection({
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <FeatureGrid
-        features={ALL_FEATURES}
+        features={ALL_FEATURES.filter(isPlatformFeatureEnabled)}
         enabled={enabled}
         namePrefix="feature_"
       />
@@ -213,8 +213,10 @@ export function FeatureToggleForm({
   /** null = no per-role overrides */
   roleFeatures: RoleFeatures | null;
 }) {
-  const availableFeatures: AppFeature[] =
-    enabledFeatures === null ? ALL_FEATURES : enabledFeatures;
+  const configurableFeatures = ALL_FEATURES.filter(isPlatformFeatureEnabled);
+  const availableFeatures: AppFeature[] = (
+    enabledFeatures === null ? configurableFeatures : enabledFeatures
+  ).filter(isPlatformFeatureEnabled);
 
   return (
     <div className="space-y-4">

@@ -14,7 +14,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getVisibleFeatures, isMdManagerFeatureAllowed, OWNER_FEATURES } from "@/lib/features";
+import { getVisibleFeatures, isMdManagerFeatureAllowed, isPlatformFeatureEnabled, OWNER_FEATURES } from "@/lib/features";
 import { getCompanyData } from "@/lib/company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { getDashboardData } from "@/lib/data/dashboard";
@@ -56,6 +56,7 @@ export default async function PortalDashboard() {
   );
 
   const hasFeature = (f: AppFeature) => {
+    if (!isPlatformFeatureEnabled(f)) return false;
     if (profile.is_super_admin) {
       return visibleFeatures === null || visibleFeatures.includes(f);
     }
