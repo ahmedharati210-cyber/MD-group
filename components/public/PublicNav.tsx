@@ -30,7 +30,7 @@ export function PublicNav() {
   return (
     <nav
       className={cn(
-        "sticky top-0 z-50 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-700 transition-shadow",
+        "sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 transition-shadow",
         scrolled
           ? "shadow-md dark:shadow-black/50"
           : "shadow-xs dark:shadow-black/30",
