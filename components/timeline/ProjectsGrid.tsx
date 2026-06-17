@@ -22,6 +22,7 @@ const statusCls: Record<ProjectStatus, string> = {
   survey:      "bg-cyan-100   text-cyan-700   dark:bg-cyan-900/30   dark:text-cyan-300",
   on_hold:       "bg-amber-100  text-amber-700  dark:bg-amber-900/30  dark:text-amber-300",
   on_hold_claim: "bg-rose-100   text-rose-800   dark:bg-rose-900/30  dark:text-rose-300",
+  done:          "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
 };
 
 const statusLabel: Record<ProjectStatus, string> = {
@@ -32,6 +33,7 @@ const statusLabel: Record<ProjectStatus, string> = {
   survey:        "رفع مساحي",
   on_hold:       "متوقف",
   on_hold_claim: "متوقف ( مطالبة)",
+  done:          "تم الانتهاء",
 };
 
 type TaskSummary = {
@@ -58,9 +60,10 @@ export type ProjectCardData = {
 interface Props {
   projects: ProjectCardData[];
   canManage: boolean;
+  isDoneSection?: boolean;
 }
 
-export function ProjectsGrid({ projects, canManage }: Props) {
+export function ProjectsGrid({ projects, canManage, isDoneSection = false }: Props) {
   const today = new Date().toISOString().slice(0, 10);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -84,8 +87,15 @@ export function ProjectsGrid({ projects, canManage }: Props) {
         return (
           <div
             key={p.id}
-            className="relative bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all flex flex-col h-full min-h-0 overflow-hidden focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-inset"
+            className={`relative bg-white dark:bg-gray-900 rounded-2xl border shadow-xs transition-all flex flex-col h-full min-h-0 overflow-hidden focus-within:ring-2 focus-within:ring-inset ${
+              isDoneSection
+                ? "border-emerald-200 dark:border-emerald-800/60 hover:border-emerald-300 dark:hover:border-emerald-700 focus-within:ring-emerald-400 opacity-80 saturate-75"
+                : "border-gray-200 dark:border-gray-800 hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 focus-within:ring-primary-500"
+            }`}
           >
+            {isDoneSection ? (
+              <div className="absolute inset-x-0 top-0 h-0.5 bg-emerald-500 dark:bg-emerald-600 rounded-t-2xl" />
+            ) : null}
             <Link
               href={`/portal/timeline/${p.id}`}
               className="absolute inset-0 z-0 rounded-2xl outline-hidden"
@@ -175,7 +185,11 @@ export function ProjectsGrid({ projects, canManage }: Props) {
                 </div>
                 <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden pointer-events-none">
                   <div
-                    className="h-full bg-primary-500 dark:bg-primary-400 rounded-full transition-all"
+                    className={`h-full rounded-full transition-all ${
+                      isDoneSection
+                        ? "bg-emerald-500 dark:bg-emerald-400"
+                        : "bg-primary-500 dark:bg-primary-400"
+                    }`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>

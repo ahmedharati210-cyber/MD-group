@@ -16,6 +16,7 @@ const statusLabels: Record<ProjectStatus, string> = {
   survey:      "رفع مساحي",
   on_hold:       "متوقف",
   on_hold_claim: "متوقف ( مطالبة)",
+  done:          "تم الانتهاء",
 };
 
 function calcRemaining(days: number | null | undefined, setAt: string | null | undefined, today: string): number | null {

@@ -336,7 +336,8 @@ export type ProjectStatus =
   | "maintenance"
   | "survey"
   | "on_hold"
-  | "on_hold_claim";
+  | "on_hold_claim"
+  | "done";
 
 export interface Project {
   id: string;

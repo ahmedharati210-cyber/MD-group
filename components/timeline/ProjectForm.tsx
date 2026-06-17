@@ -64,6 +64,7 @@ export function ProjectForm({
           <option value="survey">رفع مساحي</option>
           <option value="on_hold">متوقف</option>
           <option value="on_hold_claim">متوقف ( مطالبة)</option>
+          <option value="done">تم الانتهاء</option>
         </select>
       </div>
 

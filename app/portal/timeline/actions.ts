@@ -75,6 +75,7 @@ const projectSchema = z.object({
       "survey",
       "on_hold",
       "on_hold_claim",
+      "done",
     ])
     .default("planning"),
   location_notes: z.string().optional().nullable(),
@@ -133,6 +134,7 @@ export async function updateProjectStatusAction(
       "survey",
       "on_hold",
       "on_hold_claim",
+      "done",
     ])
     .safeParse(status);
   if (!parsed.success) return { error: "حالة غير صالحة" };

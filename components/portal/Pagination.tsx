@@ -8,14 +8,23 @@ type Props = {
   pageSize: number;
   baseUrl: string;
   extraParams?: Record<string, string>;
+  pageParam?: string;
 };
 
-export function Pagination({ page, totalCount, pageSize, baseUrl, extraParams = {} }: Props) {
+export function Pagination({
+  page,
+  totalCount,
+  pageSize,
+  baseUrl,
+  extraParams = {},
+  pageParam = "page",
+}: Props) {
   const totalPages = Math.ceil(totalCount / pageSize);
   if (totalPages <= 1) return null;
 
   const buildHref = (p: number) => {
-    const params = new URLSearchParams({ ...extraParams, page: String(p) });
+    const params = new URLSearchParams(extraParams);
+    params.set(pageParam, String(p));
     return `${baseUrl}?${params.toString()}`;
   };
 

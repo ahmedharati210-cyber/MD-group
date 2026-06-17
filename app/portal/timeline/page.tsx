@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, FolderKanban } from "lucide-react";
+import { Plus, FolderKanban, Archive } from "lucide-react";
 import { requireFeature } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
@@ -12,14 +12,26 @@ export const metadata = { title: " المشاريع" };
 
 const PAGE_SIZE = 30;
 
-type SearchParams = Promise<{ page?: string; companyId?: string }>;
+type SearchParams = Promise<{ page?: string; donePage?: string; companyId?: string }>;
+
+const PROJECT_SELECT = `
+  id, name, description, start_date, end_date, status, location_notes,
+  default_engineer:default_engineer_id(full_name),
+  categories:project_categories(
+    id, name, sort_order,
+    tasks:project_tasks(id, title, is_completed, due_date, sort_order)
+  )
+`;
 
 export default async function TimelinePage({ searchParams }: { searchParams: SearchParams }) {
   const { profile } = await requireFeature("timeline");
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? 1));
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
+  const donePage = Math.max(1, Number(sp.donePage ?? 1));
+  const activeFrom = (page - 1) * PAGE_SIZE;
+  const activeTo = activeFrom + PAGE_SIZE - 1;
+  const doneFrom = (donePage - 1) * PAGE_SIZE;
+  const doneTo = doneFrom + PAGE_SIZE - 1;
 
   const scopeId = await getShellCompanyIdForProfile(profile);
   const companyIdParam =
@@ -37,27 +49,44 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
   const supabase = await createSupabaseServerClient();
   const canManage = profile.role !== "employee" && profile.role !== "owner";
 
-  let projectQuery = supabase
-    .from("projects")
-    .select(
-      `
-      id, name, description, start_date, end_date, status, location_notes,
-      default_engineer:default_engineer_id(full_name),
-      categories:project_categories(
-        id, name, sort_order,
-        tasks:project_tasks(id, title, is_completed, due_date, sort_order)
-      )
-    `,
-      { count: "exact" },
-    )
-    .order("created_at", { ascending: false })
-    .range(from, to);
+  const applyCompanyScope = <T extends { eq: (col: string, val: string) => T }>(query: T) =>
+    projectCompanyId ? query.eq("company_id", projectCompanyId) : query;
 
-  if (projectCompanyId) projectQuery = projectQuery.eq("company_id", projectCompanyId);
+  const activeQuery = applyCompanyScope(
+    supabase
+      .from("projects")
+      .select(PROJECT_SELECT, { count: "exact" })
+      .neq("status", "done")
+      .order("created_at", { ascending: false })
+      .range(activeFrom, activeTo),
+  );
 
-  const { data: rawProjects, count: totalCount } = await projectQuery;
+  const doneQuery = applyCompanyScope(
+    supabase
+      .from("projects")
+      .select(PROJECT_SELECT, { count: "exact" })
+      .eq("status", "done")
+      .order("updated_at", { ascending: false })
+      .range(doneFrom, doneTo),
+  );
 
-  const projects = (rawProjects ?? []) as unknown as ProjectCardData[];
+  const [{ data: rawActiveProjects, count: activeCount }, { data: rawDoneProjects, count: doneCount }] =
+    await Promise.all([activeQuery, doneQuery]);
+
+  const activeProjects = (rawActiveProjects ?? []) as unknown as ProjectCardData[];
+  const doneProjects = (rawDoneProjects ?? []) as unknown as ProjectCardData[];
+
+  const paginationExtraParams = {
+    ...(companyIdParam ? { companyId: companyIdParam } : {}),
+    ...(donePage > 1 ? { donePage: String(donePage) } : {}),
+  };
+
+  const donePaginationExtraParams = {
+    ...(companyIdParam ? { companyId: companyIdParam } : {}),
+    ...(page > 1 ? { page: String(page) } : {}),
+  };
+
+  const hasNoProjects = activeProjects.length === 0 && doneProjects.length === 0;
 
   return (
     <div>
@@ -77,27 +106,66 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
         }
       />
 
-      {projects.length === 0 ? (
+      {hasNoProjects ? (
         <EmptyState
           icon={FolderKanban}
           title="لا توجد مشاريع"
           description={canManage ? "أضف أول مشروع هندسي." : "لم تُضف مشاريع بعد."}
         />
       ) : (
-        <>
-          <ProjectsGrid projects={projects} canManage={canManage} />
-          {(totalCount ?? 0) > PAGE_SIZE && (
-            <Pagination
-              page={page}
-              totalCount={totalCount ?? 0}
-              pageSize={PAGE_SIZE}
-              baseUrl="/portal/timeline"
-              extraParams={{
-                ...(companyIdParam ? { companyId: companyIdParam } : {}),
-              }}
+        <div className="space-y-10">
+          {activeProjects.length === 0 ? (
+            <EmptyState
+              icon={FolderKanban}
+              title="لا توجد مشاريع نشطة"
+              description={canManage ? "جميع المشاريع منتهية أو لم تُضف مشاريع بعد." : "لا توجد مشاريع قيد التنفيذ حالياً."}
             />
+          ) : (
+            <>
+              <ProjectsGrid projects={activeProjects} canManage={canManage} />
+              {(activeCount ?? 0) > PAGE_SIZE && (
+                <Pagination
+                  page={page}
+                  totalCount={activeCount ?? 0}
+                  pageSize={PAGE_SIZE}
+                  baseUrl="/portal/timeline"
+                  extraParams={paginationExtraParams}
+                />
+              )}
+            </>
           )}
-        </>
+
+          {doneProjects.length > 0 ? (
+            <section className="space-y-4">
+              <div className="flex items-center gap-2 border-t border-gray-200 dark:border-gray-800 pt-8">
+                <Archive className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-50">
+                  المشاريع المنجزة
+                  <span className="ms-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                    ({doneCount ?? doneProjects.length})
+                  </span>
+                </h2>
+              </div>
+
+              <ProjectsGrid
+                projects={doneProjects}
+                canManage={canManage}
+                isDoneSection
+              />
+
+              {(doneCount ?? 0) > PAGE_SIZE && (
+                <Pagination
+                  page={donePage}
+                  totalCount={doneCount ?? 0}
+                  pageSize={PAGE_SIZE}
+                  baseUrl="/portal/timeline"
+                  pageParam="donePage"
+                  extraParams={donePaginationExtraParams}
+                />
+              )}
+            </section>
+          ) : null}
+        </div>
       )}
     </div>
   );

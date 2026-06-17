@@ -30,6 +30,7 @@ const statusMap: Record<ProjectStatus, { label: string; cls: string }> = {
   survey:      { label: "رفع مساحي",            cls: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300" },
   on_hold:       { label: "متوقف",               cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
   on_hold_claim: { label: "متوقف ( مطالبة)",    cls: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300" },
+  done:          { label: "تم الانتهاء",          cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300" },
 };
 
 type TaskRow = {
