@@ -60,6 +60,13 @@ const items: Item[] = [
     roles: ["md_admin", "owner"],
   },
   {
+    href: "/portal/timeline",
+    label: "المشاريع",
+    icon: FolderKanban,
+    roles: ["md_admin", "company_manager", "employee", "owner"],
+    feature: "timeline",
+  },
+  {
     href: "/portal/employees",
     label: "الموظفون",
     icon: Users,
@@ -105,13 +112,6 @@ const items: Item[] = [
     icon: CalendarCheck,
     roles: ["md_admin", "company_manager", "employee"],
     feature: "attendance",
-  },
-  {
-    href: "/portal/timeline",
-    label: "المشاريع",
-    icon: FolderKanban,
-    roles: ["md_admin", "company_manager", "employee", "owner"],
-    feature: "timeline",
   },
   {
     href: "/portal/timeline/drafts",
