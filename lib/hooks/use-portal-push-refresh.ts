@@ -17,17 +17,21 @@ export function usePortalPushRefresh(): void {
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    function scheduleRefresh() {
+    function scheduleRefresh(url?: string) {
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
       refreshTimer.current = setTimeout(() => {
-        router.refresh();
+        if (url) {
+          router.push(url);
+        } else {
+          router.refresh();
+        }
         void syncPortalAppBadge();
       }, REFRESH_DEBOUNCE_MS);
     }
 
     function onSwMessage(event: MessageEvent<SwMessage>) {
       if (event.data?.type === "PORTAL_REFRESH") {
-        scheduleRefresh();
+        scheduleRefresh(event.data.url);
       }
     }
 

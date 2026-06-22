@@ -4,6 +4,7 @@ import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/sup
 import { PageHeader } from "@/components/portal/PageHeader";
 import { FeatureToggleForm } from "./feature-toggle-form";
 import { SuperAdminToggle } from "./super-admin-toggle";
+import { ProjectNotificationsToggle } from "./project-notifications-toggle";
 import { UserEditForm } from "./user-edit-form";
 import type { AppFeature, RoleFeatures, UserRole } from "@/types/db";
 
@@ -17,6 +18,7 @@ type ProfileRow = {
   job_title: string | null;
   is_active: boolean;
   is_super_admin: boolean;
+  project_notifications_enabled: boolean;
   companies: { name_ar: string } | null;
 };
 
@@ -35,7 +37,7 @@ export default async function AdminPage() {
       supabase
         .from("profiles")
         .select(
-          "id, full_name, role, company_id, job_title, is_active, is_super_admin, companies:company_id(name_ar)",
+          "id, full_name, role, company_id, job_title, is_active, is_super_admin, project_notifications_enabled, companies:company_id(name_ar)",
         )
         .order("role")
         .order("full_name"),
@@ -128,6 +130,17 @@ export default async function AdminPage() {
                         fullName={user.full_name}
                         isSuperAdmin={user.is_super_admin}
                         isSelf={isSelf}
+                      />
+                    </div>
+                  ) : null}
+
+                  {/* Project notifications — company managers only */}
+                  {user.role === "company_manager" ? (
+                    <div className="shrink-0">
+                      <ProjectNotificationsToggle
+                        profileId={user.id}
+                        fullName={user.full_name}
+                        enabled={user.project_notifications_enabled}
                       />
                     </div>
                   ) : null}

@@ -215,6 +215,60 @@ export async function setSuperAdminAction(
 }
 
 // ---------------------------------------------------------------------------
+// Project notification grants (per manager)
+// ---------------------------------------------------------------------------
+const projectNotificationsSchema = z.object({
+  profile_id: z.string().uuid(),
+  grant: z.boolean(),
+});
+
+/**
+ * Grant or revoke automated project/task notifications for a manager profile.
+ * Only super admin can do this; only company_manager and md_admin are eligible.
+ */
+export async function setProjectNotificationsAction(
+  profileId: string,
+  grant: boolean,
+): Promise<ActionState> {
+  const { userId } = await requireSuperAdmin();
+
+  const parsed = projectNotificationsSchema.safeParse({
+    profile_id: profileId,
+    grant,
+  });
+  if (!parsed.success) return { error: "بيانات غير صالحة" };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: target } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", profileId)
+    .single<{ role: string }>();
+
+  if (
+    !target ||
+    (target.role !== "company_manager" && target.role !== "md_admin")
+  ) {
+    return { error: "يمكن منح إشعارات المشاريع للمدراء فقط" };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ project_notifications_enabled: grant })
+    .eq("id", profileId);
+
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "profile", profileId, {
+    project_notifications_enabled: grant,
+  });
+
+  revalidateTag(profileCacheTag(profileId), "default");
+  revalidatePath("/portal/admin");
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
 // User role management (super admin only)
 // ---------------------------------------------------------------------------
 const roleSchema = z.object({

@@ -106,6 +106,8 @@ export interface Profile {
   is_active: boolean;
   avatar_url: string | null;
   is_super_admin: boolean;
+  /** Super-admin grant: receive automated project/task notifications. */
+  project_notifications_enabled: boolean;
   created_at: string;
   // Extended HR fields
   date_of_birth: string | null;
@@ -441,6 +443,7 @@ export interface ProjectTask {
   completed_by: string | null;
   completed_at: string | null;
   sort_order: number;
+  task_due_notified_at: string | null;
   created_at: string;
 }
 type ProjectTaskInsert = {

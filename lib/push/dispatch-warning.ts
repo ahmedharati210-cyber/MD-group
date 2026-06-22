@@ -36,7 +36,7 @@ export async function dispatchWarningWebPushTargets(options: {
       sendWebPushToUserIds([profileId], {
         title,
         body,
-        url: "/portal/notifications",
+        url: "/portal/notifications?tab=inbox",
         tag: `warning-${warningId}`,
         warningId,
       }),
@@ -58,7 +58,7 @@ export async function dispatchWarningWebPush(options: {
   await sendWebPushToUserIds(targetProfileIds, {
     title: pushTitleForKind(kind),
     body: truncateMessage(message),
-    url: "/portal/notifications",
+    url: "/portal/notifications?tab=inbox",
     tag: `warning-${tagId}`,
     warningId: tagId,
   });
@@ -90,7 +90,7 @@ export async function dispatchWarningWebPushBroadcast(options: {
   await sendWebPushToUserIds(ids, {
     title: pushTitleForKind(options.kind),
     body: truncateMessage(options.message),
-    url: "/portal/notifications",
+    url: "/portal/notifications?tab=inbox",
     tag: `warning-${options.warningId}`,
     warningId: options.warningId,
   });

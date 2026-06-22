@@ -7,8 +7,20 @@ import { requireRole, requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
+import { dispatchProjectNotification } from "@/lib/push/dispatch-project-notification";
 
 export type ActionState = { error?: string; ok?: boolean };
+
+const PROJECT_STATUS_LABELS: Record<string, string> = {
+  planning: "تخطيط",
+  active: "نشط",
+  completed: "مكتمل",
+  maintenance: "صيانة",
+  survey: "مسح",
+  on_hold: "متوقف",
+  on_hold_claim: "متوقف (مطالبة)",
+  done: "منتهي",
+};
 
 /** Empty form field → null; otherwise non-negative integer days. */
 function parseEstimatedDaysFromForm(value: FormDataEntryValue | null): number | null {
@@ -140,17 +152,32 @@ export async function updateProjectStatusAction(
   if (!parsed.success) return { error: "حالة غير صالحة" };
 
   const supabase = await createSupabaseServerClient();
+  const { data: projectRow } = await supabase
+    .from("projects")
+    .select("company_id, name")
+    .eq("id", projectId)
+    .maybeSingle<{ company_id: string; name: string }>();
+
   const { error } = await supabase
     .from("projects")
     .update({ status: parsed.data })
     .eq("id", projectId);
   if (error) return { error: error.message };
 
-  const project_name = await projectNameById(supabase, projectId);
+  const project_name = projectRow?.name ?? (await projectNameById(supabase, projectId));
   void logAudit(userId, "update", "project", projectId, {
     status: parsed.data,
     ...(project_name ? { project_name } : {}),
   });
+
+  if (projectRow?.company_id && project_name) {
+    const statusLabel = PROJECT_STATUS_LABELS[parsed.data] ?? parsed.data;
+    void dispatchProjectNotification({
+      companyId: projectRow.company_id,
+      senderId: userId,
+      message: `تم تغيير حالة مشروع «${project_name}» إلى ${statusLabel}.`,
+    });
+  }
 
   revalidateTimeline(projectId);
   return { ok: true };
@@ -560,6 +587,33 @@ export async function updateTaskStatusAction(
     task_status: parsed.data,
     ...(project_name ? { project_name } : {}),
   });
+
+  if (parsed.data === "in_progress") {
+    const [{ data: taskRow }, { data: projectRow }] = await Promise.all([
+      supabase
+        .from("project_tasks")
+        .select("title")
+        .eq("id", taskId)
+        .maybeSingle<{ title: string }>(),
+      supabase
+        .from("projects")
+        .select("company_id, name")
+        .eq("id", projectId)
+        .maybeSingle<{ company_id: string; name: string }>(),
+    ]);
+
+    const companyId = projectRow?.company_id;
+    const taskTitle = taskRow?.title;
+    const projName = projectRow?.name ?? project_name;
+
+    if (companyId && taskTitle && projName) {
+      void dispatchProjectNotification({
+        companyId,
+        senderId: userId,
+        message: `تم تغيير حالة المهمة «${taskTitle}» في مشروع «${projName}» إلى قيد التنفيذ.`,
+      });
+    }
+  }
 
   revalidateTimeline(projectId);
   return { ok: true };

@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/paper-expiry",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/task-due-notifications",
+      "schedule": "0 6 * * *"
     }
   ]
 }
