@@ -1,9 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
+import chromium from "@sparticuz/chromium";
+import puppeteer from "puppeteer-core";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import { toDateOnlyIso } from "@/lib/paper-expiry";
 import type { ProjectStatus, TaskWorkStatus } from "@/types/db";
+
+export const maxDuration = 60;
 
 const statusLabels: Record<ProjectStatus, string> = {
   planning:    "تصميم",
@@ -61,6 +65,55 @@ function escapeHtml(str: string | null | undefined): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function sanitizeFilename(name: string): string {
+  const safe = name
+    .trim()
+    .replace(/[^\w\u0600-\u06FF\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .slice(0, 80);
+  return safe || "project-timeline";
+}
+
+async function getBrowserExecutablePath(): Promise<string> {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  if (process.env.VERCEL) {
+    return chromium.executablePath();
+  }
+  if (process.platform === "darwin") {
+    return "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  }
+  if (process.platform === "win32") {
+    return "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+  }
+  return "/usr/bin/google-chrome";
+}
+
+async function renderPdfFromHtml(html: string): Promise<Uint8Array> {
+  const executablePath = await getBrowserExecutablePath();
+  const browser = await puppeteer.launch({
+    args: process.env.VERCEL ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
+    defaultViewport: { width: 794, height: 1123 },
+    executablePath,
+    headless: true,
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "load", timeout: 30_000 });
+    await page.evaluateHandle("document.fonts.ready");
+    const pdf = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "1.5cm", right: "1.5cm", bottom: "1.5cm", left: "1.5cm" },
+    });
+    return new Uint8Array(pdf);
+  } finally {
+    await browser.close();
+  }
 }
 
 // Build a fully self-contained HTML document suitable for print-to-PDF
@@ -172,26 +225,6 @@ function buildHtml(
       padding: 0;
     }
 
-    /* ── Toolbar (screen only) ─────────────────────── */
-    #toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 24px;
-      background: #f5f5f5;
-      border-bottom: 1px solid #ddd;
-      margin-bottom: 20px;
-    }
-    #toolbar a { color: #555; text-decoration: none; font-size: 13px; }
-    #toolbar a:hover { color: #111; }
-    #save-btn {
-      background: #15803d; color: #fff; border: none;
-      padding: 8px 18px; border-radius: 8px; font-family: 'Cairo', sans-serif;
-      font-size: 13px; cursor: pointer; font-weight: 600;
-    }
-    #save-btn:hover { background: #166534; }
-    @media print { #toolbar { display: none; } }
-
     /* ── Project header ─────────────────────────────── */
     .page-header {
       border-bottom: 2px solid #111;
@@ -284,12 +317,6 @@ function buildHtml(
 </head>
 <body>
 
-  <!-- Screen-only toolbar -->
-  <div id="toolbar">
-    <a href="javascript:history.back()">← العودة للمشروع</a>
-    <button id="save-btn" onclick="window.print()">حفظ كـ PDF / طباعة</button>
-  </div>
-
   <!-- ── Main content ── -->
   <div class="page-header">
     <div class="header-top">
@@ -329,25 +356,16 @@ function buildHtml(
     <span>MD Group — ${escapeHtml(project.name)}</span>
     <span>${escapeHtml(printDate)}</span>
   </div>
-
-  <script>
-    // Auto-trigger print dialog once fonts are ready
-    const autoprint = new URLSearchParams(location.search).get('autoprint');
-    if (autoprint === '1') {
-      document.fonts.ready.then(() => {
-        setTimeout(() => window.print(), 800);
-      });
-    }
-  </script>
 </body>
 </html>`;
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const format = req.nextUrl.searchParams.get("format");
 
   const user = await requireUser().catch(() => null);
   if (!user) {
@@ -402,6 +420,23 @@ export async function GET(
 
   const today = new Date().toISOString().slice(0, 10);
   const html = buildHtml(project, categories, today);
+
+  if (format === "pdf") {
+    try {
+      const pdfBytes = await renderPdfFromHtml(html);
+      const filename = `${sanitizeFilename(project.name)}.pdf`;
+      return new NextResponse(Buffer.from(pdfBytes), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Cache-Control": "no-store",
+        },
+      });
+    } catch (err) {
+      console.error("timeline pdf generation failed", err);
+      return new NextResponse("PDF generation failed", { status: 500 });
+    }
+  }
 
   return new NextResponse(html, {
     headers: {
