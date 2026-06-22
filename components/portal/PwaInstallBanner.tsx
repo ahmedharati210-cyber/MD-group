@@ -21,6 +21,15 @@ function isDismissedRecently(): boolean {
   }
 }
 
+function isMobileDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  if (/Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return true;
+  if (/iPad/i.test(ua)) return true;
+  // iPadOS 13+ may report as Mac; touch points distinguish it from desktop Mac
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
+
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   readonly userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
@@ -39,6 +48,7 @@ export function PwaInstallBanner() {
   useEffect(() => {
     if (isStandalone) return;
     if (isDismissedRecently()) return;
+    if (!isMobileDevice()) return;
 
     const ua = window.navigator.userAgent;
     const isIosSafari =
@@ -84,7 +94,7 @@ export function PwaInstallBanner() {
     setDeferredPrompt(null);
   }
 
-  if (isStandalone) return null;
+  if (isStandalone || !isMobileDevice()) return null;
 
   return (
     <AnimatePresence>
