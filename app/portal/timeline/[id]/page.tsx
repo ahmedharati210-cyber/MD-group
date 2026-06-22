@@ -18,6 +18,7 @@ import { AssignEngineerButton } from "@/components/timeline/AssignEngineerButton
 import { TaskStatusButton } from "@/components/timeline/TaskStatusButton";
 import { TimelineNav } from "@/components/timeline/TimelineNav";
 import { ProjectEstimatedDaysField } from "@/components/timeline/ProjectEstimatedDaysField";
+import { SaveAsPdfButton } from "@/components/timeline/SaveAsPdfButton";
 import { CategoryEstimatedDaysField } from "@/components/timeline/CategoryEstimatedDaysField";
 import { TaskEstimatedDaysField } from "@/components/timeline/TaskEstimatedDaysField";
 import type { ProjectStatus, TaskWorkStatus } from "@/types/db";
@@ -150,6 +151,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         description={project.description ?? undefined}
         action={
           <div className="flex gap-2">
+            <SaveAsPdfButton projectId={id} />
             <Link
               href={`/portal/timeline/${id}/print`}
               target="_blank"

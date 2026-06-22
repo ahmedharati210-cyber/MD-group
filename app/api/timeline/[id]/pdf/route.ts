@@ -68,12 +68,20 @@ function escapeHtml(str: string | null | undefined): string {
 }
 
 function sanitizeFilename(name: string): string {
+  // HTTP headers must be ASCII — strip non-ASCII characters for the plain filename.
   const safe = name
     .trim()
-    .replace(/[^\w\u0600-\u06FF\s-]/g, "")
+    .replace(/[^\w\s-]/g, "")
     .replace(/\s+/g, "-")
     .slice(0, 80);
   return safe || "project-timeline";
+}
+
+function contentDispositionHeader(projectName: string): string {
+  const ascii = sanitizeFilename(projectName);
+  // RFC 5987 encoding allows the browser to save with the full Unicode name.
+  const encoded = encodeURIComponent(`${projectName}.pdf`);
+  return `attachment; filename="${ascii}.pdf"; filename*=UTF-8''${encoded}`;
 }
 
 async function getBrowserExecutablePath(): Promise<string> {
@@ -424,11 +432,10 @@ export async function GET(
   if (format === "pdf") {
     try {
       const pdfBytes = await renderPdfFromHtml(html);
-      const filename = `${sanitizeFilename(project.name)}.pdf`;
       return new NextResponse(Buffer.from(pdfBytes), {
         headers: {
           "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Content-Disposition": contentDispositionHeader(project.name),
           "Cache-Control": "no-store",
         },
       });
