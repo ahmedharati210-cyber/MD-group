@@ -336,6 +336,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                           isCompleted={task.is_completed}
                           title={task.title}
                           canUncheck={canManage}
+                          canCheck={canManage}
                         />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -351,7 +352,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                             projectId={id}
                             initialStatus={task.task_status ?? null}
                             isCompleted={task.is_completed}
-                            canEdit
+                            canEdit={canManage}
                           />
                           {canManage && !task.is_completed ? (
                             <AssignEngineerButton

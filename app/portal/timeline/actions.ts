@@ -530,6 +530,10 @@ export async function deleteTaskAction(taskId: string, projectId: string): Promi
 export async function toggleTaskAction(taskId: string, projectId: string, currentlyCompleted: boolean): Promise<ActionState> {
   const { userId, profile } = await requireUser();
 
+  if (profile.role === "owner") {
+    return { error: "ليس لديك صلاحية تعديل المهام" };
+  }
+
   // Employees may only mark tasks as complete, not uncheck them.
   if (currentlyCompleted && profile.role === "employee") {
     return { error: "ليس لديك صلاحية إلغاء الإتمام" };
@@ -557,7 +561,10 @@ export async function toggleTaskAction(taskId: string, projectId: string, curren
 }
 
 export async function updateTaskNotesAction(taskId: string, projectId: string, notes: string): Promise<ActionState> {
-  await requireUser();
+  const { profile } = await requireUser();
+  if (profile.role === "owner") {
+    return { error: "ليس لديك صلاحية تعديل ملاحظات المهمة" };
+  }
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("project_tasks").update({ notes }).eq("id", taskId);
   if (error) return { error: error.message };
@@ -570,7 +577,10 @@ export async function updateTaskStatusAction(
   projectId: string,
   status: "in_progress" | null,
 ): Promise<ActionState> {
-  const { userId } = await requireUser();
+  const { userId, profile } = await requireUser();
+  if (profile.role === "owner") {
+    return { error: "ليس لديك صلاحية تعديل حالة المهمة" };
+  }
   const parsed = z.enum(["in_progress"]).nullable().safeParse(status);
   if (!parsed.success) return { error: "حالة المهمة غير صالحة" };
 

@@ -11,17 +11,19 @@ export function TaskCheckbox({
   isCompleted,
   title,
   canUncheck = true,
+  canCheck = true,
 }: {
   taskId: string;
   projectId: string;
   isCompleted: boolean;
   title: string;
   canUncheck?: boolean;
+  canCheck?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
 
-  // Employees cannot uncheck a completed task.
-  const isLocked = isCompleted && !canUncheck;
+  const isLocked =
+    (isCompleted && !canUncheck) || (!isCompleted && !canCheck);
 
   function handleToggle() {
     if (isLocked) return;
@@ -36,7 +38,13 @@ export function TaskCheckbox({
       onClick={handleToggle}
       disabled={isPending || isLocked}
       aria-label={isCompleted ? "مكتمل" : "وضع علامة مكتمل"}
-      title={isLocked ? "فقط المدير يمكنه إلغاء الإتمام" : undefined}
+      title={
+        isLocked
+          ? isCompleted
+            ? "فقط المدير يمكنه إلغاء الإتمام"
+            : "عرض فقط — لا يمكن تعديل المهمة"
+          : undefined
+      }
       className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${
         isPending
           ? "opacity-50 cursor-not-allowed"

@@ -26,7 +26,7 @@ export default async function MapsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { profile } = await requireFeature("maps");
-  const canManage = profile.role !== "employee";
+  const canManage = profile.role !== "employee" && profile.role !== "owner";
   const scopeId = await getShellCompanyIdForProfile(profile);
 
   const sp = await searchParams;
