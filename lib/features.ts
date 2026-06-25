@@ -54,6 +54,14 @@ export async function isConstructionCompany(
   return data.enabled_features.includes("timeline");
 }
 
+/** Sync check from company row — null enabled_features means all features on. */
+export function isConstructionCompanyByFeatures(
+  enabledFeatures: AppFeature[] | null | undefined,
+): boolean {
+  if (enabledFeatures == null) return true;
+  return enabledFeatures.includes("timeline");
+}
+
 export const featureLabels: Record<AppFeature, string> = {
   attendance: "الحضور والانصراف",
   papers: "الأوراق الرسمية",

@@ -5,7 +5,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { ContactForm } from "../contact-form";
 import { createContactAction } from "../actions";
-import { isConstructionCompany } from "@/lib/features";
+import { isConstructionCompany, isConstructionCompanyByFeatures } from "@/lib/features";
+import type { AppFeature } from "@/types/db";
 
 export const metadata = { title: "إضافة جهة اتصال" };
 
@@ -14,11 +15,20 @@ export default async function NewContactPage() {
   const supabase = await createSupabaseServerClient();
   const { data: companies } = await supabase
     .from("companies")
-    .select("id, name_ar")
+    .select("id, name_ar, enabled_features")
     .order("name_ar");
 
-  // Trade categories only shown for the construction company (has timeline feature)
-  const showTradeCategory = await isConstructionCompany(supabase, profile.company_id);
+  const constructionCompanyIds = (companies ?? [])
+    .filter((c) =>
+      isConstructionCompanyByFeatures(c.enabled_features as AppFeature[] | null),
+    )
+    .map((c) => c.id);
+
+  // md_admin / super admin have no company_id — always show category on add form
+  const showTradeCategory =
+    profile.role === "md_admin" ||
+    profile.is_super_admin ||
+    (await isConstructionCompany(supabase, profile.company_id));
 
   return (
     <div className="max-w-2xl">
@@ -38,6 +48,7 @@ export default async function NewContactPage() {
             profile.role === "company_manager" ? profile.company_id : null
           }
           showTradeCategory={showTradeCategory}
+          constructionCompanyIds={constructionCompanyIds}
           submitLabel="إضافة"
         />
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { CircleAlert, Loader2, Save } from "lucide-react";
 import type { ActionState } from "./actions";
@@ -47,8 +47,10 @@ type Props = {
   lockedCompanyId: string | null;
   initial?: Partial<Contact> | null;
   submitLabel?: string;
-  /** Show construction-specific trade category field (Emaar Al Youm only) */
+  /** Always show trade category (e.g. md_admin / construction company manager) */
   showTradeCategory?: boolean;
+  /** Company IDs with timeline feature — show category when one is selected */
+  constructionCompanyIds?: string[];
 };
 
 export function ContactForm({
@@ -58,11 +60,17 @@ export function ContactForm({
   initial,
   submitLabel = "حفظ",
   showTradeCategory = false,
+  constructionCompanyIds = [],
 }: Props) {
   const [state, formAction] = useActionState<ActionState, FormData>(
     action,
     {},
   );
+  const initialCompanyId = lockedCompanyId ?? initial?.company_id ?? "";
+  const [selectedCompanyId, setSelectedCompanyId] = useState(initialCompanyId);
+  const shouldShowTradeCategory =
+    showTradeCategory ||
+    (!!selectedCompanyId && constructionCompanyIds.includes(selectedCompanyId));
 
   return (
     <form action={formAction} className="space-y-5">
@@ -111,7 +119,8 @@ export function ContactForm({
           <select
             name="company_id"
             disabled={!!lockedCompanyId}
-            defaultValue={lockedCompanyId ?? initial?.company_id ?? ""}
+            defaultValue={initialCompanyId}
+            onChange={(e) => setSelectedCompanyId(e.target.value)}
             className={`${inputClasses} disabled:bg-gray-50 dark:disabled:bg-gray-900`}
           >
             <option value="">— على مستوى المجموعة —</option>
@@ -122,7 +131,7 @@ export function ContactForm({
             ))}
           </select>
         </div>
-        {showTradeCategory ? (
+        {shouldShowTradeCategory ? (
           <div>
             <label className={labelClasses}>التخصص / الفئة</label>
             <select

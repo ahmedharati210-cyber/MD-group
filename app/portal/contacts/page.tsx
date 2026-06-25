@@ -69,11 +69,22 @@ export default async function ContactsPage({ searchParams }: { searchParams: Sea
   });
   const showTradeBadge = showTradeFilter;
 
+  const hasFilters = Boolean(q?.trim() || companyId || trade);
+  const contactCountLabel =
+    totalCount === 0
+      ? "لا توجد جهات"
+      : totalCount === 1
+        ? "جهة اتصال واحدة"
+        : `${totalCount} جهة اتصال`;
+  const headerDescription = hasFilters
+    ? `${contactCountLabel} مطابقة للبحث`
+    : `${contactCountLabel} — موظفون، عمال، فنيون، وأخرى.`;
+
   return (
     <div>
       <PageHeader
         title="جهات الاتصال"
-        description="دليل جهات الاتصال — موظفون، عمال، فنيون، وأخرى."
+        description={headerDescription}
         action={
           canEdit ? (
             <Link href="/portal/contacts/new" className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm shadow-md hover:bg-primary-700 w-full sm:w-auto justify-center">

@@ -6,7 +6,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { ContactForm } from "../../contact-form";
 import { updateContactAction } from "../../actions";
-import { isConstructionCompany } from "@/lib/features";
+import { isConstructionCompany, isConstructionCompanyByFeatures } from "@/lib/features";
+import type { AppFeature } from "@/types/db";
 
 export const metadata = { title: "تعديل جهة اتصال" };
 
@@ -21,14 +22,26 @@ export default async function EditContactPage({
   const supabase = await createSupabaseServerClient();
   const [{ data: contact }, { data: companies }] = await Promise.all([
     supabase.from("contacts").select("*").eq("id", id).single(),
-    supabase.from("companies").select("id, name_ar").order("name_ar"),
+    supabase
+      .from("companies")
+      .select("id, name_ar, enabled_features")
+      .order("name_ar"),
   ]);
 
   if (!contact) notFound();
 
+  const constructionCompanyIds = (companies ?? [])
+    .filter((c) =>
+      isConstructionCompanyByFeatures(c.enabled_features as AppFeature[] | null),
+    )
+    .map((c) => c.id);
+
   // For company_manager, use their own company. For md_admin, use the contact's company.
-  const relevantCompanyId = profile.role === "md_admin" ? contact.company_id : profile.company_id;
-  const showTradeCategory = await isConstructionCompany(supabase, relevantCompanyId);
+  const relevantCompanyId =
+    profile.role === "md_admin" ? contact.company_id : profile.company_id;
+  const showTradeCategory =
+    profile.is_super_admin ||
+    (await isConstructionCompany(supabase, relevantCompanyId));
 
   return (
     <div className="max-w-2xl">
@@ -48,6 +61,7 @@ export default async function EditContactPage({
             profile.role === "company_manager" ? profile.company_id : null
           }
           showTradeCategory={showTradeCategory}
+          constructionCompanyIds={constructionCompanyIds}
           initial={contact}
           submitLabel="حفظ التعديلات"
         />
