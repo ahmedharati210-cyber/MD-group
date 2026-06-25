@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/utils";
+import { formatDate, tripoliTodayIso } from "@/lib/utils";
 import { toDateOnlyIso } from "@/lib/paper-expiry";
 import { PrintButton } from "@/components/timeline/PrintButton";
 import { SaveAsPdfButton } from "@/components/timeline/SaveAsPdfButton";
@@ -98,7 +98,7 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
     tasks: [...cat.tasks].sort((a, b) => a.sort_order - b.sort_order),
   }));
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = tripoliTodayIso();
   const allTasks = categories.flatMap((c) => c.tasks);
   const totalTasks = allTasks.length;
   const completedTasks = allTasks.filter((t) => t.is_completed).length;
@@ -108,7 +108,12 @@ export default async function PrintProjectPage({ params }: { params: Promise<{ i
   }).length;
   const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  const printDate = new Date().toLocaleDateString("ar-LY", { year: "numeric", month: "long", day: "numeric" });
+  const printDate = new Date().toLocaleDateString("ar-LY", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "Africa/Tripoli",
+  });
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-8" dir="rtl">

@@ -19,13 +19,18 @@ export function formatDate(value: Date | string | null | undefined): string {
 }
 
 /**
- * Format a Date as local time "HH:MM".
+ * Format a Date as Tripoli time "HH:MM" (24-hour).
  */
 export function formatTime(value: Date | string | null | undefined): string {
   if (!value) return "";
   const d = typeof value === "string" ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return "";
-  return d.toTimeString().slice(0, 5);
+  return d.toLocaleTimeString("ar-LY", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Africa/Tripoli",
+  });
 }
 
 /**
@@ -43,7 +48,13 @@ export function formatDateTime(value: Date | string | null | undefined): string 
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone: "Africa/Tripoli",
   });
+}
+
+/** Today as YYYY-MM-DD in Africa/Tripoli (Libya). */
+export function tripoliTodayIso(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Tripoli" });
 }
 
 export function bytesToReadable(bytes: number | null | undefined): string {

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireRole, requireUser } from "@/lib/auth";
 import { isPlatformFeatureEnabled } from "@/lib/features";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { tripoliTodayIso } from "@/lib/utils";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -30,7 +31,7 @@ export async function checkInAction(): Promise<ActionState> {
     return { error: "لا توجد شركة مرتبطة بحسابك" };
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = tripoliTodayIso();
   const now = new Date().toISOString();
   const supabase = await createSupabaseServerClient();
 
@@ -77,7 +78,7 @@ export async function checkOutAction(): Promise<ActionState> {
   if (blocked) return blocked;
 
   const { userId } = await requireUser();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = tripoliTodayIso();
   const now = new Date().toISOString();
   const supabase = await createSupabaseServerClient();
 

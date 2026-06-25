@@ -3,7 +3,7 @@ import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer-core";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/utils";
+import { formatDate, tripoliTodayIso } from "@/lib/utils";
 import { toDateOnlyIso } from "@/lib/paper-expiry";
 import type { ProjectStatus, TaskWorkStatus } from "@/types/db";
 
@@ -154,6 +154,7 @@ function buildHtml(
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "Africa/Tripoli",
   });
 
   const categoriesHtml = categories
@@ -426,7 +427,7 @@ export async function GET(
     }),
   );
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = tripoliTodayIso();
   const html = buildHtml(project, categories, today);
 
   if (format === "pdf") {
