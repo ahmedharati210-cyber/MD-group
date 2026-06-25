@@ -100,7 +100,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Sea
           type="text"
           name="q"
           defaultValue={q ?? ""}
-          placeholder="بحث بالاسم..."
+          placeholder="بحث بالاسم أو المسمى الوظيفي..."
           className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden"
         />
         {showTradeFilter ? (

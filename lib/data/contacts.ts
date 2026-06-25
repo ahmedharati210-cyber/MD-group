@@ -44,7 +44,13 @@ export async function getContactsData(params: {
     .order("full_name")
     .range(offset, offset + params.pageSize - 1);
 
-  if (params.q) query = query.ilike("full_name", `%${params.q}%`);
+  if (params.q) {
+    const term = params.q.replace(/,/g, " ").trim();
+    if (term) {
+      const pattern = `%${term}%`;
+      query = query.or(`full_name.ilike.${pattern},title.ilike.${pattern}`);
+    }
+  }
   if (params.filterCompanyId) query = query.eq("company_id", params.filterCompanyId);
   if (params.trade) query = query.eq("trade_category", params.trade);
 
