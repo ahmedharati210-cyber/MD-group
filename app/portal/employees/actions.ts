@@ -15,7 +15,6 @@ import {
 } from "@/lib/dolce-signup-invite-config";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { getCompanyData } from "@/lib/company";
-import { canAccessDolceEmployeeSignup } from "@/lib/dolce-signup-company";
 import { logAudit } from "@/lib/audit";
 
 const createSchema = z.object({
@@ -369,12 +368,6 @@ export async function generateInviteTokenAction(
     if (!shellId) {
       return { error: "اختر شركة نشطة من القائمة أولاً." };
     }
-    if (!(await canAccessDolceEmployeeSignup(current.profile, shellId))) {
-      return {
-        error:
-          "طلبات التوظيف غير مفعّلة لشركتك النشطة. يفعّلها Super Admin من لوحة الإدارة.",
-      };
-    }
     company_id = shellId;
   }
 
@@ -476,12 +469,6 @@ export async function deleteSignupInviteAction(
     const shellId = await getShellCompanyIdForProfile(current.profile);
     if (!shellId) {
       return { error: "اختر شركة نشطة من القائمة أولاً." };
-    }
-    if (!(await canAccessDolceEmployeeSignup(current.profile, shellId))) {
-      return {
-        error:
-          "طلبات التوظيف غير مفعّلة لشركتك النشطة. يفعّلها Super Admin من لوحة الإدارة.",
-      };
     }
     allowedCompanyId = shellId;
   }

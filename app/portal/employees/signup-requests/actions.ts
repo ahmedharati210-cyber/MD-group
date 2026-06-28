@@ -5,9 +5,6 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { profileCacheTag, requireRole } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
-import {
-  canAccessDolceEmployeeSignup,
-} from "@/lib/dolce-signup-company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import type { BloodType, Gender } from "@/types/db";
 
@@ -91,11 +88,7 @@ export async function approveSignupRequestAction(
 
     if (current.profile.role === "md_admin") {
       const shellId = await getShellCompanyIdForProfile(current.profile);
-      if (
-        !shellId ||
-        row.company_id !== shellId ||
-        !(await canAccessDolceEmployeeSignup(current.profile, shellId))
-      ) {
+      if (shellId && row.company_id !== shellId) {
         return { error: "صلاحيات غير كافية." };
       }
     }
@@ -248,11 +241,7 @@ export async function rejectSignupRequestAction(
 
     if (current.profile.role === "md_admin") {
       const shellId = await getShellCompanyIdForProfile(current.profile);
-      if (
-        !shellId ||
-        row.company_id !== shellId ||
-        !(await canAccessDolceEmployeeSignup(current.profile, shellId))
-      ) {
+      if (shellId && row.company_id !== shellId) {
         return { error: "صلاحيات غير كافية." };
       }
     }

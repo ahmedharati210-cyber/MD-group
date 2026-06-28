@@ -3,7 +3,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getCompanyData } from "@/lib/company";
-import { isFeatureEnabled, isMdManagerFeatureAllowed } from "@/lib/features";
+import { isFeatureEnabled } from "@/lib/features";
 import type { AppFeature, Profile } from "@/types/db";
 
 /**
@@ -44,26 +44,19 @@ export async function getDolceSignupCompanyDisplay(): Promise<{
 }
 
 /**
- * Employee signup UI/API: super admin; company managers when their company has
- * `employee_signup` enabled; MD Group managers when their active shell company
- * has `employee_signup` in `enabled_features`.
+ * Employee signup UI/API: super admin and all MD Group managers (`md_admin`);
+ * company managers when their company has `employee_signup` enabled.
  *
  * Pass `shellEnabledFeatures` when the shell company row is already loaded
  * (avoids a duplicate `getCompanyData` in the portal layout).
  */
 export function resolveDolceEmployeeSignupAccess(
   profile: Pick<Profile, "role" | "company_id" | "is_super_admin">,
-  shellCompanyId?: string | null,
+  _shellCompanyId?: string | null,
   shellEnabledFeatures?: AppFeature[] | null,
 ): boolean {
   if (profile.is_super_admin) return true;
-  if (profile.role === "md_admin") {
-    if (shellCompanyId == null) return false;
-    return isMdManagerFeatureAllowed(
-      "employee_signup",
-      shellEnabledFeatures ?? null,
-    );
-  }
+  if (profile.role === "md_admin") return true;
   if (profile.role === "company_manager") {
     return isFeatureEnabled("employee_signup", shellEnabledFeatures);
   }
@@ -76,15 +69,7 @@ export async function canAccessDolceEmployeeSignup(
   shellCompanyId?: string | null,
 ): Promise<boolean> {
   if (profile.is_super_admin) return true;
-  if (profile.role === "md_admin") {
-    if (shellCompanyId == null) return false;
-    const row = await getCompanyData(shellCompanyId);
-    return resolveDolceEmployeeSignupAccess(
-      profile,
-      shellCompanyId,
-      row?.enabled_features ?? null,
-    );
-  }
+  if (profile.role === "md_admin") return true;
   if (profile.role === "company_manager" && profile.company_id) {
     const row = await getCompanyData(profile.company_id);
     return resolveDolceEmployeeSignupAccess(
