@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidateTag } from "next/cache";
 import { z } from "zod";
-import { passportStorageFileName } from "@/lib/passport-archive-name";
+import { passportStorageFileName, passportUploadUserMessage } from "@/lib/passport-archive-name";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getDolceSignupCompanyId } from "@/lib/dolce-signup-company";
 
@@ -172,10 +172,7 @@ export async function submitOpenDolceSignupAction(
     });
 
   if (uploadErr) {
-    return {
-      error:
-        uploadErr.message ?? "تعذّر رفع صورة الجواز. حاول مرة أخرى لاحقاً.",
-    };
+    return { error: passportUploadUserMessage() };
   }
 
   const { error: insErr } = await admin.from("employee_signup_requests").insert({

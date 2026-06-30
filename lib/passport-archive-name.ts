@@ -36,17 +36,24 @@ export function passportZipEntryFileName(
 }
 
 /**
- * Object key file segment for Supabase Storage: `{name}_{phone}.{ext}` (no request id; folder is unique).
+ * Object key file segment for Supabase Storage.
+ * ASCII-only — Supabase Storage rejects Unicode (e.g. Arabic) in object keys.
+ * Format: `passport_{phone}_{shortRequestId}.{ext}`
  */
 export function passportStorageFileName(
-  fullName: string,
+  _fullName: string,
   phone: string,
   fallbackId: string,
   ext: string,
 ): string {
-  const a = sanitizePassportArchiveLabel(fullName) || "unknown";
-  const b = sanitizePassportArchiveLabel(phone.replace(/\s/g, "")) || "no-phone";
-  const base = `${a}_${b}`.slice(0, 200);
-  const stem = base || fallbackId.replace(/-/g, "").slice(0, 8);
-  return `${stem}.${ext}`;
+  const phonePart =
+    sanitizePassportArchiveLabel(phone.replace(/\s/g, "")) || "no-phone";
+  const idPart = fallbackId.replace(/-/g, "").slice(0, 12);
+  const safeExt = ext.replace(/[^a-z0-9]/gi, "").toLowerCase() || "jpg";
+  return `passport_${phonePart}_${idPart}.${safeExt}`;
+}
+
+/** User-facing message when passport upload to Storage fails (hide raw Supabase keys). */
+export function passportUploadUserMessage(): string {
+  return "تعذّر رفع صورة الجواز. يرجى إعادة المحاولة بصورة JPG أو PNG واضحة.";
 }

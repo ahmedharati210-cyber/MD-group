@@ -102,14 +102,18 @@ export default async function SignupRequestsPage() {
     redirect("/portal");
   }
 
-  const queryCompanyId = current.profile.is_super_admin
-    ? null
-    : current.profile.role === "md_admin"
-      ? shellId
-      : current.profile.company_id;
+  const queryCompanyId =
+    current.profile.role === "company_manager"
+      ? current.profile.company_id
+      : null;
+
+  const inviteCompanyId =
+    current.profile.role === "company_manager"
+      ? current.profile.company_id
+      : shellId;
 
   const activeCompany =
-    queryCompanyId != null ? await getCompanyData(queryCompanyId) : null;
+    inviteCompanyId != null ? await getCompanyData(inviteCompanyId) : null;
 
   const supabase = await createSupabaseServerClient();
 
@@ -153,9 +157,9 @@ export default async function SignupRequestsPage() {
         }
       />
 
-      {queryCompanyId && activeCompany ? (
+      {inviteCompanyId && activeCompany ? (
         <DolceSignupInvitesSection
-          companyId={queryCompanyId}
+          companyId={inviteCompanyId}
           companyNameAr={activeCompany.name_ar}
         />
       ) : null}

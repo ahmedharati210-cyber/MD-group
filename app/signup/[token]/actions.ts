@@ -2,9 +2,8 @@
 
 import { revalidateTag } from "next/cache";
 import { z } from "zod";
-import { passportStorageFileName } from "@/lib/passport-archive-name";
+import { passportStorageFileName, passportUploadUserMessage } from "@/lib/passport-archive-name";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
-import { getDolceSignupCompanyId } from "@/lib/dolce-signup-company";
 
 function normalizeGenderStored(input: string | null | undefined): string | null {
   const t = input?.trim() ?? "";
@@ -152,7 +151,6 @@ export async function submitEmployeeSignupAction(
   const ext = extFromMime(mime);
 
   const admin = createSupabaseAdminClient();
-  const dolceCompanyId = await getDolceSignupCompanyId();
 
   type InviteSlotRow = {
     invite_id: string;
@@ -176,11 +174,6 @@ export async function submitEmployeeSignupAction(
     Array.isArray(slotArr) && slotArr.length > 0 ? slotArr[0]! : null;
 
   if (slot) {
-    if (dolceCompanyId && slot.company_id !== dolceCompanyId) {
-      await admin.rpc("release_invite_slot", { p_invite_id: slot.invite_id });
-      return { error: "رابط الدعوة غير صالح." };
-    }
-
     const newId = crypto.randomUUID();
     const storagePath = `employee-signup/${slot.company_id}/${newId}/${passportStorageFileName(parsed.data.full_name, parsed.data.phone, newId, ext)}`;
 
@@ -193,10 +186,7 @@ export async function submitEmployeeSignupAction(
 
     if (uploadErr) {
       await admin.rpc("release_invite_slot", { p_invite_id: slot.invite_id });
-      return {
-        error:
-          uploadErr.message ?? "تعذّر رفع صورة الجواز. حاول مرة أخرى لاحقاً.",
-      };
+      return { error: passportUploadUserMessage() };
     }
 
     const { error: insErr } = await admin.from("employee_signup_requests").insert({
@@ -255,10 +245,6 @@ export async function submitEmployeeSignupAction(
     };
   }
 
-  if (dolceCompanyId && row.company_id !== dolceCompanyId) {
-    return { error: "رابط الدعوة غير صالح." };
-  }
-
   const expires = new Date(row.token_expires_at).getTime();
   if (Number.isFinite(expires) && expires < Date.now()) {
     return { error: "انتهت صلاحية رابط الدعوة." };
@@ -278,10 +264,7 @@ export async function submitEmployeeSignupAction(
     });
 
   if (uploadErr) {
-    return {
-      error:
-        uploadErr.message ?? "تعذّر رفع صورة الجواز. حاول مرة أخرى لاحقاً.",
-    };
+    return { error: passportUploadUserMessage() };
   }
 
   const { error: updErr } = await admin
