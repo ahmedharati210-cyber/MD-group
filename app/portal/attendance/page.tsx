@@ -1,219 +1,287 @@
 import Link from "next/link";
-import { CalendarCheck, Download, Clock, Plus } from "lucide-react";
-import { requireFeature } from "@/lib/auth";
-import { getEmployeeAttendance, getManagerAttendanceData } from "@/lib/data/attendance";
+import { Download, FileText } from "lucide-react";
+import { requireAttendanceAccess } from "@/lib/auth";
+import {
+  buildCalendarDays,
+  buildMonthSummary,
+  buildPersonCalendarDays,
+  buildPersonMonthStats,
+  personRecordCounts,
+} from "@/lib/attendance/attendance-view";
+import { pickDefaultAttendanceCompanyId } from "@/lib/attendance/defaults";
+import { getDefaultAttendanceMonth } from "@/lib/attendance/import-month";
+import {
+  filterPeopleBySearch,
+  filterRecordsBySearch,
+  normalizeSearchQuery,
+} from "@/lib/attendance/search";
+import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
+import {
+  getAttendanceBranches,
+  getAttendanceCompanies,
+  getAttendanceImport,
+  getAttendancePeople,
+  getAttendanceShifts,
+  getMonthlyAttendanceRecords,
+} from "@/lib/data/monthly-attendance";
 import { PageHeader } from "@/components/portal/PageHeader";
-import { EmptyState } from "@/components/portal/EmptyState";
-import { formatDate, formatTime } from "@/lib/utils";
-import { CheckInPanel } from "./check-in-panel";
-import { DailyGrid } from "./daily-grid";
+import { AttendanceCalendar } from "./attendance-calendar";
+import { AttendanceDayPanel } from "./attendance-day-panel";
+import { AttendanceImportForm } from "./attendance-import-form";
+import { AttendancePersonHeader } from "./attendance-person-detail";
+import { AttendancePersonList } from "./attendance-person-list";
+import { AttendanceSearch } from "./attendance-search";
+import {
+  AttendancePersonSummaryCards,
+  AttendanceSummaryCards,
+} from "./attendance-summary-cards";
+import { buildBranchAttendanceHref } from "./attendance-navigation";
+import { AttendanceToolbar } from "./attendance-toolbar";
+import { MonthlyFilters } from "./monthly-filters";
 
-export const metadata = { title: "الحضور" };
+export const metadata = { title: "الحضور الشهري" };
 
-type SearchParams = Promise<{ date?: string; companyId?: string }>;
+type SearchParams = Promise<{
+  companyId?: string;
+  branchId?: string;
+  month?: string;
+  q?: string;
+  day?: string;
+  personId?: string;
+}>;
 
 export default async function AttendancePage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
-  const { userId, profile } = await requireFeature("attendance");
+  const { profile } = await requireAttendanceAccess();
   const params = await searchParams;
-  const today = new Date().toISOString().slice(0, 10);
-  const selectedDate = params.date ?? today;
+  const searchQuery = normalizeSearchQuery(params.q);
 
-  if (profile.role === "employee") {
-    const mine = await getEmployeeAttendance(userId);
-    const todays = mine.find((r) => r.date === today) ?? null;
+  const defaultMonth = getDefaultAttendanceMonth();
+  const month = params.month ?? defaultMonth;
 
-    return (
-      <div>
-        <PageHeader
-          title="الحضور"
-          description="تسجيل الحضور اليومي ومتابعة سجلاتك."
-        />
-        <CheckInPanel
-          checkedIn={!!todays?.check_in}
-          checkedOut={!!todays?.check_out}
-          checkIn={todays?.check_in ?? null}
-          checkOut={todays?.check_out ?? null}
-        />
-        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 mb-3 mt-6 sm:mt-8">
-          آخر 30 سجل
-        </h2>
-        {mine.length === 0 ? (
-          <EmptyState
-            icon={CalendarCheck}
-            title="لا يوجد سجل بعد"
-            description="سجّل حضورك اليوم لتبدأ."
-          />
-        ) : (
-          <>
-            <div className="md:hidden space-y-2">
-              {mine.map((a) => (
-                <div
-                  key={a.id}
-                  className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 flex items-center justify-between gap-2"
-                >
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                      {formatDate(a.date)}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {a.check_in ? formatTime(a.check_in) : "—"}
-                      {" → "}
-                      {a.check_out ? formatTime(a.check_out) : "—"}
-                    </div>
-                  </div>
-                  <StatusBadge status={a.status} />
-                </div>
-              ))}
-            </div>
-            <div className="hidden md:block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">
-                  <tr className="text-right text-gray-600 dark:text-gray-400">
-                    <th className="px-5 py-3 font-semibold">التاريخ</th>
-                    <th className="px-5 py-3 font-semibold">الحضور</th>
-                    <th className="px-5 py-3 font-semibold">الانصراف</th>
-                    <th className="px-5 py-3 font-semibold">الحالة</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {mine.map((a) => (
-                    <tr key={a.id}>
-                      <td className="px-5 py-3 text-gray-800 dark:text-gray-200">
-                        {formatDate(a.date)}
-                      </td>
-                      <td className="px-5 py-3 text-gray-600 dark:text-gray-400">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
-                          {a.check_in ? formatTime(a.check_in) : "—"}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-gray-600 dark:text-gray-400">
-                        {a.check_out ? formatTime(a.check_out) : "—"}
-                      </td>
-                      <td className="px-5 py-3">
-                        <StatusBadge status={a.status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </div>
-    );
+  const companies = await getAttendanceCompanies();
+  let companyId =
+    params.companyId ??
+    profile.company_id ??
+    pickDefaultAttendanceCompanyId(companies);
+
+  if (profile.role === "md_admin" && !profile.is_super_admin) {
+    companyId = (await getShellCompanyIdForProfile(profile)) ?? companyId;
   }
 
-  // Manager / admin view — daily grid
-  const { employees, companies, rows } = await getManagerAttendanceData(
-    selectedDate,
-    params.companyId,
-  );
+  const branches = companyId ? await getAttendanceBranches(companyId) : [];
+  const requestedBranchId = params.branchId ?? null;
+  const branchId =
+    requestedBranchId && branches.some((b) => b.id === requestedBranchId)
+      ? requestedBranchId
+      : (branches.find((b) => b.active)?.id ?? branches[0]?.id ?? null);
+  const monthDate = `${month}-01`;
+
+  const [importRow, people, branchShifts] = await Promise.all([
+    companyId && branchId
+      ? getAttendanceImport(companyId, branchId, monthDate)
+      : Promise.resolve(null),
+    companyId && branchId
+      ? getAttendancePeople(companyId, branchId)
+      : Promise.resolve([]),
+    branchId ? getAttendanceShifts(branchId) : Promise.resolve([]),
+  ]);
+
+  const allRecords = importRow ? await getMonthlyAttendanceRecords(importRow.id) : [];
+  const filteredRecords = filterRecordsBySearch(allRecords, searchQuery);
+  const filteredPeople = filterPeopleBySearch(people, searchQuery);
+  const counts = personRecordCounts(people, allRecords);
+
+  const peopleWithCounts = filteredPeople.map((p) => ({
+    ...p,
+    recordCount: counts.get(p.id) ?? 0,
+  }));
+
+  const selectedDay = params.day ?? null;
+  const selectedPersonId = params.personId ?? null;
+  const selectedPerson = selectedPersonId
+    ? (people.find((p) => p.id === selectedPersonId) ?? null)
+    : null;
+
+  const personAllRecords = selectedPerson
+    ? allRecords.filter((r) => r.attendance_person_id === selectedPerson.id)
+    : [];
+
+  const calendarDays = selectedPerson
+    ? buildPersonCalendarDays(month, personAllRecords)
+    : buildCalendarDays(month, filteredRecords);
+
+  const summary = buildMonthSummary(allRecords, people.length);
+  const personStats = selectedPerson
+    ? buildPersonMonthStats(month, personAllRecords)
+    : null;
+
+  const navContext =
+    companyId && branchId
+      ? { companyId, branchId, month }
+      : null;
+
+  const dayRecords = selectedDay
+    ? filterRecordsBySearch(
+        allRecords.filter(
+          (r) =>
+            r.date === selectedDay &&
+            (!selectedPerson || r.attendance_person_id === selectedPerson.id),
+        ),
+        searchQuery,
+      )
+    : [];
+
+  const exportHref =
+    companyId && branchId
+      ? `/api/attendance/export.xlsx?companyId=${companyId}&branchId=${branchId}&month=${month}`
+      : "#";
+  const exportPdfHref =
+    companyId && branchId
+      ? `/api/attendance/export.pdf?companyId=${companyId}&branchId=${branchId}&month=${month}`
+      : "#";
+
+  const hasData = allRecords.length > 0;
+  const hasSearch = searchQuery.length > 0;
+  const noSearchResults =
+    hasSearch && hasData && filteredRecords.length === 0 && filteredPeople.length === 0;
 
   return (
     <div>
       <PageHeader
-        title="سجل الحضور"
-        description="عرض وإدارة الحضور اليومي للموظفين."
+        title="الحضور الشهري"
+        description="تقويم شهري، ملخص، واستيراد/تصدير الحضور."
         action={
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Link
-              href={`/portal/attendance/new?date=${selectedDate}`}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm shadow-md hover:bg-primary-700 w-full sm:w-auto justify-center"
-            >
-              <Plus className="w-4 h-4" />
-              إضافة سجل
-            </Link>
-            <Link
-              href={`/api/attendance/export?date=${selectedDate}${
-                params.companyId ? `&companyId=${params.companyId}` : ""
-              }`}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-semibold text-sm hover:bg-gray-800 dark:hover:bg-white w-full sm:w-auto justify-center"
-            >
-              <Download className="w-4 h-4" />
-              تصدير CSV
-            </Link>
-          </div>
+          companyId && branchId && hasData ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href={exportPdfHref}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm hover:bg-primary-700"
+              >
+                <FileText className="w-4 h-4" />
+                تصدير PDF
+              </Link>
+              <Link
+                href={exportHref}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-semibold text-sm"
+              >
+                <Download className="w-4 h-4" />
+                تصدير Excel
+              </Link>
+            </div>
+          ) : null
         }
       />
 
-      <form className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-5">
-        <input
-          type="date"
-          name="date"
-          defaultValue={selectedDate}
-          className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden"
-        />
-        {profile.role === "md_admin" ? (
-          <select
-            name="companyId"
-            defaultValue={params.companyId ?? ""}
-            className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden"
-          >
-            <option value="">كل الشركات</option>
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name_ar}
-              </option>
-            ))}
-          </select>
-        ) : null}
-        <button
-          type="submit"
-          className="px-5 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm hover:bg-primary-700"
-        >
-          عرض
-        </button>
-      </form>
+      <MonthlyFilters
+        companies={companies}
+        branches={branches}
+        companyId={companyId}
+        branchId={branchId}
+        month={month}
+        showCompanyPicker={profile.is_super_admin}
+      />
 
-      {employees.length === 0 ? (
-        <EmptyState
-          icon={CalendarCheck}
-          title="لا يوجد موظفون"
-          description="أضف موظفين أولاً لعرض الحضور."
-        />
+      {!companyId ? (
+        <p className="text-sm text-gray-500">اختر شركة لعرض الحضور.</p>
+      ) : branches.length === 0 ? (
+        <p className="text-sm text-gray-500">
+          لا توجد فروع بعد.{" "}
+          <Link href="/portal/attendance/branches" className="text-primary-600 underline">
+            أضف فروع الحضور
+          </Link>
+        </p>
+      ) : !branchId ? (
+        <p className="text-sm text-gray-500">اختر فرعاً لعرض الحضور.</p>
       ) : (
-        <DailyGrid
-          date={selectedDate}
-          employees={employees}
-          records={rows.map((r) => ({
-            id: r.id,
-            profile_id: r.profile_id,
-            status: r.status,
-            check_in: r.check_in,
-            check_out: r.check_out,
-          }))}
-        />
+        <>
+          <AttendanceSearch basePath="/portal/attendance" defaultValue={params.q ?? ""} />
+
+          {noSearchResults ? (
+            <p className="text-sm text-gray-500 mb-4">
+              لا توجد نتائج للبحث «{params.q}». جرّب اسماً آخر أو{" "}
+              <Link
+                href={`/portal/attendance?companyId=${companyId}&branchId=${branchId}&month=${month}`}
+                className="text-primary-600 underline"
+              >
+                امسح البحث
+              </Link>
+              .
+            </p>
+          ) : null}
+
+          {selectedPerson && personStats ? (
+            <>
+              <AttendancePersonHeader
+                personName={selectedPerson.full_name}
+                externalNumber={selectedPerson.external_employee_number}
+                recordCount={personAllRecords.length}
+                closeHref={
+                  navContext ? buildBranchAttendanceHref(navContext) : null
+                }
+              />
+              <AttendancePersonSummaryCards stats={personStats} />
+            </>
+          ) : (
+            <AttendanceSummaryCards summary={summary} />
+          )}
+
+          <AttendanceToolbar
+            importRow={importRow}
+            isSuperAdmin={profile.is_super_admin}
+          />
+
+          <div className="mb-4">
+            <AttendanceImportForm
+              companyId={companyId}
+              branchId={branchId}
+              month={month}
+            />
+          </div>
+
+          {!hasData ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">
+              لا توجد سجلات محفوظة لهذا الشهر. قم باستيراد ملف البصمة أولاً.
+            </p>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="lg:col-span-2 space-y-4">
+                <AttendanceCalendar
+                  days={calendarDays}
+                  month={month}
+                  selectedDay={selectedDay}
+                  personMode={Boolean(selectedPerson)}
+                  title={
+                    selectedPerson ? `تقويم ${selectedPerson.full_name}` : "تقويم الشهر"
+                  }
+                />
+                {selectedDay ? (
+                  <AttendanceDayPanel
+                    date={selectedDay}
+                    records={dayRecords}
+                    shifts={branchShifts}
+                    isSuperAdmin={profile.is_super_admin}
+                    hasSearch={hasSearch}
+                  />
+                ) : null}
+              </div>
+              <AttendancePersonList
+                people={peopleWithCounts}
+                selectedPersonId={selectedPersonId}
+                hasSearch={hasSearch}
+                navContext={{
+                  companyId: companyId!,
+                  branchId: branchId!,
+                  month,
+                }}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    present:
-      "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-    late: "bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-    absent: "bg-red-50 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-    leave: "bg-sky-50 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
-  };
-  const label: Record<string, string> = {
-    present: "حاضر",
-    late: "متأخر",
-    absent: "غائب",
-    leave: "إجازة",
-  };
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-        map[status] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-      }`}
-    >
-      {label[status] ?? status}
-    </span>
   );
 }

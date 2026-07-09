@@ -166,3 +166,8 @@ export async function requireFeature(
 
   return current;
 }
+
+/** Monthly attendance: MD admins, company managers, and super admins only. */
+export async function requireAttendanceAccess() {
+  return requireFeature("attendance", ["md_admin", "company_manager"]);
+}

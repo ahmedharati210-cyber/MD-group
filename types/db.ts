@@ -157,6 +157,187 @@ type ProfileInsert = {
   external_employee_number?: string | null;
 };
 
+export interface AttendancePerson {
+  id: string;
+  company_id: string;
+  branch_id: string;
+  external_employee_number: string;
+  full_name: string;
+  active: boolean;
+  first_seen_at: string;
+  last_seen_at: string;
+  notes: string | null;
+  raw_department_hint: string | null;
+  shift_id: string | null;
+  created_at: string;
+}
+type AttendancePersonInsert = {
+  id?: string;
+  company_id: string;
+  branch_id: string;
+  external_employee_number: string;
+  full_name: string;
+  active?: boolean;
+  first_seen_at?: string;
+  last_seen_at?: string;
+  notes?: string | null;
+  raw_department_hint?: string | null;
+  shift_id?: string | null;
+  created_at?: string;
+};
+
+export type AttendanceImportStatus = "imported" | "finalized";
+
+export interface AttendanceBranch {
+  id: string;
+  company_id: string;
+  name: string;
+  code: string | null;
+  active: boolean;
+  display_order: number;
+  /** Total worked minutes that triggers "دوام كامل" classification. */
+  full_time_threshold_minutes: number;
+  /** Expected work minutes on a full-time day. */
+  full_time_expected_minutes: number;
+  created_at: string;
+}
+type AttendanceBranchInsert = {
+  id?: string;
+  company_id: string;
+  name: string;
+  code?: string | null;
+  active?: boolean;
+  display_order?: number;
+  full_time_threshold_minutes?: number;
+  full_time_expected_minutes?: number;
+  created_at?: string;
+};
+
+export interface AttendanceShift {
+  id: string;
+  company_id: string;
+  branch_id: string;
+  name: string;
+  start_time: string;
+  end_time: string;
+  crosses_midnight: boolean;
+  checkout_cutoff_time: string | null;
+  expected_minutes: number;
+  late_grace_minutes: number;
+  early_leave_grace_minutes: number;
+  check_in_window_start: string | null;
+  check_in_window_end: string | null;
+  check_out_window_start: string | null;
+  check_out_window_end: string | null;
+  active: boolean;
+  display_order: number;
+  created_at: string;
+}
+type AttendanceShiftInsert = {
+  id?: string;
+  company_id: string;
+  branch_id: string;
+  name: string;
+  start_time: string;
+  end_time: string;
+  crosses_midnight?: boolean;
+  checkout_cutoff_time?: string | null;
+  expected_minutes: number;
+  late_grace_minutes?: number;
+  early_leave_grace_minutes?: number;
+  check_in_window_start?: string | null;
+  check_in_window_end?: string | null;
+  check_out_window_start?: string | null;
+  check_out_window_end?: string | null;
+  active?: boolean;
+  display_order?: number;
+  created_at?: string;
+};
+
+export interface AttendanceImport {
+  id: string;
+  company_id: string;
+  branch_id: string;
+  month: string;
+  file_name: string | null;
+  status: AttendanceImportStatus;
+  created_by: string | null;
+  matched_count: number;
+  unmatched_count: number;
+  warning_summary: Record<string, unknown> | null;
+  created_at: string;
+}
+type AttendanceImportInsert = {
+  id?: string;
+  company_id: string;
+  branch_id: string;
+  month: string;
+  file_name?: string | null;
+  status?: AttendanceImportStatus;
+  created_by?: string | null;
+  matched_count?: number;
+  unmatched_count?: number;
+  warning_summary?: Record<string, unknown> | null;
+  created_at?: string;
+};
+
+export interface AttendanceMonthlyRecord {
+  id: string;
+  import_id: string;
+  company_id: string;
+  branch_id: string;
+  attendance_person_id: string | null;
+  profile_id: string | null;
+  external_employee_number: string;
+  employee_name: string;
+  date: string;
+  first_check_in: string | null;
+  last_check_out: string | null;
+  total_minutes: number | null;
+  shift_type: string | null;
+  expected_minutes: number | null;
+  late_minutes: number;
+  early_leave_minutes: number;
+  overtime_minutes: number;
+  deduction_minutes: number;
+  is_holiday: boolean;
+  is_absent: boolean;
+  leave_type: string | null;
+  notes: string | null;
+  raw_payload: Record<string, unknown> | null;
+  shift_id: string | null;
+  punch_count: number | null;
+  created_at: string;
+}
+type AttendanceMonthlyRecordInsert = {
+  id?: string;
+  import_id: string;
+  company_id: string;
+  branch_id: string;
+  attendance_person_id?: string | null;
+  profile_id?: string | null;
+  external_employee_number: string;
+  employee_name: string;
+  date: string;
+  first_check_in?: string | null;
+  last_check_out?: string | null;
+  total_minutes?: number | null;
+  shift_type?: string | null;
+  expected_minutes?: number | null;
+  late_minutes?: number;
+  early_leave_minutes?: number;
+  overtime_minutes?: number;
+  deduction_minutes?: number;
+  is_holiday?: boolean;
+  is_absent?: boolean;
+  leave_type?: string | null;
+  notes?: string | null;
+  raw_payload?: Record<string, unknown> | null;
+  shift_id?: string | null;
+  punch_count?: number | null;
+  created_at?: string;
+};
+
 export interface Attendance {
   id: string;
   profile_id: string;
@@ -739,6 +920,14 @@ export interface Database {
     Tables: {
       companies: TableDef<Company, CompanyInsert>;
       profiles: TableDef<Profile, ProfileInsert>;
+      attendance_branches: TableDef<AttendanceBranch, AttendanceBranchInsert>;
+      attendance_shifts: TableDef<AttendanceShift, AttendanceShiftInsert>;
+      attendance_people: TableDef<AttendancePerson, AttendancePersonInsert>;
+      attendance_imports: TableDef<AttendanceImport, AttendanceImportInsert>;
+      attendance_monthly_records: TableDef<
+        AttendanceMonthlyRecord,
+        AttendanceMonthlyRecordInsert
+      >;
       attendance: TableDef<Attendance, AttendanceInsert>;
       documents: TableDef<DocumentRow, DocumentInsert>;
       mail: TableDef<Mail, MailInsert>;
@@ -784,6 +973,7 @@ export interface Database {
     Enums: {
       user_role: UserRole;
       attendance_status: AttendanceStatus;
+      attendance_import_status: AttendanceImportStatus;
       document_category: DocumentCategory;
       mail_direction: MailDirection;
       task_status: TaskStatus;

@@ -98,8 +98,8 @@ export default async function PortalDashboard() {
         {!isEmployee ? (
           <StatCard label="الموظفون" value={counts.employees} icon={Users} tone="primary" href="/portal/employees" />
         ) : null}
-        {hasFeature("attendance") ? (
-          <StatCard label={isEmployee ? "سجلاتك اليوم" : "حضور اليوم"} value={counts.attendanceToday} icon={CalendarCheck} tone="success" href="/portal/attendance" />
+        {hasFeature("attendance") && !isEmployee ? (
+          <StatCard label="حضور الشهر" value={counts.attendanceToday} icon={CalendarCheck} tone="success" href="/portal/attendance" />
         ) : null}
         {hasFeature("papers") ? (
           <StatCard label="الأوراق الرسمية" value={counts.papers} icon={FileText} tone="secondary" href="/portal/papers" />
@@ -205,15 +205,11 @@ export default async function PortalDashboard() {
             icon={FileText}
           />
         ) : null}
-        {hasFeature("attendance") ? (
+        {hasFeature("attendance") && !isEmployee ? (
           <QuickLink
             href="/portal/attendance"
-            title="الحضور والانصراف"
-            description={
-              isEmployee
-                ? "سجّل حضورك اليومي وراجع سجلاتك السابقة."
-                : "مراجعة سجلات الحضور اليومية والشهرية."
-            }
+            title="الحضور الشهري"
+            description="استيراد ملف البصمة، المراجعة، وتصدير التقرير الشهري."
             icon={CalendarCheck}
           />
         ) : null}

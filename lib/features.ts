@@ -2,7 +2,7 @@ import type { AppFeature, RoleFeatures, UserRole } from "@/types/db";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** Platform-wide kill switch — clear when a module is ready for production. */
-export const PLATFORM_DISABLED_FEATURES: AppFeature[] = ["attendance"];
+export const PLATFORM_DISABLED_FEATURES: AppFeature[] = [];
 
 export function isPlatformFeatureEnabled(feature: AppFeature): boolean {
   return !PLATFORM_DISABLED_FEATURES.includes(feature);
@@ -161,13 +161,20 @@ export function getVisibleFeatures(
   if (roleOverride !== undefined) {
     // Intersect role override with the company's enabled features
     if (enabledFeatures === null) {
-      return withoutPlatformDisabled(roleOverride);
+      return withoutPlatformDisabled(roleOverride).filter(
+        (f) => !(role === "employee" && f === "attendance"),
+      );
     }
     return withoutPlatformDisabled(
       roleOverride.filter((f) => enabledFeatures.includes(f)),
-    );
+    ).filter((f) => !(role === "employee" && f === "attendance"));
   }
 
   if (enabledFeatures === null) return null;
-  return withoutPlatformDisabled(enabledFeatures);
+
+  const features = withoutPlatformDisabled(enabledFeatures);
+  if (role === "employee") {
+    return features.filter((f) => f !== "attendance");
+  }
+  return features;
 }

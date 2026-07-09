@@ -110,7 +110,7 @@ const items: Item[] = [
     href: "/portal/attendance",
     label: "الحضور",
     icon: CalendarCheck,
-    roles: ["md_admin", "company_manager", "employee"],
+    roles: ["md_admin", "company_manager"],
     feature: "attendance",
   },
   {
@@ -229,6 +229,18 @@ export function Sidebar({
       if (!(isSuperAdmin || role === "md_admin")) return false;
       if (isSuperAdmin) return true;
       return isMdManagerFeatureAllowed("timeline", enabledFeatures);
+    }
+    if (item.href === "/portal/attendance") {
+      if (!(isSuperAdmin || role === "md_admin" || role === "company_manager")) {
+        return false;
+      }
+      if (!isPlatformFeatureEnabled("attendance")) return false;
+      if (isSuperAdmin) return true;
+      if (role === "md_admin") {
+        return isMdManagerFeatureAllowed("attendance", enabledFeatures);
+      }
+      if (visibleFeatures === null) return true;
+      return visibleFeatures.includes("attendance");
     }
     if (!item.roles.includes(role)) return false;
     if (
