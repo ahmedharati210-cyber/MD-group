@@ -35,7 +35,7 @@ function addDays(date: string, days: number): string {
   return `${ny}-${nmo}-${nd}`;
 }
 
-function inferLastPunchDate(
+export function inferLastPunchDate(
   shiftDate: string,
   firstCheckIn: string | null,
   lastCheckOut: string | null,

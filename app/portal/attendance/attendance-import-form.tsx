@@ -153,6 +153,28 @@ export function AttendanceImportForm({
             </div>
           ) : null}
 
+          {preview?.reimportDiff ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-4 text-sm space-y-2">
+              <p className="font-semibold text-amber-900 dark:text-amber-200">
+                مقارنة مع الاستيراد الحالي (سيتم استبداله)
+              </p>
+              <ul className="grid gap-1 sm:grid-cols-2 text-amber-900 dark:text-amber-100">
+                <li>السجلات الحالية: {preview.reimportDiff.existingRecordCount}</li>
+                <li>سجلات الملف الجديد: {preview.reimportDiff.newRecordCount}</li>
+                <li>أيام جديدة: {preview.reimportDiff.newDays}</li>
+                <li>أيام ستُحذف: {preview.reimportDiff.removedDays}</li>
+                <li>تغيّر في البصمات: {preview.reimportDiff.changedPunches}</li>
+                <li>بدون تغيير: {preview.reimportDiff.unchanged}</li>
+              </ul>
+              {preview.reimportDiff.manuallyEditedAtRisk > 0 ? (
+                <p className="text-amber-800 dark:text-amber-200 font-medium">
+                  تحذير: {preview.reimportDiff.manuallyEditedAtRisk} سجل معدّل يدوياً
+                  قد يتغيّر بعد إعادة الاستيراد.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           {preview?.warnings && preview.warnings.length > 0 ? (
             <ul className="text-sm text-amber-700 dark:text-amber-300 list-disc pr-5">
               {preview.warnings.map((w) => (

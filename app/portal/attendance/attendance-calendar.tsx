@@ -3,8 +3,26 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { DaySummary } from "@/lib/attendance/calendar-shared";
+import { ABSENT_STATUS } from "@/lib/attendance/leave-types";
 
-const AR_DAYS = ["أحد", "إثن", "ثلا", "أرب", "خمي", "جمع", "سبت"];
+const AR_DAYS = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
+
+function dayAriaLabel(day: DaySummary, dayNum: number, personMode: boolean): string {
+  const parts = [`يوم ${dayNum}`];
+  if (personMode) {
+    if (day.leave > 0) parts.push(day.leaveLabel ?? "إجازة");
+    else if (day.missingPunch > 0) parts.push("بصمة واحدة");
+    else if (day.absent > 0) parts.push(ABSENT_STATUS);
+    else if (day.present > 0) parts.push("حاضر");
+  } else {
+    if (day.leave > 0) parts.push(`${day.leave} إجازة`);
+    if (day.present > 0) parts.push(`${day.present} حضور`);
+    if (day.absent > 0) parts.push(`${day.absent} غياب`);
+    if (day.missingPunch > 0) parts.push(`${day.missingPunch} بصمة ناقصة`);
+  }
+  if (day.late > 0) parts.push(personMode ? "تأخير" : `${day.late} تأخير`);
+  return parts.join("، ");
+}
 
 function dayCellClass(day: DaySummary, isSelected: boolean): string {
   const hasLeave = day.leave > 0;
@@ -69,6 +87,15 @@ export function AttendanceCalendar({
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4">
       <h2 className="text-base font-bold mb-3">{title}</h2>
+      {!personMode ? (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500 mb-3">
+          <span><span className="text-emerald-600 font-semibold">ح</span> حضور</span>
+          <span><span className="text-red-600 font-semibold">غ</span> غياب</span>
+          <span><span className="text-teal-600 font-semibold">إ</span> إجازة</span>
+          <span><span className="text-amber-600 font-semibold">ت</span> تأخير</span>
+          <span><span className="text-orange-600 font-semibold">بصمة</span> بصمة ناقصة</span>
+        </div>
+      ) : null}
       <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-2">
         {AR_DAYS.map((d) => (
           <div key={d} className="py-1 font-semibold">
@@ -93,6 +120,8 @@ export function AttendanceCalendar({
             <Link
               key={day.date}
               href={dayHref(day.date)}
+              aria-label={dayAriaLabel(day, dayNum, personMode)}
+              aria-current={isSelected ? "date" : undefined}
               className={`min-h-[72px] rounded-xl border p-1.5 text-right transition-colors ${dayCellClass(day, isSelected)}`}
             >
               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -117,7 +146,7 @@ export function AttendanceCalendar({
                     : day.missingPunch > 0
                     ? "بصمة واحدة"
                     : day.absent > 0
-                      ? "لم يظهر"
+                      ? ABSENT_STATUS
                       : day.present > 0
                         ? "حاضر"
                         : ""}

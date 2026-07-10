@@ -9,7 +9,9 @@
     "dev": "next dev -H 0.0.0.0",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@serwist/next": "^9.5.11",
@@ -43,6 +45,7 @@
     "@types/web-push": "^3.6.4",
     "postcss": "^8.4.33",
     "tailwindcss": "^4.3.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^3.2.7"
   }
 }

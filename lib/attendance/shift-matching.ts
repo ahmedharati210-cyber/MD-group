@@ -1,5 +1,6 @@
 import {
   computeDayRecord,
+  incompletePunchDay,
   parseTimeToMinutes,
   SHIFT_FULL,
   type ComputedDay,
@@ -106,15 +107,18 @@ export function computeDayRecordWithShift(
   let overtimeMinutes = 0;
 
   if (shift.expected_minutes != null) {
-    const expectedEnd = minutesOnClock(startExpected + shift.expected_minutes);
-    if (shift.crosses_midnight && checkOutMinutes < startExpected) {
-      const adjustedCheckout = checkOutMinutes + 24 * 60;
+    if (shift.crosses_midnight) {
       const adjustedExpectedEnd = startExpected + shift.expected_minutes;
+      let adjustedCheckout = checkOutMinutes;
+      if (checkOutMinutes <= startExpected) {
+        adjustedCheckout = checkOutMinutes + 24 * 60;
+      }
       earlyLeaveMinutes = Math.max(
         0,
         adjustedExpectedEnd - adjustedCheckout - shift.early_leave_grace_minutes,
       );
     } else {
+      const expectedEnd = minutesOnClock(startExpected + shift.expected_minutes);
       earlyLeaveMinutes = Math.max(
         0,
         expectedEnd - checkOutMinutes - shift.early_leave_grace_minutes,
@@ -160,6 +164,10 @@ export function computeSessionRecord(
       computed: computeDayRecord({ firstCheckIn, lastCheckOut }),
       shift: null,
     };
+  }
+
+  if (firstCheckIn === lastCheckOut) {
+    return { computed: incompletePunchDay(), shift: null };
   }
 
   const totalMinutes = calcSessionMinutes(session);

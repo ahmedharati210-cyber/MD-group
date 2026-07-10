@@ -7,6 +7,10 @@ import {
 } from "@/lib/attendance/monthly-calculations";
 import { hasOnePunch, type DaySummary } from "@/lib/attendance/calendar-shared";
 import { hasLeave, HOLIDAY_LEAVE_TYPE, recordLeaveLabel } from "@/lib/attendance/leave-types";
+import {
+  classifyPersonDayStatus,
+  type PersonDayStatus,
+} from "@/lib/attendance/status-labels";
 import type { AttendanceMonthlyRecord, AttendancePerson } from "@/types/db";
 
 export type { DaySummary } from "@/lib/attendance/calendar-shared";
@@ -20,31 +24,29 @@ export type MonthSummary = {
 };
 
 export function buildMonthSummary(
+  month: string,
   records: AttendanceMonthlyRecord[],
-  peopleCount: number,
+  people: AttendancePerson[] = [],
 ): MonthSummary {
-  const byDate = groupRecordsByDate(records);
+  const calendarDays = buildCalendarDays(month, records, people);
   let presentDays = 0;
   let absentDays = 0;
   let lateDays = 0;
   let totalDeductionMinutes = 0;
 
-  for (const dayRecords of byDate.values()) {
-    const hasAbsent = dayRecords.some((r) => r.is_absent);
-    const hasPresent = dayRecords.some(
-      (r) => !r.is_absent && (r.first_check_in || r.last_check_out),
-    );
-    const hasLate = dayRecords.some((r) => r.late_minutes > 0);
-    if (hasAbsent) absentDays += 1;
-    if (hasPresent) presentDays += 1;
-    if (hasLate) lateDays += 1;
-    for (const r of dayRecords) {
-      totalDeductionMinutes += r.deduction_minutes;
-    }
+  for (const day of calendarDays) {
+    if (day.present > 0) presentDays += 1;
+    if (day.absent > 0) absentDays += 1;
+    if (day.late > 0) lateDays += 1;
+  }
+  for (const r of records) {
+    totalDeductionMinutes += r.deduction_minutes;
   }
 
+  const activePeople = people.filter((p) => p.active);
+
   return {
-    totalPeople: peopleCount,
+    totalPeople: activePeople.length || people.length,
     presentDays,
     absentDays,
     lateDays,
@@ -77,14 +79,31 @@ export function groupRecordsByPerson(
   return map;
 }
 
+function recordsByPersonAndDate(
+  records: AttendanceMonthlyRecord[],
+): Map<string, Map<string, AttendanceMonthlyRecord>> {
+  const map = new Map<string, Map<string, AttendanceMonthlyRecord>>();
+  for (const r of records) {
+    if (!r.attendance_person_id) continue;
+    const byDate = map.get(r.attendance_person_id) ?? new Map();
+    byDate.set(r.date, r);
+    map.set(r.attendance_person_id, byDate);
+  }
+  return map;
+}
+
 export function buildCalendarDays(
   month: string,
   records: AttendanceMonthlyRecord[],
+  people: AttendancePerson[] = [],
 ): DaySummary[] {
   const parsed = parseMonthParam(month.slice(0, 7));
   if (!parsed) return [];
   const days = enumerateMonthDays(parsed.year, parsed.month);
   const byDate = groupRecordsByDate(records);
+  const byPersonDate = recordsByPersonAndDate(records);
+  const activePeople = people.filter((p) => p.active);
+  const rosterIds = activePeople.map((p) => p.id);
 
   return days.map((date) => {
     const dayRecords = byDate.get(date) ?? [];
@@ -92,14 +111,34 @@ export function buildCalendarDays(
     let absent = 0;
     let late = 0;
     let missingPunch = 0;
+    let leave = 0;
+
+    const personIds = new Set<string>(rosterIds);
     for (const r of dayRecords) {
-      if (hasLeave(r)) continue;
-      if (r.is_absent) absent += 1;
-      else if (!r.first_check_in || !r.last_check_out) missingPunch += 1;
-      else present += 1;
-      if (r.late_minutes > 0) late += 1;
+      if (r.attendance_person_id) personIds.add(r.attendance_person_id);
     }
-    const leave = dayRecords.filter((r) => hasLeave(r)).length;
+
+    if (personIds.size === 0) {
+      for (const r of dayRecords) {
+        const status = classifyPersonDayStatus(r);
+        if (status === "leave") leave += 1;
+        else if (status === "absent") absent += 1;
+        else if (status === "onePunch") missingPunch += 1;
+        else present += 1;
+        if (r.late_minutes > 0) late += 1;
+      }
+    } else {
+      for (const personId of personIds) {
+        const record = byPersonDate.get(personId)?.get(date) ?? null;
+        const status = classifyPersonDayStatus(record);
+        if (status === "leave") leave += 1;
+        else if (status === "absent") absent += 1;
+        else if (status === "onePunch") missingPunch += 1;
+        else present += 1;
+        if (record && record.late_minutes > 0) late += 1;
+      }
+    }
+
     const leaveLabel =
       dayRecords.length === 1 ? recordLeaveLabel(dayRecords[0]) : null;
     return {
@@ -130,6 +169,63 @@ export function personRecordCounts(
     }
   }
   return counts;
+}
+
+export type DayRosterEntry = {
+  person: AttendancePerson | null;
+  record: AttendanceMonthlyRecord | null;
+  status: PersonDayStatus;
+  leaveLabel: string | null;
+};
+
+/**
+ * Roster-aware day breakdown: includes active people without a DB row as absent.
+ */
+export function buildDayRosterEntries(
+  date: string,
+  records: AttendanceMonthlyRecord[],
+  people: AttendancePerson[],
+): DayRosterEntry[] {
+  const dayRecords = records.filter((record) => record.date === date);
+  const byPersonDate = recordsByPersonAndDate(dayRecords);
+  const rosterPeople = people.filter((person) => person.active);
+  const seenPersonIds = new Set<string>();
+  const entries: DayRosterEntry[] = [];
+
+  for (const person of rosterPeople) {
+    seenPersonIds.add(person.id);
+    const record = byPersonDate.get(person.id)?.get(date) ?? null;
+    entries.push({
+      person,
+      record,
+      status: classifyPersonDayStatus(record),
+      leaveLabel: record ? recordLeaveLabel(record) : null,
+    });
+  }
+
+  for (const record of dayRecords) {
+    const personId = record.attendance_person_id;
+    if (personId && seenPersonIds.has(personId)) continue;
+
+    const rosterPerson = personId
+      ? people.find((person) => person.id === personId) ?? null
+      : null;
+    if (personId) seenPersonIds.add(personId);
+
+    entries.push({
+      person: rosterPerson,
+      record,
+      status: classifyPersonDayStatus(record),
+      leaveLabel: recordLeaveLabel(record),
+    });
+  }
+
+  entries.sort((a, b) => {
+    const nameA = a.person?.full_name ?? a.record?.employee_name ?? "";
+    const nameB = b.person?.full_name ?? b.record?.employee_name ?? "";
+    return nameA.localeCompare(nameB, "ar");
+  });
+  return entries;
 }
 
 export function formatDeductionHours(minutes: number): string {
@@ -191,8 +287,9 @@ export type PersonMonthStats = {
   absentDays: number;
   onePunchDays: number;
   lateDays: number;
-  weekendDays: number;
   leaveDays: number;
+  weekendDays: number;
+  totalDeductionMinutes: number;
 };
 
 export function buildPersonMonthStats(
@@ -206,8 +303,9 @@ export function buildPersonMonthStats(
       absentDays: 0,
       onePunchDays: 0,
       lateDays: 0,
-      weekendDays: 0,
       leaveDays: 0,
+      weekendDays: 0,
+      totalDeductionMinutes: 0,
     };
   }
   const days = enumerateMonthDays(parsed.year, parsed.month);
@@ -217,9 +315,9 @@ export function buildPersonMonthStats(
   let absentDays = 0;
   let onePunchDays = 0;
   let lateDays = 0;
-  let weekendDays = 0;
-
   let leaveDays = 0;
+  let weekendDays = 0;
+  let totalDeductionMinutes = 0;
 
   for (const date of days) {
     const record = (byDate.get(date) ?? [])[0] ?? null;
@@ -238,9 +336,18 @@ export function buildPersonMonthStats(
     if (hasOnePunch(record)) onePunchDays += 1;
     else presentDays += 1;
     if (record.late_minutes > 0) lateDays += 1;
+    totalDeductionMinutes += record.deduction_minutes;
   }
 
-  return { presentDays, absentDays, onePunchDays, lateDays, weekendDays, leaveDays };
+  return {
+    presentDays,
+    absentDays,
+    onePunchDays,
+    lateDays,
+    leaveDays,
+    weekendDays,
+    totalDeductionMinutes,
+  };
 }
 
 export type PersonPayrollSummary = {

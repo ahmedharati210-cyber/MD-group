@@ -3,6 +3,7 @@ import { Download, FileText } from "lucide-react";
 import { requireAttendanceAccess } from "@/lib/auth";
 import {
   buildCalendarDays,
+  buildDayRosterEntries,
   buildMonthSummary,
   buildPersonCalendarDays,
   buildPersonMonthStats,
@@ -71,6 +72,9 @@ export default async function AttendancePage({
   if (profile.role === "md_admin" && !profile.is_super_admin) {
     companyId = (await getShellCompanyIdForProfile(profile)) ?? companyId;
   }
+  if (profile.role === "company_manager" && profile.company_id) {
+    companyId = profile.company_id;
+  }
 
   const branches = companyId ? await getAttendanceBranches(companyId) : [];
   const requestedBranchId = params.branchId ?? null;
@@ -93,6 +97,7 @@ export default async function AttendancePage({
   const allRecords = importRow ? await getMonthlyAttendanceRecords(importRow.id) : [];
   const filteredRecords = filterRecordsBySearch(allRecords, searchQuery);
   const filteredPeople = filterPeopleBySearch(people, searchQuery);
+  const hasSearch = searchQuery.length > 0;
   const counts = personRecordCounts(people, allRecords);
 
   const peopleWithCounts = filteredPeople.map((p) => ({
@@ -112,9 +117,17 @@ export default async function AttendancePage({
 
   const calendarDays = selectedPerson
     ? buildPersonCalendarDays(month, personAllRecords)
-    : buildCalendarDays(month, filteredRecords);
+    : buildCalendarDays(
+        month,
+        filteredRecords,
+        hasSearch ? filteredPeople : people,
+      );
 
-  const summary = buildMonthSummary(allRecords, people.length);
+  const summary = buildMonthSummary(
+    month,
+    hasSearch ? filteredRecords : allRecords,
+    hasSearch ? filteredPeople : people,
+  );
   const personStats = selectedPerson
     ? buildPersonMonthStats(month, personAllRecords)
     : null;
@@ -124,16 +137,20 @@ export default async function AttendancePage({
       ? { companyId, branchId, month }
       : null;
 
-  const dayRecords = selectedDay
-    ? filterRecordsBySearch(
-        allRecords.filter(
-          (r) =>
-            r.date === selectedDay &&
-            (!selectedPerson || r.attendance_person_id === selectedPerson.id),
-        ),
-        searchQuery,
-      )
-    : [];
+  const rosterPeople = selectedPerson
+    ? [selectedPerson]
+    : hasSearch
+      ? filteredPeople
+      : people;
+
+  const dayRosterEntries =
+    selectedDay && companyId && branchId
+      ? buildDayRosterEntries(
+          selectedDay,
+          hasSearch ? filteredRecords : allRecords,
+          rosterPeople,
+        )
+      : [];
 
   const exportHref =
     companyId && branchId
@@ -145,7 +162,6 @@ export default async function AttendancePage({
       : "#";
 
   const hasData = allRecords.length > 0;
-  const hasSearch = searchQuery.length > 0;
   const noSearchResults =
     hasSearch && hasData && filteredRecords.length === 0 && filteredPeople.length === 0;
 
@@ -213,12 +229,13 @@ export default async function AttendancePage({
             </p>
           ) : null}
 
-          {selectedPerson && personStats ? (
+          {selectedPerson && personStats && importRow ? (
             <>
               <AttendancePersonHeader
                 personName={selectedPerson.full_name}
                 externalNumber={selectedPerson.external_employee_number}
                 recordCount={personAllRecords.length}
+                leaveDays={personStats.leaveDays}
                 closeHref={
                   navContext ? buildBranchAttendanceHref(navContext) : null
                 }
@@ -261,10 +278,12 @@ export default async function AttendancePage({
                 {selectedDay ? (
                   <AttendanceDayPanel
                     date={selectedDay}
-                    records={dayRecords}
+                    entries={dayRosterEntries}
                     shifts={branchShifts}
                     isSuperAdmin={profile.is_super_admin}
                     hasSearch={hasSearch}
+                    companyId={companyId}
+                    branchId={branchId}
                   />
                 ) : null}
               </div>

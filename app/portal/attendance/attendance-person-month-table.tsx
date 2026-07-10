@@ -2,7 +2,12 @@
 
 import React from "react";
 import type { DaySummary } from "@/lib/attendance/calendar-shared";
+import { ABSENT_STATUS } from "@/lib/attendance/leave-types";
 import type { AttendancePerson, AttendanceShift } from "@/types/db";
+import {
+  personDayStatusBadgeClass,
+  personDayStatusLabel,
+} from "@/lib/attendance/status-labels";
 import {
   AttendanceCreateLeaveTableRow,
   AttendanceRecordTableRow,
@@ -21,25 +26,25 @@ function shortDate(date: string): string {
 
 function statusBadgeClass(day: DaySummary): string {
   if (day.leave > 0) {
-    return "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-200";
+    return personDayStatusBadgeClass("leave");
   }
   if (day.missingPunch > 0) {
-    return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200";
+    return personDayStatusBadgeClass("onePunch");
   }
   if (day.absent > 0) {
-    return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200";
+    return personDayStatusBadgeClass("absent");
   }
   if (day.present > 0) {
-    return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200";
+    return personDayStatusBadgeClass("present");
   }
   return "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300";
 }
 
 function statusLabel(day: DaySummary): string {
-  if (day.leave > 0) return day.leaveLabel ?? "إجازة";
-  if (day.missingPunch > 0) return "بصمة واحدة";
-  if (day.absent > 0) return "لم يظهر";
-  if (day.present > 0) return "حاضر";
+  if (day.leave > 0) return personDayStatusLabel("leave", day.leaveLabel);
+  if (day.missingPunch > 0) return personDayStatusLabel("onePunch");
+  if (day.absent > 0) return ABSENT_STATUS;
+  if (day.present > 0) return personDayStatusLabel("present");
   return "—";
 }
 
@@ -119,7 +124,7 @@ export function AttendancePersonMonthTable({
             if (record) {
               return (
                 <AttendanceRecordTableRow
-                  key={`${record.id}:${record.is_absent}:${record.leave_type}:${record.first_check_in}:${record.last_check_out}:${record.notes}`}
+                  key={`${record.id}:${record.is_absent}:${record.leave_type}:${record.first_check_in}:${record.last_check_out}:${record.late_minutes}:${record.deduction_minutes}:${record.notes}`}
                   record={record}
                   shifts={shifts}
                   isSuperAdmin={isSuperAdmin}

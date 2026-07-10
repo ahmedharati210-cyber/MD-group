@@ -50,7 +50,7 @@ export function AttendancePersonList({
                   <p className="font-semibold text-sm">{person.full_name}</p>
                   <p className="text-xs text-gray-500 flex justify-between mt-0.5">
                     <span dir="ltr">#{person.external_employee_number}</span>
-                    <span>{person.recordCount} يوم</span>
+                    <span>{person.recordCount} سجل</span>
                   </p>
                 </Link>
                 <a

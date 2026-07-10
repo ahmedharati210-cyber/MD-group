@@ -9,6 +9,7 @@ import {
   computeSessionRecord,
   type FullTimeConfig,
 } from "@/lib/attendance/shift-matching";
+import { inferLastPunchDate } from "@/lib/attendance/session-from-record";
 import type { AttendanceShift } from "@/types/db";
 
 export type RawEmployeeBlock = {
@@ -274,12 +275,18 @@ export function matchBlocksToAttendancePeople(
     const isNewPerson = !person;
 
     for (const day of block.rows) {
+      const lastPunchDate = inferLastPunchDate(
+        day.date,
+        day.firstCheckIn,
+        day.lastCheckOut,
+        day.date,
+      );
       const session = {
         shiftDate: day.date,
         firstCheckIn: day.firstCheckIn,
         lastCheckOut: day.lastCheckOut,
         firstPunchDate: day.date,
-        lastPunchDate: day.date,
+        lastPunchDate,
         punchCount:
           day.firstCheckIn &&
           day.lastCheckOut &&
@@ -290,8 +297,8 @@ export function matchBlocksToAttendancePeople(
           ...(day.firstCheckIn
             ? [{ date: day.date, time: day.firstCheckIn }]
             : []),
-          ...(day.lastCheckOut && day.lastCheckOut !== day.firstCheckIn
-            ? [{ date: day.date, time: day.lastCheckOut }]
+          ...(day.lastCheckOut
+            ? [{ date: lastPunchDate, time: day.lastCheckOut }]
             : []),
         ],
       };
@@ -324,6 +331,8 @@ export function matchBlocksToAttendancePeople(
           department_hint: block.departmentHint,
           day_name: day.dayName,
           total_time: day.totalTime,
+          first_punch_date: day.date,
+          last_punch_date: lastPunchDate,
         },
       });
     }

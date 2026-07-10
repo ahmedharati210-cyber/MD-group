@@ -1,12 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
+import toast from "react-hot-toast";
 import type { AttendanceMonthlyRecord, AttendancePerson, AttendanceShift } from "@/types/db";
 import { hasOnePunch } from "@/lib/attendance/calendar-shared";
 import {
   ABSENT_STATUS,
   CREATE_DAY_STATUS_OPTIONS,
   hasLeave,
+  HOLIDAY_LEAVE_TYPE,
+  isLeaveType,
   LEAVE_TYPES,
   recordLeaveLabel,
 } from "@/lib/attendance/leave-types";
@@ -17,6 +20,12 @@ import {
   type ActionState,
 } from "./actions";
 import { DeleteConfirmButton } from "./delete-confirm-button";
+
+function useSaveSuccessToast(state: ActionState | undefined) {
+  useEffect(() => {
+    if (state?.ok) toast.success("تم الحفظ");
+  }, [state?.ok]);
+}
 
 type RawPunchTime = { date: string; time: string };
 
@@ -88,6 +97,58 @@ const compactCellClass = "px-2 py-2 border-t border-gray-100 dark:border-gray-80
 const compactBadgeClass =
   "text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap";
 
+/** Shared column template for day-panel record rows. */
+export const dayPanelFormGridClass =
+  "grid w-full grid-cols-[4.5rem_4.5rem_5.5rem_6.5rem_minmax(8rem,1fr)_3.75rem] gap-2 items-center";
+
+const dayPanelControlClass =
+  "h-8 w-full min-w-0 px-2 border border-gray-200 dark:border-gray-700 rounded-md text-xs bg-white dark:bg-gray-900";
+
+const dayPanelEmptyClass =
+  "h-8 w-full flex items-center justify-center rounded-md border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 text-xs text-gray-400";
+
+const dayPanelSaveClass =
+  "h-8 w-full px-2 rounded-md text-xs font-semibold whitespace-nowrap bg-primary-600 text-white border border-primary-600 hover:bg-primary-700 disabled:opacity-60";
+
+function DayPanelCell({ children }: { children: ReactNode }) {
+  return <div className="min-w-0">{children}</div>;
+}
+
+function RecordDayMeta({ record }: { record: AttendanceMonthlyRecord }) {
+  const leaveLabel = recordLeaveLabel(record);
+
+  return (
+    <div className="text-xs text-gray-500 text-left shrink-0 space-y-0.5">
+      {leaveLabel ? (
+        <p className="text-teal-700 font-semibold">{leaveLabel}</p>
+      ) : (
+        <p>{record.shift_type ?? (record.is_absent ? "غياب" : "—")}</p>
+      )}
+      {!record.is_absent && !hasLeave(record) && hasOnePunch(record) ? (
+        <p className="text-orange-600 font-semibold">بصمة واحدة</p>
+      ) : null}
+      {!record.is_absent &&
+      !hasLeave(record) &&
+      record.punch_count &&
+      record.punch_count > 1 ? (
+        <p className="text-orange-600">{record.punch_count} بصمة</p>
+      ) : null}
+      {!record.is_absent && !hasLeave(record) && record.late_minutes > 0 ? (
+        <p className="text-amber-600">تأخير {record.late_minutes} د</p>
+      ) : null}
+    </div>
+  );
+}
+
+function recordDayStatus(record: AttendanceMonthlyRecord): string {
+  if (record.is_absent) return ABSENT_STATUS;
+  return record.leave_type ?? "";
+}
+
+function hidesAttendanceTimes(status: string): boolean {
+  return status === ABSENT_STATUS || isLeaveType(status);
+}
+
 export type DayTableMeta = {
   index: number;
   shortDate: string;
@@ -122,7 +183,7 @@ export function AttendanceCreateLeaveForm({
       action={action}
       className={
         compact
-          ? "flex flex-wrap items-center gap-2"
+          ? dayPanelFormGridClass
           : "px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-teal-50/60 dark:bg-teal-950/20 space-y-2"
       }
     >
@@ -131,34 +192,57 @@ export function AttendanceCreateLeaveForm({
       <input type="hidden" name="company_id" value={companyId} />
       <input type="hidden" name="branch_id" value={branchId} />
       {!compact ? (
-        <p className="text-sm font-semibold w-full">
+        <p className="text-sm font-semibold w-full col-span-full">
           تسجيل عطلة / إجازة — {person.full_name}
         </p>
-      ) : null}
-      <select
-        name="leave_type"
-        required
-        defaultValue="عطلة"
-        className="px-2 py-1.5 border rounded-lg text-xs min-w-[140px]"
-      >
-        {CREATE_DAY_STATUS_OPTIONS.map((type) => (
-          <option key={type} value={type}>
-            {type}
-          </option>
-        ))}
-      </select>
-      <button
-        type="submit"
-        disabled={pending}
-        className="text-xs px-3 py-1.5 bg-teal-600 text-white rounded-lg"
-      >
-        {pending ? "..." : "حفظ"}
-      </button>
+      ) : (
+        <>
+          <DayPanelCell>
+            <div className={dayPanelEmptyClass} aria-hidden>
+              —
+            </div>
+          </DayPanelCell>
+          <DayPanelCell>
+            <div className={dayPanelEmptyClass} aria-hidden>
+              —
+            </div>
+          </DayPanelCell>
+          <DayPanelCell>
+            <div className={dayPanelEmptyClass} aria-hidden>
+              —
+            </div>
+          </DayPanelCell>
+        </>
+      )}
+      <DayPanelCell>
+        <select
+          name="leave_type"
+          required
+          defaultValue={HOLIDAY_LEAVE_TYPE}
+          className={dayPanelControlClass}
+        >
+          {CREATE_DAY_STATUS_OPTIONS.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+      </DayPanelCell>
+      <DayPanelCell>
+        <div className={dayPanelEmptyClass} aria-hidden>
+          —
+        </div>
+      </DayPanelCell>
+      <DayPanelCell>
+        <button type="submit" disabled={pending} className={dayPanelSaveClass}>
+          {pending ? "..." : "حفظ"}
+        </button>
+      </DayPanelCell>
       {state?.error ? (
-        <span className="text-xs text-red-600">{state.error}</span>
+        <p className="col-span-full text-xs text-red-600">{state.error}</p>
       ) : null}
       {state?.ok ? (
-        <span className="text-xs text-teal-700">تم التسجيل</span>
+        <p className="col-span-full text-xs text-teal-700">تم التسجيل</p>
       ) : null}
     </form>
   );
@@ -215,7 +299,7 @@ export function AttendanceCreateLeaveTableRow({
         <select
           name="leave_type"
           required
-          defaultValue="عطلة"
+          defaultValue={HOLIDAY_LEAVE_TYPE}
           className={compactSelectClass}
         >
           {CREATE_DAY_STATUS_OPTIONS.map((type) => (
@@ -236,7 +320,7 @@ export function AttendanceCreateLeaveTableRow({
           disabled={pending}
           className="text-xs px-2 py-1.5 bg-teal-600 text-white rounded whitespace-nowrap w-full"
         >
-          {pending ? "..." : "حفظ"}
+          {pending ? "جاري الحفظ..." : "حفظ"}
         </button>
         {state?.error ? (
           <p className="text-[10px] text-red-600 mt-0.5 leading-tight">{state.error}</p>
@@ -263,6 +347,9 @@ export function AttendanceRecordTableRow({
     updateMonthlyRecordAction,
     undefined,
   );
+  useSaveSuccessToast(state);
+  const [dayStatus, setDayStatus] = useState(() => recordDayStatus(record));
+  const hideTimes = hidesAttendanceTimes(dayStatus);
 
   const lateDeduction =
     record.late_minutes > 0 || record.deduction_minutes > 0
@@ -275,9 +362,6 @@ export function AttendanceRecordTableRow({
       : "—";
 
   const cellBase = `${compactCellClass} ${dayMeta.rowClassName}`;
-  const statusValue = record.is_absent
-    ? ABSENT_STATUS
-    : record.leave_type ?? "";
 
   return (
     <form action={action} className="contents">
@@ -297,31 +381,40 @@ export function AttendanceRecordTableRow({
         </span>
       </div>
       <div className={cellBase}>
-        <input
-          name="first_check_in"
-          {...timeInputProps}
-          title="الدخول"
-          defaultValue={record.first_check_in?.slice(0, 5) ?? ""}
-          className={compactInputClass}
-        />
+        {hideTimes ? (
+          <span className="text-xs text-gray-400">—</span>
+        ) : (
+          <input
+            name="first_check_in"
+            {...timeInputProps}
+            title="الدخول"
+            defaultValue={record.first_check_in?.slice(0, 5) ?? ""}
+            className={compactInputClass}
+          />
+        )}
       </div>
       <div className={cellBase}>
-        <input
-          name="last_check_out"
-          {...timeInputProps}
-          title="الخروج"
-          defaultValue={record.last_check_out?.slice(0, 5) ?? ""}
-          className={compactInputClass}
-        />
+        {hideTimes ? (
+          <span className="text-xs text-gray-400">—</span>
+        ) : (
+          <input
+            name="last_check_out"
+            {...timeInputProps}
+            title="الخروج"
+            defaultValue={record.last_check_out?.slice(0, 5) ?? ""}
+            className={compactInputClass}
+          />
+        )}
       </div>
       <div className={cellBase}>
-        {shifts.length > 0 ? (
+        {hideTimes ? (
+          <span className="text-xs text-gray-400">—</span>
+        ) : shifts.length > 0 ? (
           <select
             name="shift_id"
             title="الوردية"
             defaultValue={record.shift_id ?? ""}
             className={compactSelectClass}
-            disabled={hasLeave(record)}
           >
             <option value="">—</option>
             {shifts
@@ -340,7 +433,8 @@ export function AttendanceRecordTableRow({
         <select
           name="leave_type"
           title="حالة اليوم"
-          defaultValue={statusValue}
+          value={dayStatus}
+          onChange={(e) => setDayStatus(e.target.value)}
           className={compactSelectClass}
         >
           <option value="">عادي</option>
@@ -370,7 +464,7 @@ export function AttendanceRecordTableRow({
           disabled={pending}
           className="text-xs px-3 py-1.5 bg-primary-600 text-white rounded whitespace-nowrap"
         >
-          {pending ? "..." : "حفظ"}
+          {pending ? "جاري الحفظ..." : "حفظ"}
         </button>
         {state?.error ? (
           <p className="text-xs text-red-600 mt-0.5 leading-tight">
@@ -399,6 +493,8 @@ type RecordEditRowProps = {
   isSuperAdmin: boolean;
   showEmployeeHeader?: boolean;
   showPunchTimeline?: boolean;
+  employeeName?: string;
+  externalNumber?: string;
 };
 
 export function AttendanceRecordEditRow({
@@ -407,91 +503,97 @@ export function AttendanceRecordEditRow({
   isSuperAdmin,
   showEmployeeHeader = true,
   showPunchTimeline = true,
+  employeeName,
+  externalNumber,
 }: RecordEditRowProps) {
   const [state, action, pending] = useActionState<ActionState | undefined, FormData>(
     updateMonthlyRecordAction,
     undefined,
   );
-  const leaveLabel = recordLeaveLabel(record);
+  useSaveSuccessToast(state);
+  const [dayStatus, setDayStatus] = useState(() => recordDayStatus(record));
+  const hideTimes = hidesAttendanceTimes(dayStatus);
+  const displayName = employeeName ?? record.employee_name;
+  const displayNumber = externalNumber ?? record.external_employee_number;
 
   return (
     <div className="space-y-2">
       {showEmployeeHeader ? (
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="font-semibold text-sm">{record.employee_name}</p>
-            <p className="text-xs text-gray-500" dir="ltr">
-              #{record.external_employee_number}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 items-center min-h-8">
+          <div className="min-w-0">
+            <p className="font-semibold text-sm truncate leading-tight">{displayName}</p>
+            <p className="text-[11px] text-gray-500 leading-tight" dir="ltr">
+              #{displayNumber}
             </p>
           </div>
-          <div className="text-xs text-gray-500 text-left">
-            {leaveLabel ? (
-              <p className="text-teal-700 font-semibold">{leaveLabel}</p>
-            ) : (
-              <p>{record.shift_type ?? (record.is_absent ? "غياب" : "—")}</p>
-            )}
-            {!record.is_absent && !hasLeave(record) && hasOnePunch(record) ? (
-              <p className="text-orange-600 font-semibold">بصمة واحدة</p>
-            ) : null}
-            {!record.is_absent &&
-            !hasLeave(record) &&
-            record.punch_count &&
-            record.punch_count > 1 ? (
-              <p className="text-orange-600">{record.punch_count} بصمة</p>
-            ) : null}
-            {!record.is_absent && !hasLeave(record) && record.late_minutes > 0 ? (
-              <p className="text-amber-600">تأخير {record.late_minutes} د</p>
-            ) : null}
-          </div>
+          <RecordDayMeta record={record} />
+          {isSuperAdmin ? (
+            <DeleteConfirmButton
+              label="حذف"
+              confirmMessage="حذف هذا السجل نهائياً؟"
+              action={deleteMonthlyRecordAction}
+              hiddenFields={{ id: record.id }}
+              className="h-8 px-2.5 text-[11px] text-red-600 border border-red-200 dark:border-red-900 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 shrink-0"
+            />
+          ) : null}
         </div>
       ) : null}
-      <form action={action} className="flex flex-wrap items-center gap-2">
+      <form action={action} className={dayPanelFormGridClass}>
         <input type="hidden" name="id" value={record.id} />
-        <div className="flex flex-col gap-0.5">
-          <label className="text-[10px] text-gray-500">الدخول المحسوب</label>
-          <input
-            name="first_check_in"
-            {...timeInputProps}
-            defaultValue={record.first_check_in?.slice(0, 5) ?? ""}
-            className="w-24 px-2 py-1 border rounded-lg text-xs"
-          />
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <label className="text-[10px] text-gray-500">الخروج المحسوب</label>
-          <input
-            name="last_check_out"
-            {...timeInputProps}
-            defaultValue={record.last_check_out?.slice(0, 5) ?? ""}
-            className="w-24 px-2 py-1 border rounded-lg text-xs"
-          />
-        </div>
-        {shifts.length > 0 ? (
-          <select
-            name="shift_id"
-            defaultValue={record.shift_id ?? ""}
-            className="px-2 py-1 border rounded-lg text-xs"
-            disabled={hasLeave(record)}
-          >
-            <option value="">بدون وردية</option>
-            {shifts
-              .filter((s) => s.active)
-              .map((shift) => (
-                <option key={shift.id} value={shift.id}>
-                  {shift.name}
-                </option>
-              ))}
-          </select>
-        ) : null}
-        <div className="flex flex-col gap-0.5">
-          <label className="text-[10px] text-gray-500">حالة اليوم</label>
+        <DayPanelCell>
+          {hideTimes ? (
+            <div className={dayPanelEmptyClass}>—</div>
+          ) : (
+            <input
+              name="first_check_in"
+              {...timeInputProps}
+              defaultValue={record.first_check_in?.slice(0, 5) ?? ""}
+              className={dayPanelControlClass}
+            />
+          )}
+        </DayPanelCell>
+        <DayPanelCell>
+          {hideTimes ? (
+            <div className={dayPanelEmptyClass}>—</div>
+          ) : (
+            <input
+              name="last_check_out"
+              {...timeInputProps}
+              defaultValue={record.last_check_out?.slice(0, 5) ?? ""}
+              className={dayPanelControlClass}
+            />
+          )}
+        </DayPanelCell>
+        <DayPanelCell>
+          {hideTimes ? (
+            <div className={dayPanelEmptyClass}>—</div>
+          ) : shifts.length > 0 ? (
+            <select
+              name="shift_id"
+              defaultValue={record.shift_id ?? ""}
+              className={dayPanelControlClass}
+            >
+              <option value="">—</option>
+              {shifts
+                .filter((s) => s.active)
+                .map((shift) => (
+                  <option key={shift.id} value={shift.id}>
+                    {shift.name}
+                  </option>
+                ))}
+            </select>
+          ) : (
+            <div className={dayPanelEmptyClass}>—</div>
+          )}
+        </DayPanelCell>
+        <DayPanelCell>
           <select
             name="leave_type"
-            defaultValue={
-              record.is_absent ? ABSENT_STATUS : record.leave_type ?? ""
-            }
-            className="px-2 py-1 border rounded-lg text-xs min-w-[120px]"
+            value={dayStatus}
+            onChange={(e) => setDayStatus(e.target.value)}
+            className={dayPanelControlClass}
           >
-            <option value="">دوام عادي</option>
+            <option value="">عادي</option>
             <option value={ABSENT_STATUS}>{ABSENT_STATUS}</option>
             {LEAVE_TYPES.map((type) => (
               <option key={type} value={type}>
@@ -499,34 +601,26 @@ export function AttendanceRecordEditRow({
               </option>
             ))}
           </select>
-        </div>
-        <input
-          name="notes"
-          defaultValue={record.notes ?? ""}
-          placeholder="ملاحظة"
-          className="flex-1 min-w-[100px] px-2 py-1 border rounded-lg text-xs"
-        />
-        <button
-          type="submit"
-          disabled={pending}
-          className="text-xs px-3 py-1 bg-primary-600 text-white rounded-lg"
-        >
-          {pending ? "..." : "حفظ"}
-        </button>
+        </DayPanelCell>
+        <DayPanelCell>
+          <input
+            name="notes"
+            defaultValue={record.notes ?? ""}
+            placeholder="ملاحظة"
+            className={dayPanelControlClass}
+          />
+        </DayPanelCell>
+        <DayPanelCell>
+          <button type="submit" disabled={pending} className={dayPanelSaveClass}>
+            {pending ? "…" : "حفظ"}
+          </button>
+        </DayPanelCell>
         {state?.error ? (
-          <span className="text-xs text-red-600">{state.error}</span>
+          <p className="col-span-full text-xs text-red-600">{state.error}</p>
         ) : null}
       </form>
-      {showPunchTimeline && !record.is_absent && !hasLeave(record) ? (
+      {showPunchTimeline && !hideTimes ? (
         <PunchTimeline record={record} />
-      ) : null}
-      {isSuperAdmin ? (
-        <DeleteConfirmButton
-          label="حذف السجل"
-          confirmMessage="حذف هذا السجل نهائياً؟"
-          action={deleteMonthlyRecordAction}
-          hiddenFields={{ id: record.id }}
-        />
       ) : null}
     </div>
   );
@@ -558,12 +652,12 @@ function PunchTimeline({ record }: { record: AttendanceMonthlyRecord }) {
   }
 
   return (
-    <div className="rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-950/40 p-2">
-      <p className="text-[10px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+    <div className="rounded-md border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-950/40 px-2 py-1.5">
+      <p className="text-[10px] font-medium text-gray-600 dark:text-gray-400 mb-1">
         البصمات الخام ({allPunches.length || record.punch_count})
       </p>
       {allPunches.length > 0 ? (
-        <ul className="flex flex-wrap gap-1.5">
+        <ul className="flex flex-wrap gap-1 min-h-6 items-center">
           {allPunches.map((punch) => {
             const key = punchKey(punch);
             const isCheckIn = selectedIn && punchKey(selectedIn) === key;
@@ -571,7 +665,7 @@ function PunchTimeline({ record }: { record: AttendanceMonthlyRecord }) {
             const isIgnored = !isCheckIn && !isCheckOut;
 
             let className =
-              "text-[10px] px-1.5 py-0.5 rounded border font-mono ";
+              "inline-flex items-center h-6 text-[10px] px-1.5 rounded border font-mono ";
             if (isCheckIn) {
               className +=
                 "bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200";

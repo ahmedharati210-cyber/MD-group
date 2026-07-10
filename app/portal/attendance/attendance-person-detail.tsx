@@ -7,6 +7,7 @@ type Props = {
   personName: string;
   externalNumber: string;
   recordCount: number;
+  leaveDays?: number;
   closeHref?: string | null;
 };
 
@@ -14,6 +15,7 @@ export function AttendancePersonHeader({
   personName,
   externalNumber,
   recordCount,
+  leaveDays,
   closeHref = null,
 }: Props) {
   return (
@@ -25,6 +27,7 @@ export function AttendancePersonHeader({
         <h3 className="font-bold text-lg">{personName}</h3>
         <p className="text-sm text-gray-500" dir="ltr">
           #{externalNumber} — {recordCount} سجل هذا الشهر
+          {leaveDays != null && leaveDays > 0 ? ` — إجازات: ${leaveDays}` : ""}
         </p>
       </div>
       {closeHref ? (

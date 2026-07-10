@@ -41,6 +41,7 @@ export function DeleteConfirmButton({
       type="button"
       onClick={onClick}
       disabled={pending}
+      aria-label={label || confirmMessage}
       className={
         className ??
         "inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300"

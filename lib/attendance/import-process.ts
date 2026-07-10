@@ -94,7 +94,7 @@ export async function processAttendanceImportFile(
     warnings.unshift(monthMismatch.message);
   }
 
-  rows = dedupeMatchedImportRows(rows);
+  rows = dedupeMatchedImportRows(rows, shifts, fullTimeConfig);
 
   return { rows, warnings, format, monthMismatch };
 }

@@ -1,4 +1,4 @@
-import { CalendarOff, Clock3, Palmtree, UserCheck, UserX, Users, AlertTriangle } from "lucide-react";
+import { CalendarOff, Clock3, Fingerprint, UserCheck, UserX, Users, AlertTriangle } from "lucide-react";
 import type { MonthSummary, PersonMonthStats } from "@/lib/attendance/attendance-view";
 import { formatDeductionHours } from "@/lib/attendance/attendance-view";
 
@@ -80,14 +80,14 @@ const personCards = [
   },
   {
     key: "absentDays",
-    label: "غياب / لم يظهر",
+    label: "غياب",
     icon: UserX,
     color: "text-red-600 bg-red-50 dark:bg-red-900/20",
   },
   {
     key: "onePunchDays",
     label: "بصمة واحدة",
-    icon: Clock3,
+    icon: Fingerprint,
     color: "text-orange-600 bg-orange-50 dark:bg-orange-900/20",
   },
   {
@@ -98,17 +98,28 @@ const personCards = [
   },
   {
     key: "weekendDays",
-    label: "عطلات",
+    label: "أيام عطلة",
     icon: CalendarOff,
     color: "text-green-600 bg-green-50 dark:bg-green-900/20",
   },
   {
-    key: "leaveDays",
-    label: "إجازات",
-    icon: Palmtree,
-    color: "text-teal-600 bg-teal-50 dark:bg-teal-900/20",
+    key: "totalDeductionMinutes",
+    label: "ساعات الخصم",
+    icon: Clock3,
+    color: "text-violet-600 bg-violet-50 dark:bg-violet-900/20",
   },
 ] as const;
+
+function personCardValues(stats: PersonMonthStats): Record<string, string | number> {
+  return {
+    presentDays: stats.presentDays,
+    absentDays: stats.absentDays,
+    onePunchDays: stats.onePunchDays,
+    lateDays: stats.lateDays,
+    weekendDays: stats.weekendDays,
+    totalDeductionMinutes: formatDeductionHours(stats.totalDeductionMinutes),
+  };
+}
 
 export function AttendancePersonSummaryCards({
   stats,
@@ -117,6 +128,8 @@ export function AttendancePersonSummaryCards({
   stats: PersonMonthStats;
   compact?: boolean;
 }) {
+  const values = personCardValues(stats);
+
   if (compact) {
     return (
       <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 mb-3">
@@ -132,7 +145,7 @@ export function AttendancePersonSummaryCards({
               </div>
               <div className="min-w-0">
                 <p className="text-lg font-bold text-gray-900 dark:text-gray-50 leading-tight">
-                  {stats[card.key]}
+                  {values[card.key]}
                 </p>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
                   {card.label}
@@ -158,7 +171,7 @@ export function AttendancePersonSummaryCards({
               <Icon className="w-4 h-4" />
             </div>
             <p className="text-2xl font-bold text-gray-900 dark:text-gray-50">
-              {stats[card.key]}
+              {values[card.key]}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{card.label}</p>
           </div>

@@ -1,7 +1,13 @@
 import "server-only";
 
-import { computeDayRecord } from "@/lib/attendance/monthly-calculations";
+import type { PunchSession } from "@/lib/attendance/punch-sessions";
+import {
+  computeSessionRecord,
+  DEFAULT_FULL_TIME_CONFIG,
+  type FullTimeConfig,
+} from "@/lib/attendance/shift-matching";
 import type { MatchedImportRow } from "@/lib/attendance/raw-excel-parser";
+import type { AttendanceShift } from "@/types/db";
 
 function punchTimestamp(date: string, time: string | null): number {
   if (!time) return 0;
@@ -25,7 +31,11 @@ function rowEndTs(row: MatchedImportRow): number {
 /**
  * Safety net: collapse duplicate (employee, date) rows before DB insert.
  */
-export function dedupeMatchedImportRows(rows: MatchedImportRow[]): MatchedImportRow[] {
+export function dedupeMatchedImportRows(
+  rows: MatchedImportRow[],
+  shifts: AttendanceShift[] = [],
+  fullTimeConfig: FullTimeConfig = DEFAULT_FULL_TIME_CONFIG,
+): MatchedImportRow[] {
   const byKey = new Map<string, MatchedImportRow[]>();
 
   for (const row of rows) {
@@ -86,10 +96,31 @@ export function dedupeMatchedImportRows(rows: MatchedImportRow[]): MatchedImport
     const lastDate =
       (latest.rawPayload?.last_punch_date as string | undefined) ?? latest.date;
 
-    const computed = computeDayRecord({
+    const sortedPunchTimes =
+      allPunchTimes.length > 0
+        ? allPunchTimes.sort(
+            (a, b) => punchTimestamp(a.date, a.time) - punchTimestamp(b.date, b.time),
+          )
+        : [
+            ...(earliest.firstCheckIn
+              ? [{ date: firstDate, time: earliest.firstCheckIn }]
+              : []),
+            ...(latest.lastCheckOut
+              ? [{ date: lastDate, time: latest.lastCheckOut }]
+              : []),
+          ];
+
+    const session: PunchSession = {
+      shiftDate: earliest.date,
       firstCheckIn: earliest.firstCheckIn,
       lastCheckOut: latest.lastCheckOut,
-    });
+      firstPunchDate: firstDate,
+      lastPunchDate: lastDate,
+      punchCount: punchCount || sortedPunchTimes.length || 1,
+      allPunchTimes: sortedPunchTimes,
+    };
+
+    const { computed, shift } = computeSessionRecord(session, shifts, fullTimeConfig);
 
     deduped.push({
       ...group[0],
@@ -97,6 +128,7 @@ export function dedupeMatchedImportRows(rows: MatchedImportRow[]): MatchedImport
       lastCheckOut: latest.lastCheckOut,
       computed,
       totalMinutes: computed.totalMinutes,
+      shiftId: shift?.id ?? group[0].shiftId ?? null,
       punchCount: punchCount || null,
       rawPayload: {
         ...group[0].rawPayload,
@@ -105,9 +137,7 @@ export function dedupeMatchedImportRows(rows: MatchedImportRow[]): MatchedImport
         last_punch_date: lastDate,
         all_punch_times:
           allPunchTimes.length > 0
-            ? allPunchTimes.sort(
-                (a, b) => punchTimestamp(a.date, a.time) - punchTimestamp(b.date, b.time),
-              )
+            ? sortedPunchTimes
             : group[0].rawPayload?.all_punch_times,
         merged_duplicate_rows: group.length,
       },

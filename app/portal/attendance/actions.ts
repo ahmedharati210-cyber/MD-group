@@ -4,7 +4,6 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { requireAttendanceAccess, requireRole } from "@/lib/auth";
 import { computeDayRecord } from "@/lib/attendance/monthly-calculations";
-import { dedupeMatchedImportRows } from "@/lib/attendance/import-dedupe";
 import {
   fullTimeConfigFromBranch,
   processAttendanceImportFile,
@@ -14,11 +13,16 @@ import {
   computeDayRecordWithShift,
   computeSessionRecord,
 } from "@/lib/attendance/shift-matching";
+import { sessionTotalMinutes } from "@/lib/attendance/punch-sessions";
 import {
   punchSessionFromManualEdit,
   punchSessionFromRecord,
 } from "@/lib/attendance/session-from-record";
-import { assertBranchBelongsToCompany, requireSuperAdmin } from "@/lib/attendance/scope";
+import { assertAttendanceCompanyAccess, assertBranchBelongsToCompany, requireSuperAdmin } from "@/lib/attendance/scope";
+import {
+  computeImportReimportDiff,
+  type ImportReimportDiff,
+} from "@/lib/attendance/import-reimport-diff";
 import {
   getAttendanceBranch,
   getAttendanceImport,
@@ -34,6 +38,7 @@ import {
 } from "@/lib/attendance/leave-types";
 
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
+import type { Profile } from "@/types/db";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -50,23 +55,37 @@ export type ImportPreviewState = {
     selectedMonth: string;
     message: string;
   };
+  reimportDiff?: ImportReimportDiff;
 };
 
 async function resolveCompanyScope(
   companyId: string | null,
-  role: string,
-  profileCompanyId: string | null,
-  isSuperAdmin: boolean,
+  profile: Pick<Profile, "role" | "company_id" | "is_super_admin">,
 ): Promise<{ companyId: string } | { error: string }> {
-  if (isSuperAdmin || role === "md_admin") {
+  if (profile.is_super_admin) {
     if (!companyId) return { error: "اختر الشركة" };
     return { companyId };
   }
-  if (!profileCompanyId) return { error: "لا توجد شركة مرتبطة بحسابك" };
-  if (companyId && companyId !== profileCompanyId) {
-    return { error: "صلاحيات غير كافية" };
+
+  if (profile.role === "company_manager") {
+    if (!profile.company_id) return { error: "لا توجد شركة مرتبطة بحسابك" };
+    if (companyId && companyId !== profile.company_id) {
+      return { error: "صلاحيات غير كافية" };
+    }
+    return { companyId: profile.company_id };
   }
-  return { companyId: profileCompanyId };
+
+  if (!companyId) return { error: "اختر الشركة" };
+  const access = await assertAttendanceCompanyAccess(profile, companyId);
+  if ("error" in access) return { error: access.error };
+  return { companyId };
+}
+
+function revalidateAttendanceData() {
+  revalidatePath("/portal/attendance");
+  revalidatePath("/portal/attendance/person");
+  revalidatePath("/portal/attendance/summary");
+  revalidateTag("attendance", "default");
 }
 
 const monthSchema = z.string().regex(/^\d{4}-\d{2}-01$/);
@@ -97,12 +116,7 @@ export async function previewAttendanceImportAction(
     companyId = (await getShellCompanyIdForProfile(current.profile)) ?? companyId;
   }
 
-  const scope = await resolveCompanyScope(
-    companyId,
-    current.profile.role,
-    current.profile.company_id,
-    current.profile.is_super_admin,
-  );
+  const scope = await resolveCompanyScope(companyId, current.profile);
   if ("error" in scope) return { error: scope.error };
 
   const branchCheck = await assertBranchBelongsToCompany(scope.companyId, branchId);
@@ -134,6 +148,31 @@ export async function previewAttendanceImportAction(
     (p) => `${p.name} (${p.externalNumber})`,
   );
 
+  const monthDate = `${month}-01`;
+  const supabase = await createSupabaseServerClient();
+  const { data: existingImport } = await supabase
+    .from("attendance_imports")
+    .select("id")
+    .eq("company_id", scope.companyId)
+    .eq("branch_id", branchId)
+    .eq("month", monthDate)
+    .maybeSingle<{ id: string }>();
+
+  let reimportDiff: ImportReimportDiff | undefined;
+  if (existingImport?.id) {
+    const { data: existingRecords } = await supabase
+      .from("attendance_monthly_records")
+      .select(
+        "external_employee_number, date, first_check_in, last_check_out, manually_overridden",
+      )
+      .eq("import_id", existingImport.id);
+
+    reimportDiff = computeImportReimportDiff(
+      existingRecords ?? [],
+      matched.rows,
+    );
+  }
+
   return {
     rows: matched.rows,
     newPeople,
@@ -142,6 +181,7 @@ export async function previewAttendanceImportAction(
     fileName: file.name,
     importFormat: processed.format === "unknown" ? undefined : processed.format,
     monthMismatch: processed.monthMismatch ?? undefined,
+    reimportDiff,
   };
 }
 
@@ -221,12 +261,7 @@ export async function saveAttendanceImportAction(
     companyId = (await getShellCompanyIdForProfile(current.profile)) ?? companyId;
   }
 
-  const scope = await resolveCompanyScope(
-    companyId,
-    current.profile.role,
-    current.profile.company_id,
-    current.profile.is_super_admin,
-  );
+  const scope = await resolveCompanyScope(companyId, current.profile);
   if ("error" in scope) return { error: scope.error };
 
   const branchCheck = await assertBranchBelongsToCompany(scope.companyId, branchId);
@@ -241,7 +276,7 @@ export async function saveAttendanceImportAction(
   );
   if ("error" in processed) return { error: processed.error };
 
-  const rows = dedupeMatchedImportRows(processed.rows);
+  const rows = processed.rows;
 
   const confirmMismatch = formData.get("confirm_month_mismatch") === "true";
   if (processed.monthMismatch && !confirmMismatch) {
@@ -350,16 +385,21 @@ export async function saveAttendanceImportAction(
     if (recordsError) return { error: recordsError.message };
   }
 
-  revalidatePath("/portal/attendance");
+  revalidateAttendanceData();
   revalidatePath("/portal/attendance/branches");
-  revalidateTag("attendance", "default");
   return { ok: true };
 }
 
+const punchTimeSchema = z
+  .string()
+  .regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/, "صيغة الوقت غير صالحة")
+  .optional()
+  .nullable();
+
 const updateRecordSchema = z.object({
   id: z.string().uuid(),
-  first_check_in: z.string().optional().nullable(),
-  last_check_out: z.string().optional().nullable(),
+  first_check_in: punchTimeSchema,
+  last_check_out: punchTimeSchema,
   leave_type: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   shift_id: z.string().uuid().optional().nullable(),
@@ -415,21 +455,30 @@ export async function updateMonthlyRecordAction(
   ) {
     return { error: "صلاحيات غير كافية" };
   }
+  const recordCompanyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    existing.company_id,
+  );
+  if ("error" in recordCompanyAccess) return { error: recordCompanyAccess.error };
 
-  const firstCheckIn = isAbsentStatus
-    ? null
-    : parsed.data.first_check_in ?? existing.first_check_in;
-  const lastCheckOut = isAbsentStatus
-    ? null
-    : parsed.data.last_check_out ?? existing.last_check_out;
+  const firstCheckIn =
+    isAbsentStatus || leaveType
+      ? null
+      : (parsed.data.first_check_in ?? existing.first_check_in);
+  const lastCheckOut =
+    isAbsentStatus || leaveType
+      ? null
+      : (parsed.data.last_check_out ?? existing.last_check_out);
   const isHoliday = leaveType === HOLIDAY_LEAVE_TYPE;
   const shiftId = isAbsentStatus ? null : parsed.data.shift_id ?? null;
 
   const rawPayload = existing.raw_payload ?? {};
+  // Form sends HH:MM while Postgres stores HH:MM:SS — compare normalized values.
+  const normalizeTime = (t: string | null) => t?.slice(0, 5) ?? null;
   const manuallyEdited =
     !isAbsentStatus &&
-    (firstCheckIn !== existing.first_check_in ||
-      lastCheckOut !== existing.last_check_out);
+    (normalizeTime(firstCheckIn) !== normalizeTime(existing.first_check_in) ||
+      normalizeTime(lastCheckOut) !== normalizeTime(existing.last_check_out));
 
   const session =
     isAbsentStatus || leaveType
@@ -489,10 +538,20 @@ export async function updateMonthlyRecordAction(
     ]);
     const fullTimeConfig = fullTimeConfigFromBranch(branch);
 
-    if (shiftId) {
+    const sessionMinutes = sessionTotalMinutes(session);
+    if (sessionMinutes >= fullTimeConfig.thresholdMinutes) {
+      const result = computeSessionRecord(session, shifts, fullTimeConfig);
+      computed = result.computed;
+      resolvedShiftId = result.shift?.id ?? null;
+    } else if (shiftId) {
       const shift = shifts.find((s) => s.id === shiftId);
       if (shift) {
         computed = computeDayRecordWithShift(session, shift);
+        resolvedShiftId = shift.id;
+      } else {
+        const result = computeSessionRecord(session, shifts, fullTimeConfig);
+        computed = result.computed;
+        resolvedShiftId = result.shift?.id ?? null;
       }
     } else {
       const result = computeSessionRecord(session, shifts, fullTimeConfig);
@@ -544,9 +603,7 @@ export async function updateMonthlyRecordAction(
 
   if (error) return { error: error.message };
 
-  revalidatePath("/portal/attendance");
-  revalidatePath("/portal/attendance/person");
-  revalidateTag("attendance", "default");
+  revalidateAttendanceData();
   return { ok: true };
 }
 
@@ -580,6 +637,12 @@ export async function createLeaveRecordAction(
   ) {
     return { error: "صلاحيات غير كافية" };
   }
+
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    parsed.data.company_id,
+  );
+  if ("error" in companyAccess) return { error: companyAccess.error };
 
   const branchCheck = await assertBranchBelongsToCompany(
     parsed.data.company_id,
@@ -615,6 +678,9 @@ export async function createLeaveRecordAction(
 
   if (!person || person.company_id !== parsed.data.company_id) {
     return { error: "الموظف غير موجود" };
+  }
+  if (person.branch_id && person.branch_id !== parsed.data.branch_id) {
+    return { error: "الموظف لا ينتمي لهذا الفرع" };
   }
 
   const statusValue = parsed.data.leave_type;
@@ -660,9 +726,7 @@ export async function createLeaveRecordAction(
     return { error: error.message };
   }
 
-  revalidatePath("/portal/attendance");
-  revalidatePath("/portal/attendance/person");
-  revalidateTag("attendance", "default");
+  revalidateAttendanceData();
   return { ok: true };
 }
 
@@ -687,6 +751,12 @@ export async function createAttendanceBranchAction(
     display_order: formData.get("display_order") || 0,
   });
   if (!parsed.success) return { error: "بيانات الفرع غير صالحة" };
+
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    parsed.data.company_id,
+  );
+  if ("error" in companyAccess) return { error: companyAccess.error };
 
   if (
     current.profile.role === "company_manager" &&
@@ -723,6 +793,11 @@ export async function toggleAttendanceBranchAction(formData: FormData) {
     .eq("id", id)
     .single<{ company_id: string }>();
   if (!branch) return;
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    branch.company_id,
+  );
+  if ("error" in companyAccess) return;
   if (
     current.profile.role === "company_manager" &&
     branch.company_id !== current.profile.company_id
@@ -758,6 +833,12 @@ export async function createAttendancePersonAction(
     notes: formData.get("notes") || null,
   });
   if (!parsed.success) return { error: "بيانات غير صالحة" };
+
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    parsed.data.company_id,
+  );
+  if ("error" in companyAccess) return { error: companyAccess.error };
 
   if (
     current.profile.role === "company_manager" &&
@@ -816,6 +897,11 @@ export async function updateAttendancePersonAction(
     .eq("id", parsed.data.id)
     .single<{ company_id: string }>();
   if (!person) return { error: "الشخص غير موجود" };
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    person.company_id,
+  );
+  if ("error" in companyAccess) return { error: companyAccess.error };
   if (
     current.profile.role === "company_manager" &&
     person.company_id !== current.profile.company_id
@@ -852,6 +938,11 @@ export async function toggleAttendancePersonAction(formData: FormData) {
     .eq("id", id)
     .single<{ company_id: string }>();
   if (!person) return;
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    person.company_id,
+  );
+  if ("error" in companyAccess) return;
   if (
     current.profile.role === "company_manager" &&
     person.company_id !== current.profile.company_id
@@ -896,9 +987,8 @@ export async function deleteAttendanceImportAction(
   const { error } = await supabase.from("attendance_imports").delete().eq("id", importId);
   if (error) return { error: error.message };
 
-  revalidatePath("/portal/attendance");
+  revalidateAttendanceData();
   revalidatePath("/portal/attendance/branches");
-  revalidateTag("attendance", "default");
   return { ok: true };
 }
 
@@ -932,9 +1022,7 @@ export async function deleteMonthlyRecordAction(
   const { error } = await supabase.from("attendance_monthly_records").delete().eq("id", id);
   if (error) return { error: error.message };
 
-  revalidatePath("/portal/attendance");
-  revalidatePath("/portal/attendance/person");
-  revalidateTag("attendance", "default");
+  revalidateAttendanceData();
   return { ok: true };
 }
 
@@ -959,6 +1047,11 @@ export async function deleteAttendancePersonAction(
     .maybeSingle<{ id: string; company_id: string }>();
 
   if (!person) return { error: "الشخص غير موجود" };
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    person.company_id,
+  );
+  if ("error" in companyAccess) return { error: companyAccess.error };
   if (
     current.profile.role === "company_manager" &&
     person.company_id !== current.profile.company_id
@@ -1013,6 +1106,11 @@ export async function deleteAttendanceBranchAction(
     .maybeSingle<{ id: string; company_id: string; name: string }>();
 
   if (!branch) return { error: "الفرع غير موجود" };
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    branch.company_id,
+  );
+  if ("error" in companyAccess) return { error: companyAccess.error };
   if (
     current.profile.role === "company_manager" &&
     branch.company_id !== current.profile.company_id
@@ -1108,6 +1206,12 @@ export async function createAttendanceShiftAction(
   );
   if ("error" in branchCheck) return { error: branchCheck.error };
 
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    parsed.data.company_id,
+  );
+  if ("error" in companyAccess) return { error: companyAccess.error };
+
   if (
     current.profile.role === "company_manager" &&
     parsed.data.company_id !== current.profile.company_id
@@ -1179,6 +1283,11 @@ export async function updateAttendanceShiftAction(
     .eq("id", parsed.data.id)
     .maybeSingle<{ company_id: string }>();
   if (!existing) return { error: "الوردية غير موجودة" };
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    existing.company_id,
+  );
+  if ("error" in companyAccess) return { error: companyAccess.error };
   if (
     current.profile.role === "company_manager" &&
     existing.company_id !== current.profile.company_id
@@ -1225,6 +1334,11 @@ export async function toggleAttendanceShiftAction(formData: FormData) {
     .eq("id", id)
     .single<{ company_id: string }>();
   if (!shift) return;
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    shift.company_id,
+  );
+  if ("error" in companyAccess) return;
   if (
     current.profile.role === "company_manager" &&
     shift.company_id !== current.profile.company_id
@@ -1255,6 +1369,11 @@ export async function deleteAttendanceShiftAction(
     .eq("id", id)
     .maybeSingle<{ id: string; company_id: string }>();
   if (!shift) return { error: "الوردية غير موجودة" };
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    shift.company_id,
+  );
+  if ("error" in companyAccess) return { error: companyAccess.error };
   if (
     current.profile.role === "company_manager" &&
     shift.company_id !== current.profile.company_id
@@ -1296,6 +1415,11 @@ export async function updateAttendanceBranchFullTimeRuleAction(
     .eq("id", parsed.data.branch_id)
     .maybeSingle<{ id: string; company_id: string }>();
   if (!branch) return { error: "الفرع غير موجود" };
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    branch.company_id,
+  );
+  if ("error" in companyAccess) return { error: companyAccess.error };
   if (
     current.profile.role === "company_manager" &&
     branch.company_id !== current.profile.company_id

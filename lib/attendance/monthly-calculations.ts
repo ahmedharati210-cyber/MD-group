@@ -42,6 +42,21 @@ export type ComputedDay = {
   notes: string | null;
 };
 
+/** Single punch or identical in/out — no shift deductions. */
+export function incompletePunchDay(): ComputedDay {
+  return {
+    shiftType: null,
+    expectedMinutes: null,
+    totalMinutes: null,
+    lateMinutes: 0,
+    earlyLeaveMinutes: 0,
+    overtimeMinutes: 0,
+    deductionMinutes: 0,
+    isAbsent: false,
+    notes: "بصمة ناقصة",
+  };
+}
+
 function parseTimeToMinutes(time: string | null): number | null {
   if (!time) return null;
   const parts = time.split(":");
@@ -125,17 +140,11 @@ export function computeDayRecord(
   }
 
   if (!firstCheckIn || !lastCheckOut) {
-    return {
-      shiftType: null,
-      expectedMinutes: null,
-      totalMinutes: null,
-      lateMinutes: 0,
-      earlyLeaveMinutes: 0,
-      overtimeMinutes: 0,
-      deductionMinutes: 0,
-      isAbsent: false,
-      notes: "بصمة ناقصة",
-    };
+    return incompletePunchDay();
+  }
+
+  if (firstCheckIn === lastCheckOut) {
+    return incompletePunchDay();
   }
 
   const shiftType = resolveShiftType(firstCheckIn, lastCheckOut, fullTimeRule);

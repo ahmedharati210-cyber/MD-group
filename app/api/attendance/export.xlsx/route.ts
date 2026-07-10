@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
 import { requireFeature } from "@/lib/auth";
-import { assertBranchBelongsToCompany } from "@/lib/attendance/scope";
+import {
+  assertAttendanceCompanyAccess,
+  assertBranchBelongsToCompany,
+} from "@/lib/attendance/scope";
 import {
   buildMonthlyAttendanceWorkbook,
   monthExportFileName,
@@ -11,8 +15,10 @@ import {
 } from "@/lib/data/monthly-attendance";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+const monthSchema = z.string().regex(/^\d{4}-\d{2}$/);
+
 export async function GET(req: NextRequest) {
-  await requireFeature("attendance", ["md_admin", "company_manager"]);
+  const { profile } = await requireFeature("attendance", ["md_admin", "company_manager"]);
 
   const { searchParams } = new URL(req.url);
   const companyId = searchParams.get("companyId");
@@ -24,6 +30,15 @@ export async function GET(req: NextRequest) {
       { error: "companyId و branchId و month مطلوبة" },
       { status: 400 },
     );
+  }
+
+  if (!monthSchema.safeParse(month).success) {
+    return NextResponse.json({ error: "شهر غير صالح" }, { status: 400 });
+  }
+
+  const companyAccess = await assertAttendanceCompanyAccess(profile, companyId);
+  if ("error" in companyAccess) {
+    return NextResponse.json({ error: companyAccess.error }, { status: 403 });
   }
 
   const monthDate = `${month}-01`;

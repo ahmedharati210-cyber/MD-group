@@ -38,6 +38,9 @@ export default async function AttendanceBranchesPage({
   if (profile.role === "md_admin" && !profile.is_super_admin) {
     companyId = (await getShellCompanyIdForProfile(profile)) ?? companyId;
   }
+  if (profile.role === "company_manager" && profile.company_id) {
+    companyId = profile.company_id;
+  }
 
   const branches = companyId ? await getAttendanceBranches(companyId) : [];
   const people = companyId ? await getAttendancePeople(companyId) : [];

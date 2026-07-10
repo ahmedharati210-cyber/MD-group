@@ -35,6 +35,7 @@ export async function generateMetadata({
 }: {
   searchParams: SearchParams;
 }) {
+  await requireAttendanceAccess();
   const params = await searchParams;
   const month = params.month ?? getDefaultAttendanceMonth();
   if (!params.personId || !params.companyId || !params.branchId) {
@@ -69,6 +70,9 @@ export default async function AttendancePersonPage({
 
   if (profile.role === "md_admin" && !profile.is_super_admin) {
     companyId = (await getShellCompanyIdForProfile(profile)) ?? companyId;
+  }
+  if (profile.role === "company_manager" && profile.company_id) {
+    companyId = profile.company_id;
   }
 
   const branches = companyId ? await getAttendanceBranches(companyId) : [];
@@ -117,8 +121,12 @@ export default async function AttendancePersonPage({
         title={`حضور ${person.full_name}`}
         description={
           selectedBranch
-            ? `${selectedBranch.name} — ${month} · #${person.external_employee_number} · ${personRecords.length} سجل`
-            : `${month} · #${person.external_employee_number} · ${personRecords.length} سجل`
+            ? `${selectedBranch.name} — ${month} · #${person.external_employee_number} · ${personRecords.length} سجل${
+                personStats.leaveDays > 0 ? ` · إجازات: ${personStats.leaveDays}` : ""
+              }`
+            : `${month} · #${person.external_employee_number} · ${personRecords.length} سجل${
+                personStats.leaveDays > 0 ? ` · إجازات: ${personStats.leaveDays}` : ""
+              }`
         }
       />
 
@@ -135,7 +143,9 @@ export default async function AttendancePersonPage({
         />
       </div>
 
-      <AttendancePersonSummaryCards stats={personStats} compact />
+      {importRow ? (
+        <AttendancePersonSummaryCards stats={personStats} compact />
+      ) : null}
 
       {!importRow ? (
         <p className="text-sm text-gray-500 py-8 text-center">
