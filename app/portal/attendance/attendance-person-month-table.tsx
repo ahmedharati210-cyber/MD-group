@@ -13,6 +13,7 @@ import {
   AttendanceRecordMobileCard,
   AttendanceRecordTableRow,
   PERSON_MONTH_GRID_STYLE,
+  PERSON_MONTH_SUBGRID_ROW_CLASS,
   PERSON_MONTH_TH,
   type DayTableMeta,
 } from "./attendance-record-edit-row";
@@ -95,8 +96,11 @@ export function AttendancePersonMonthTable({
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
       {/* Desktop table */}
       <div className="hidden md:block overflow-x-auto">
-        <div className="min-w-[52rem]">
-          <div className="grid w-full text-right" style={PERSON_MONTH_GRID_STYLE}>
+        <div
+          className="min-w-[52rem] grid w-full text-right"
+          style={PERSON_MONTH_GRID_STYLE}
+        >
+          <div className={PERSON_MONTH_SUBGRID_ROW_CLASS}>
             <div className={`${PERSON_MONTH_TH} justify-center flex`}>#</div>
             <div className={PERSON_MONTH_TH}>تاريخ</div>
             <div className={PERSON_MONTH_TH}>يوم</div>
@@ -122,7 +126,6 @@ export function AttendancePersonMonthTable({
                   shifts={shifts}
                   isSuperAdmin={isSuperAdmin}
                   dayMeta={dayMeta}
-                  gridStyle={PERSON_MONTH_GRID_STYLE}
                 />
               );
             }
@@ -135,7 +138,6 @@ export function AttendancePersonMonthTable({
                 branchId={branchId}
                 dayMeta={dayMeta}
                 defaultStatus={defaultStatusForDay(day)}
-                gridStyle={PERSON_MONTH_GRID_STYLE}
               />
             );
           })}

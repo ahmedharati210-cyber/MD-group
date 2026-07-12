@@ -196,7 +196,7 @@ export function PortalShell({
 
       <div
         className={
-          hideSidebar ? "print:mr-0" : "md:mr-64 print:mr-0"
+          hideSidebar ? "print:mr-0 overflow-x-hidden" : "md:mr-64 print:mr-0 overflow-x-hidden"
         }
       >
         <main className="p-4 sm:p-6 md:p-8 print:p-0 max-w-7xl mx-auto">{children}</main>

@@ -13,7 +13,8 @@ import type { AttendanceShift } from "@/types/db";
 import {
   AttendanceCreateLeaveForm,
   AttendanceRecordEditRow,
-  dayPanelFormGridClass,
+  DAY_PANEL_GRID_STYLE,
+  DAY_PANEL_SUBGRID_ROW_CLASS,
 } from "./attendance-record-edit-row";
 
 const badgeBase =
@@ -68,9 +69,12 @@ export function AttendanceDayPanel({
         {absentCount > 0 ? ` — ${absentCount} غياب` : ""})
       </h3>
       <div className="max-h-[480px] overflow-y-auto overflow-x-auto">
-        <div className="md:min-w-[40rem] divide-y divide-gray-100 dark:divide-gray-800">
+        <div
+          className="hidden md:grid md:min-w-[40rem] w-full"
+          style={DAY_PANEL_GRID_STYLE}
+        >
           <div
-            className={`hidden md:grid ${dayPanelFormGridClass} px-4 py-2 text-[10px] font-semibold text-gray-500 border-b border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-950/40`}
+            className={`${DAY_PANEL_SUBGRID_ROW_CLASS} px-4 py-2 text-[10px] font-semibold text-gray-500 border-b border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-950/40`}
           >
             <span>الدخول</span>
             <span>الخروج</span>
@@ -79,6 +83,54 @@ export function AttendanceDayPanel({
             <span>ملاحظة</span>
             <span className="text-center">حفظ</span>
           </div>
+          {entries.map((entry, index) => (
+            <div
+              key={entryKey(entry, index)}
+              className="md:contents"
+            >
+              {entry.record ? (
+                <AttendanceRecordEditRow
+                  record={entry.record}
+                  shifts={shifts}
+                  isSuperAdmin={isSuperAdmin}
+                  employeeName={entry.person?.full_name}
+                  externalNumber={entry.person?.external_employee_number}
+                />
+              ) : entry.person ? (
+                <>
+                  <div className="md:col-span-full md:px-4 md:pt-3 md:pb-1 space-y-2">
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 items-start">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate">
+                          {entry.person.full_name}
+                        </p>
+                        <p className="text-xs text-gray-500" dir="ltr">
+                          #{entry.person.external_employee_number}
+                        </p>
+                      </div>
+                      <span
+                        className={`${badgeBase} ${personDayStatusBadgeClass(entry.status)}`}
+                      >
+                        {personDayStatusLabel(entry.status, entry.leaveLabel)}
+                      </span>
+                    </div>
+                  </div>
+                  <AttendanceCreateLeaveForm
+                    date={date}
+                    person={entry.person}
+                    companyId={companyId}
+                    branchId={branchId}
+                    compact
+                    defaultStatus={
+                      entry.status === "absent" ? ABSENT_STATUS : HOLIDAY_LEAVE_TYPE
+                    }
+                  />
+                </>
+              ) : null}
+            </div>
+          ))}
+        </div>
+        <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-800">
           {entries.map((entry, index) => (
             <div key={entryKey(entry, index)} className="px-4 py-3">
             {entry.record ? (

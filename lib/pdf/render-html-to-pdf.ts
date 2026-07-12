@@ -47,9 +47,16 @@ async function getBrowserExecutablePath(): Promise<string> {
 }
 
 export async function renderPdfFromHtml(html: string): Promise<Uint8Array> {
+  const isVercel = Boolean(process.env.VERCEL);
+
+  if (isVercel) {
+    // Serverless has no GPU; software WebGL can paint blank/invisible text in PDFs.
+    chromium.setGraphicsMode = false;
+  }
+
   const executablePath = await getBrowserExecutablePath();
   const browser = await puppeteer.launch({
-    args: process.env.VERCEL
+    args: isVercel
       ? chromium.args
       : ["--no-sandbox", "--disable-setuid-sandbox"],
     defaultViewport: { width: 794, height: 1123 },
@@ -59,6 +66,9 @@ export async function renderPdfFromHtml(html: string): Promise<Uint8Array> {
 
   try {
     const page = await browser.newPage();
+    await page.emulateMediaFeatures([
+      { name: "prefers-color-scheme", value: "light" },
+    ]);
     await page.setContent(html, { waitUntil: "load", timeout: 30_000 });
     await page.evaluateHandle("document.fonts.ready");
     const pdf = await page.pdf({

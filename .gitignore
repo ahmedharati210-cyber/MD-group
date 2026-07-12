@@ -40,6 +40,8 @@ next-env.d.ts
 
 # PDF files (keep them local, don't commit)
 *.pdf
+!app/api/attendance/export.pdf/
+!app/api/attendance/export.pdf/**
 
 # Source images (keep local)
 *.jpeg

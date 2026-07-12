@@ -232,7 +232,14 @@ function buildEmployeeDailyTableHtml(
 function pdfStyles(): string {
   return `
     @page { size: A4 portrait; margin: 1.5cm; }
-    *, *::before, *::after { box-sizing: border-box; }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    html {
+      color-scheme: light only;
+    }
     html, body {
       direction: rtl;
       font-family: 'Cairo', 'Arial', sans-serif;

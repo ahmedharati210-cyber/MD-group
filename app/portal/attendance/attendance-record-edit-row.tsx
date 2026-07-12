@@ -98,17 +98,32 @@ const compactBadgeClass =
   "text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap";
 
 /** Shared column template for person month table rows. */
+export const PERSON_MONTH_GRID_COLUMNS =
+  "2.25rem 3.75rem 2.75rem minmax(5.5rem,1fr) 5rem 5rem minmax(5rem,1fr) minmax(6rem,1fr) minmax(6rem,1.5fr) 4rem 3.5rem 2.25rem";
+
 export const PERSON_MONTH_GRID_STYLE: CSSProperties = {
-  gridTemplateColumns:
-    "2.25rem 3.75rem 2.75rem minmax(5.5rem,1fr) 5rem 5rem minmax(5rem,1fr) minmax(6rem,1fr) minmax(6rem,1.5fr) 4rem 3.5rem 2.25rem",
+  gridTemplateColumns: PERSON_MONTH_GRID_COLUMNS,
 };
+
+export const PERSON_MONTH_SUBGRID_ROW_CLASS =
+  "col-span-full grid grid-cols-subgrid w-full";
 
 export const PERSON_MONTH_TH =
   "sticky top-0 z-10 px-2 py-2 bg-gray-50 dark:bg-gray-800/60 text-xs font-semibold text-gray-500 border-b border-gray-200 dark:border-gray-700";
 
 /** Shared column template for day-panel record rows. */
+export const DAY_PANEL_GRID_COLUMNS =
+  "4.5rem 4.5rem 5.5rem 6.5rem minmax(8rem,1fr) 3.75rem";
+
+export const DAY_PANEL_GRID_STYLE: CSSProperties = {
+  gridTemplateColumns: DAY_PANEL_GRID_COLUMNS,
+};
+
 export const dayPanelFormGridClass =
   "grid w-full grid-cols-[4.5rem_4.5rem_5.5rem_6.5rem_minmax(8rem,1fr)_3.75rem] gap-2 items-center";
+
+export const DAY_PANEL_SUBGRID_ROW_CLASS =
+  "col-span-full grid grid-cols-subgrid gap-2 items-center w-full";
 
 const dayPanelControlClass =
   "h-8 w-full min-w-0 px-2 border border-gray-200 dark:border-gray-700 rounded-md text-xs bg-white dark:bg-gray-900";
@@ -207,7 +222,7 @@ export function AttendanceCreateLeaveForm({
   );
 
   return (
-    <form action={action}>
+    <form action={action} className={compact ? "md:contents" : undefined}>
       <input type="hidden" name="attendance_person_id" value={person.id} />
       <input type="hidden" name="date" value={date} />
       <input type="hidden" name="company_id" value={companyId} />
@@ -233,7 +248,9 @@ export function AttendanceCreateLeaveForm({
         </div>
       ) : (
         <>
-          <div className={`hidden md:grid ${dayPanelFormGridClass}`}>
+          <div
+          className={`hidden md:grid ${DAY_PANEL_SUBGRID_ROW_CLASS} md:px-4 md:pb-3 md:border-b md:border-gray-100 dark:md:border-gray-800`}
+        >
             <DayPanelCell>
               <div className={dayPanelEmptyClass} aria-hidden>
                 —
@@ -271,10 +288,14 @@ export function AttendanceCreateLeaveForm({
             </button>
           </div>
           {state?.error ? (
-            <p className="text-xs text-red-600 mt-1">{state.error}</p>
+            <p className="text-xs text-red-600 mt-1 md:col-span-full md:px-4 md:mt-0 md:pb-2">
+              {state.error}
+            </p>
           ) : null}
           {state?.ok ? (
-            <p className="text-xs text-teal-700 mt-1">تم التسجيل</p>
+            <p className="text-xs text-teal-700 mt-1 md:col-span-full md:px-4 md:mt-0 md:pb-2">
+              تم التسجيل
+            </p>
           ) : null}
         </>
       )}
@@ -289,7 +310,6 @@ export function AttendanceCreateLeaveTableRow({
   branchId,
   dayMeta,
   defaultStatus = HOLIDAY_LEAVE_TYPE,
-  gridStyle,
 }: {
   date: string;
   person: AttendancePerson;
@@ -297,7 +317,6 @@ export function AttendanceCreateLeaveTableRow({
   branchId: string;
   dayMeta: DayTableMeta;
   defaultStatus?: string;
-  gridStyle: CSSProperties;
 }) {
   const [state, action, pending] = useActionState<ActionState | undefined, FormData>(
     createLeaveRecordAction,
@@ -308,7 +327,7 @@ export function AttendanceCreateLeaveTableRow({
   const stickySave = `${cb} sticky left-[2.25rem] z-[5] bg-inherit`;
 
   return (
-    <form action={action} className="grid w-full" style={gridStyle}>
+    <form action={action} className={PERSON_MONTH_SUBGRID_ROW_CLASS}>
       <input type="hidden" name="attendance_person_id" value={person.id} />
       <input type="hidden" name="date" value={date} />
       <input type="hidden" name="company_id" value={companyId} />
@@ -363,13 +382,11 @@ export function AttendanceRecordTableRow({
   shifts,
   isSuperAdmin,
   dayMeta,
-  gridStyle,
 }: {
   record: AttendanceMonthlyRecord;
   shifts: AttendanceShift[];
   isSuperAdmin: boolean;
   dayMeta: DayTableMeta;
-  gridStyle: CSSProperties;
 }) {
   const [state, action, pending] = useActionState<ActionState | undefined, FormData>(
     updateMonthlyRecordAction,
@@ -394,7 +411,7 @@ export function AttendanceRecordTableRow({
   const stickyDelete = `${cellBase} sticky left-0 z-[5] bg-inherit`;
 
   return (
-    <form action={action} className="grid w-full" style={gridStyle}>
+    <form action={action} className={PERSON_MONTH_SUBGRID_ROW_CLASS}>
       <div className={`${cellBase} text-xs text-gray-500 justify-center`}>
         <input type="hidden" name="id" value={record.id} />
         {dayMeta.index}
@@ -760,9 +777,9 @@ export function AttendanceRecordEditRow({
   const displayNumber = externalNumber ?? record.external_employee_number;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 md:contents">
       {showEmployeeHeader ? (
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 items-center min-h-8">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 items-center min-h-8 md:col-span-full md:px-4 md:pt-3 md:pb-1">
           <div className="min-w-0">
             <p className="font-semibold text-sm truncate leading-tight">{displayName}</p>
             <p className="text-[11px] text-gray-500 leading-tight" dir="ltr">
@@ -781,9 +798,11 @@ export function AttendanceRecordEditRow({
           ) : null}
         </div>
       ) : null}
-      <form action={action}>
+      <form action={action} className="md:contents">
         <input type="hidden" name="id" value={record.id} />
-        <div className={`hidden md:grid ${dayPanelFormGridClass}`}>
+        <div
+          className={`hidden md:grid ${DAY_PANEL_SUBGRID_ROW_CLASS} md:px-4 md:pb-3 md:border-b md:border-gray-100 dark:md:border-gray-800`}
+        >
           <DayPanelCell>
             {hideTimes ? (
               <div className={dayPanelEmptyClass}>—</div>
@@ -933,11 +952,15 @@ export function AttendanceRecordEditRow({
           </button>
         </div>
         {state?.error ? (
-          <p className="text-xs text-red-600 mt-1">{state.error}</p>
+          <p className="text-xs text-red-600 mt-1 md:col-span-full md:px-4 md:mt-0 md:pb-2">
+            {state.error}
+          </p>
         ) : null}
       </form>
       {showPunchTimeline && !hideTimes ? (
-        <PunchTimeline record={record} />
+        <div className="md:col-span-full md:px-4 md:pb-3">
+          <PunchTimeline record={record} />
+        </div>
       ) : null}
     </div>
   );
