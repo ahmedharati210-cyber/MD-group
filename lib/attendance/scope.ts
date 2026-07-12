@@ -1,9 +1,56 @@
 import "server-only";
 
+import { pickDefaultAttendanceCompanyId } from "@/lib/attendance/defaults";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
-import type { AttendanceBranch } from "@/types/db";
-import type { Profile } from "@/types/db";
+import type { AttendanceBranch, Company, Profile } from "@/types/db";
+
+export function attendanceShowCompanyPicker(
+  profile: Pick<Profile, "role" | "is_super_admin">,
+): boolean {
+  return profile.is_super_admin || profile.role === "md_admin";
+}
+
+/** Single source of truth for which company attendance pages/actions use. */
+export async function resolveAttendanceCompanyId(
+  profile: Pick<Profile, "role" | "company_id" | "is_super_admin">,
+  requestedCompanyId: string | null | undefined,
+  companies: Pick<Company, "id">[],
+): Promise<string | null> {
+  let companyId =
+    requestedCompanyId ??
+    profile.company_id ??
+    pickDefaultAttendanceCompanyId(companies);
+
+  if (profile.role === "md_admin" && !profile.is_super_admin) {
+    companyId = (await getShellCompanyIdForProfile(profile)) ?? companyId;
+  }
+  if (profile.role === "company_manager" && profile.company_id) {
+    companyId = profile.company_id;
+  }
+
+  return companyId;
+}
+
+/** Validates branchId against branches, or picks first active / first branch. */
+export function resolveAttendanceBranchId(
+  requestedBranchId: string | null | undefined,
+  branches: Pick<AttendanceBranch, "id" | "active">[],
+  options?: { autoDefault?: boolean },
+): string | null {
+  if (
+    requestedBranchId &&
+    branches.some((branch) => branch.id === requestedBranchId)
+  ) {
+    return requestedBranchId;
+  }
+
+  if (options?.autoDefault === false) {
+    return null;
+  }
+
+  return branches.find((branch) => branch.active)?.id ?? branches[0]?.id ?? null;
+}
 
 export async function assertAttendanceCompanyAccess(
   profile: Pick<Profile, "role" | "company_id" | "is_super_admin">,

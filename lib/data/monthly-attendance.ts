@@ -10,17 +10,30 @@ import type {
   Company,
 } from "@/types/db";
 
-export async function getAttendanceCompanies(): Promise<
-  Pick<Company, "id" | "name_ar">[]
-> {
+export async function getAttendanceCompanies(options?: {
+  attendanceEnabledOnly?: boolean;
+}): Promise<Pick<Company, "id" | "name_ar">[]> {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("companies")
-    .select("id, name_ar")
+    .select("id, name_ar, enabled_features")
     .eq("active", true)
     .order("display_order")
     .order("name_ar");
-  return (data ?? []) as Pick<Company, "id" | "name_ar">[];
+
+  const rows = (data ?? []) as Pick<Company, "id" | "name_ar" | "enabled_features">[];
+
+  if (!options?.attendanceEnabledOnly) {
+    return rows.map(({ id, name_ar }) => ({ id, name_ar }));
+  }
+
+  return rows
+    .filter(
+      (company) =>
+        Array.isArray(company.enabled_features) &&
+        company.enabled_features.includes("attendance"),
+    )
+    .map(({ id, name_ar }) => ({ id, name_ar }));
 }
 
 export async function getAttendanceBranches(

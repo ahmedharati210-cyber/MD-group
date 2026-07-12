@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { requireAttendanceAccess } from "@/lib/auth";
-import { pickDefaultAttendanceCompanyId } from "@/lib/attendance/defaults";
-import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
+import {
+  attendanceShowCompanyPicker,
+  resolveAttendanceBranchId,
+  resolveAttendanceCompanyId,
+} from "@/lib/attendance/scope";
 import {
   getAttendanceBranches,
   getAttendanceCompanies,
@@ -29,22 +32,20 @@ export default async function AttendanceBranchesPage({
   const { profile } = await requireAttendanceAccess();
   const params = await searchParams;
 
-  const companies = await getAttendanceCompanies();
-  let companyId =
-    params.companyId ??
-    profile.company_id ??
-    pickDefaultAttendanceCompanyId(companies);
-
-  if (profile.role === "md_admin" && !profile.is_super_admin) {
-    companyId = (await getShellCompanyIdForProfile(profile)) ?? companyId;
-  }
-  if (profile.role === "company_manager" && profile.company_id) {
-    companyId = profile.company_id;
-  }
+  const companies = await getAttendanceCompanies({
+    attendanceEnabledOnly: profile.role === "md_admin" && !profile.is_super_admin,
+  });
+  const companyId = await resolveAttendanceCompanyId(
+    profile,
+    params.companyId,
+    companies,
+  );
 
   const branches = companyId ? await getAttendanceBranches(companyId) : [];
   const people = companyId ? await getAttendancePeople(companyId) : [];
-  const selectedBranchId = params.branchId ?? null;
+  const selectedBranchId = resolveAttendanceBranchId(params.branchId, branches, {
+    autoDefault: false,
+  });
   const allShifts = companyId ? await getAttendanceShiftsForCompany(companyId) : [];
   const shifts = selectedBranchId
     ? allShifts.filter((s) => s.branch_id === selectedBranchId)
@@ -66,7 +67,7 @@ export default async function AttendanceBranchesPage({
         description="إنشاء الفروع وإدارة قائمة الحضور المنفصلة عن موظفي البوابة."
       />
 
-      {profile.is_super_admin && companies.length > 1 ? (
+      {attendanceShowCompanyPicker(profile) && companies.length > 1 ? (
         <BranchFilters
           companies={companies}
           branches={branches}

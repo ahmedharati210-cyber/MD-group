@@ -70,9 +70,10 @@ export default async function PortalDashboard() {
     return visibleFeatures === null || visibleFeatures.includes(f);
   };
 
-  // Owners see all-company stats like md_admin (no company restriction)
   const isAdmin = profile.role === "md_admin" || profile.role === "owner";
   const isEmployee = profile.role === "employee";
+  const hideAttendanceShortcuts =
+    profile.role === "md_admin" && !profile.is_super_admin;
 
   const { counts, topProjects } = await getDashboardData({
     profileId: profile.id ?? "",
@@ -98,7 +99,7 @@ export default async function PortalDashboard() {
         {!isEmployee ? (
           <StatCard label="الموظفون" value={counts.employees} icon={Users} tone="primary" href="/portal/employees" />
         ) : null}
-        {hasFeature("attendance") && !isEmployee ? (
+        {hasFeature("attendance") && !isEmployee && !hideAttendanceShortcuts ? (
           <StatCard label="حضور الشهر" value={counts.attendanceToday} icon={CalendarCheck} tone="success" href="/portal/attendance" />
         ) : null}
         {hasFeature("papers") ? (
@@ -205,7 +206,7 @@ export default async function PortalDashboard() {
             icon={FileText}
           />
         ) : null}
-        {hasFeature("attendance") && !isEmployee ? (
+        {hasFeature("attendance") && !isEmployee && !hideAttendanceShortcuts ? (
           <QuickLink
             href="/portal/attendance"
             title="الحضور الشهري"

@@ -18,13 +18,19 @@ import {
   punchSessionFromManualEdit,
   punchSessionFromRecord,
 } from "@/lib/attendance/session-from-record";
-import { assertAttendanceCompanyAccess, assertBranchBelongsToCompany, requireSuperAdmin } from "@/lib/attendance/scope";
+import {
+  assertAttendanceCompanyAccess,
+  assertBranchBelongsToCompany,
+  requireSuperAdmin,
+  resolveAttendanceCompanyId,
+} from "@/lib/attendance/scope";
 import {
   computeImportReimportDiff,
   type ImportReimportDiff,
 } from "@/lib/attendance/import-reimport-diff";
 import {
   getAttendanceBranch,
+  getAttendanceCompanies,
   getAttendanceImport,
   getAttendancePeopleByExternalNumbers,
   getAttendanceShifts,
@@ -37,7 +43,6 @@ import {
   LEAVE_TYPES,
 } from "@/lib/attendance/leave-types";
 
-import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import type { Profile } from "@/types/db";
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -75,10 +80,22 @@ async function resolveCompanyScope(
     return { companyId: profile.company_id };
   }
 
-  if (!companyId) return { error: "اختر الشركة" };
-  const access = await assertAttendanceCompanyAccess(profile, companyId);
-  if ("error" in access) return { error: access.error };
-  return { companyId };
+  if (profile.role === "md_admin") {
+    const companies = await getAttendanceCompanies({
+      attendanceEnabledOnly: !profile.is_super_admin,
+    });
+    const resolvedCompanyId = await resolveAttendanceCompanyId(
+      profile,
+      companyId,
+      companies,
+    );
+    if (!resolvedCompanyId) return { error: "اختر الشركة" };
+    const access = await assertAttendanceCompanyAccess(profile, resolvedCompanyId);
+    if ("error" in access) return { error: access.error };
+    return { companyId: resolvedCompanyId };
+  }
+
+  return { error: "صلاحيات غير كافية" };
 }
 
 function revalidateAttendanceData() {
@@ -110,10 +127,6 @@ export async function previewAttendanceImportAction(
   }
   if (typeof month !== "string" || !monthSchema.safeParse(`${month}-01`).success) {
     return { error: "اختر شهراً صالحاً" };
-  }
-
-  if (current.profile.role === "md_admin" && !current.profile.is_super_admin) {
-    companyId = (await getShellCompanyIdForProfile(current.profile)) ?? companyId;
   }
 
   const scope = await resolveCompanyScope(companyId, current.profile);
@@ -255,10 +268,6 @@ export async function saveAttendanceImportAction(
   if (typeof branchId !== "string" || !branchId) return { error: "اختر الفرع" };
   if (typeof month !== "string" || !monthSchema.safeParse(`${month}-01`).success) {
     return { error: "شهر غير صالح" };
-  }
-
-  if (current.profile.role === "md_admin" && !current.profile.is_super_admin) {
-    companyId = (await getShellCompanyIdForProfile(current.profile)) ?? companyId;
   }
 
   const scope = await resolveCompanyScope(companyId, current.profile);

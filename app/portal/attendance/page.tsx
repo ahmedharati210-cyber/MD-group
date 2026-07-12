@@ -9,14 +9,17 @@ import {
   buildPersonMonthStats,
   personRecordCounts,
 } from "@/lib/attendance/attendance-view";
-import { pickDefaultAttendanceCompanyId } from "@/lib/attendance/defaults";
 import { getDefaultAttendanceMonth } from "@/lib/attendance/import-month";
 import {
   filterPeopleBySearch,
   filterRecordsBySearch,
   normalizeSearchQuery,
 } from "@/lib/attendance/search";
-import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
+import {
+  attendanceShowCompanyPicker,
+  resolveAttendanceBranchId,
+  resolveAttendanceCompanyId,
+} from "@/lib/attendance/scope";
 import {
   getAttendanceBranches,
   getAttendanceCompanies,
@@ -64,25 +67,17 @@ export default async function AttendancePage({
   const defaultMonth = getDefaultAttendanceMonth();
   const month = params.month ?? defaultMonth;
 
-  const companies = await getAttendanceCompanies();
-  let companyId =
-    params.companyId ??
-    profile.company_id ??
-    pickDefaultAttendanceCompanyId(companies);
-
-  if (profile.role === "md_admin" && !profile.is_super_admin) {
-    companyId = (await getShellCompanyIdForProfile(profile)) ?? companyId;
-  }
-  if (profile.role === "company_manager" && profile.company_id) {
-    companyId = profile.company_id;
-  }
+  const companies = await getAttendanceCompanies({
+    attendanceEnabledOnly: profile.role === "md_admin" && !profile.is_super_admin,
+  });
+  const companyId = await resolveAttendanceCompanyId(
+    profile,
+    params.companyId,
+    companies,
+  );
 
   const branches = companyId ? await getAttendanceBranches(companyId) : [];
-  const requestedBranchId = params.branchId ?? null;
-  const branchId =
-    requestedBranchId && branches.some((b) => b.id === requestedBranchId)
-      ? requestedBranchId
-      : (branches.find((b) => b.active)?.id ?? branches[0]?.id ?? null);
+  const branchId = resolveAttendanceBranchId(params.branchId, branches);
   const monthDate = `${month}-01`;
 
   const [importRow, people, branchShifts] = await Promise.all([
@@ -201,7 +196,7 @@ export default async function AttendancePage({
         companyId={companyId}
         branchId={branchId}
         month={month}
-        showCompanyPicker={profile.is_super_admin}
+        showCompanyPicker={attendanceShowCompanyPicker(profile)}
       />
 
       {companyId && branchId ? (

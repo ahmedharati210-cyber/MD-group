@@ -38,6 +38,8 @@ export default async function CompanyDetailPage({
   const isAdmin = profile.role === "md_admin" || profile.role === "owner";
   const isOwner = profile.role === "owner";
   const isMdGroupManager = (profile.role === "md_admin" || profile.role === "owner") && !profile.is_super_admin;
+  const hideAttendanceShortcuts =
+    profile.role === "md_admin" && !profile.is_super_admin;
   const supabase = await createSupabaseServerClient();
 
   const { data: company } = await supabase
@@ -159,7 +161,7 @@ export default async function CompanyDetailPage({
       value: att.count ?? 0,
       icon: CalendarCheck,
       tone: "success",
-      show: has("attendance"),
+      show: has("attendance") && !hideAttendanceShortcuts,
       href: q("/portal/attendance"),
     },
     {
@@ -258,7 +260,7 @@ export default async function CompanyDetailPage({
       href: `/portal/attendance?companyId=${company.id}`,
       title: "حضور الشركة",
       icon: CalendarCheck,
-      show: !isOwner && has("attendance"),
+      show: !isOwner && has("attendance") && !hideAttendanceShortcuts,
     },
     {
       href: `/portal/mail?companyId=${company.id}`,

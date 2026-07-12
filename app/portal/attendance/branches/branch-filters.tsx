@@ -2,6 +2,8 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import toast from "react-hot-toast";
+import { setPortalActiveCompanyAction } from "@/app/portal/companies/active-company-actions";
 
 type Company = { id: string; name_ar: string };
 type Branch = { id: string; name: string };
@@ -26,6 +28,7 @@ export function BranchFilters({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const [isSettingCompany, setIsSettingCompany] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState(companyId ?? "");
   const [selectedBranchId, setSelectedBranchId] = useState(branchId ?? "");
 
@@ -58,6 +61,26 @@ export function BranchFilters({
     });
   }
 
+  async function onCompanyChange(nextCompanyId: string) {
+    setSelectedCompanyId(nextCompanyId);
+    setSelectedBranchId("");
+
+    if (showCompanyPicker && nextCompanyId) {
+      setIsSettingCompany(true);
+      const result = await setPortalActiveCompanyAction(nextCompanyId);
+      setIsSettingCompany(false);
+      if (result.error) {
+        toast.error(result.error);
+        setSelectedCompanyId(companyId ?? "");
+        return;
+      }
+    }
+
+    navigate({ companyId: nextCompanyId, resetBranch: true });
+  }
+
+  const filtersDisabled = isPending || isSettingCompany;
+
   if (!showCompanyPicker && branches.length <= 1) return null;
 
   return (
@@ -66,12 +89,9 @@ export function BranchFilters({
         <select
           value={selectedCompanyId}
           onChange={(e) => {
-            const nextCompanyId = e.target.value;
-            setSelectedCompanyId(nextCompanyId);
-            setSelectedBranchId("");
-            navigate({ companyId: nextCompanyId, resetBranch: true });
+            void onCompanyChange(e.target.value);
           }}
-          disabled={isPending}
+          disabled={filtersDisabled}
           className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-xl"
         >
           <option value="">اختر الشركة</option>
@@ -93,7 +113,7 @@ export function BranchFilters({
             setSelectedBranchId(nextBranchId);
             navigate({ branchId: nextBranchId });
           }}
-          disabled={isPending || branches.length === 0}
+          disabled={filtersDisabled || branches.length === 0}
           className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-xl"
         >
           <option value="">كل الفروع</option>
@@ -105,7 +125,7 @@ export function BranchFilters({
         </select>
       ) : null}
 
-      {isPending ? (
+      {filtersDisabled ? (
         <span className="text-sm text-gray-500">جاري التحميل...</span>
       ) : null}
     </div>
