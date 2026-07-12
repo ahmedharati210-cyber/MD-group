@@ -88,7 +88,7 @@ export function AttendanceCalendar({
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4">
       <h2 className="text-base font-bold mb-3">{title}</h2>
       {!personMode ? (
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500 mb-3">
+        <div className="hidden sm:flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500 mb-3">
           <span><span className="text-emerald-600 font-semibold">ح</span> حضور</span>
           <span><span className="text-red-600 font-semibold">غ</span> غياب</span>
           <span><span className="text-teal-600 font-semibold">إ</span> إجازة</span>
@@ -105,7 +105,7 @@ export function AttendanceCalendar({
       </div>
       <div className="grid grid-cols-7 gap-1">
         {blanks.map((_, i) => (
-          <div key={`blank-${i}`} className="min-h-[72px]" />
+          <div key={`blank-${i}`} className="min-h-[56px] md:min-h-[72px]" />
         ))}
         {days.map((day) => {
           const dayNum = Number(day.date.slice(8, 10));
@@ -122,14 +122,14 @@ export function AttendanceCalendar({
               href={dayHref(day.date)}
               aria-label={dayAriaLabel(day, dayNum, personMode)}
               aria-current={isSelected ? "date" : undefined}
-              className={`min-h-[72px] rounded-xl border p-1.5 text-right transition-colors ${dayCellClass(day, isSelected)}`}
+              className={`min-h-[56px] md:min-h-[72px] rounded-xl border p-1.5 text-right transition-colors ${dayCellClass(day, isSelected)}`}
             >
               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {dayNum}
               </span>
               {personMode ? (
                 <span
-                  className={`mt-1 block text-[10px] font-semibold ${
+                  className={`mt-1 block text-[9px] sm:text-[10px] font-semibold ${
                     day.leave > 0
                       ? "text-teal-700 dark:text-teal-300"
                       : day.missingPunch > 0
@@ -153,21 +153,30 @@ export function AttendanceCalendar({
                   {day.late > 0 ? " · تأخير" : ""}
                 </span>
               ) : hasData ? (
-                <div className="mt-1 space-y-0.5 text-[10px] leading-tight">
+                <div className="mt-1 space-y-0.5 text-[9px] sm:text-[10px] leading-tight">
                   {day.leave > 0 ? (
-                    <span className="block text-teal-600">إ {day.leave}</span>
+                    <span className="block text-teal-600">
+                      <span className="sm:hidden">إ{day.leave}</span>
+                      <span className="hidden sm:inline">إ {day.leave}</span>
+                    </span>
                   ) : null}
                   {day.present > 0 ? (
-                    <span className="block text-emerald-600">ح {day.present}</span>
+                    <span className="block text-emerald-600">
+                      <span className="sm:hidden">ح{day.present}</span>
+                      <span className="hidden sm:inline">ح {day.present}</span>
+                    </span>
                   ) : null}
                   {day.absent > 0 ? (
-                    <span className="block text-red-600">غ {day.absent}</span>
+                    <span className="block text-red-600">
+                      <span className="sm:hidden">غ{day.absent}</span>
+                      <span className="hidden sm:inline">غ {day.absent}</span>
+                    </span>
                   ) : null}
                   {day.late > 0 ? (
-                    <span className="block text-amber-600">ت {day.late}</span>
+                    <span className="hidden sm:block text-amber-600">ت {day.late}</span>
                   ) : null}
                   {day.missingPunch > 0 ? (
-                    <span className="block text-orange-600">بصمة {day.missingPunch}</span>
+                    <span className="hidden sm:block text-orange-600">بصمة {day.missingPunch}</span>
                   ) : null}
                 </div>
               ) : null}

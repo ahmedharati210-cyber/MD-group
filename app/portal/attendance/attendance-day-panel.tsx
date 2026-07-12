@@ -5,6 +5,10 @@ import {
   personDayStatusBadgeClass,
   personDayStatusLabel,
 } from "@/lib/attendance/status-labels";
+import {
+  ABSENT_STATUS,
+  HOLIDAY_LEAVE_TYPE,
+} from "@/lib/attendance/leave-types";
 import type { AttendanceShift } from "@/types/db";
 import {
   AttendanceCreateLeaveForm,
@@ -64,9 +68,9 @@ export function AttendanceDayPanel({
         {absentCount > 0 ? ` — ${absentCount} غياب` : ""})
       </h3>
       <div className="max-h-[480px] overflow-y-auto overflow-x-auto">
-        <div className="min-w-[40rem] divide-y divide-gray-100 dark:divide-gray-800">
+        <div className="md:min-w-[40rem] divide-y divide-gray-100 dark:divide-gray-800">
           <div
-            className={`grid ${dayPanelFormGridClass} px-4 py-2 text-[10px] font-semibold text-gray-500 border-b border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-950/40`}
+            className={`hidden md:grid ${dayPanelFormGridClass} px-4 py-2 text-[10px] font-semibold text-gray-500 border-b border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-950/40`}
           >
             <span>الدخول</span>
             <span>الخروج</span>
@@ -108,6 +112,9 @@ export function AttendanceDayPanel({
                   companyId={companyId}
                   branchId={branchId}
                   compact
+                  defaultStatus={
+                    entry.status === "absent" ? ABSENT_STATUS : HOLIDAY_LEAVE_TYPE
+                  }
                 />
               </div>
             ) : null}

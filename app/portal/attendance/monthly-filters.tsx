@@ -79,91 +79,90 @@ export function MonthlyFilters({
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mb-6"
-    >
-      {showCompanyPicker ? (
+    <form onSubmit={onSubmit} className="mb-6 space-y-3">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {showCompanyPicker ? (
+          <select
+            name="companyId"
+            value={selectedCompanyId}
+            onChange={(e) => {
+              const nextCompanyId = e.target.value;
+              setSelectedCompanyId(nextCompanyId);
+              setSelectedBranchId("");
+              navigate({
+                companyId: nextCompanyId,
+                branchId: "",
+                resetBranch: true,
+              });
+            }}
+            disabled={isPending}
+            className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-xl"
+          >
+            <option value="">اختر الشركة</option>
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name_ar}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input type="hidden" name="companyId" value={companyId ?? ""} />
+        )}
+
         <select
-          name="companyId"
-          value={selectedCompanyId}
+          name="branchId"
+          value={selectedBranchId}
           onChange={(e) => {
-            const nextCompanyId = e.target.value;
-            setSelectedCompanyId(nextCompanyId);
-            setSelectedBranchId("");
-            navigate({
-              companyId: nextCompanyId,
-              branchId: "",
-              resetBranch: true,
-            });
+            const nextBranchId = e.target.value;
+            setSelectedBranchId(nextBranchId);
+            navigate({ branchId: nextBranchId });
           }}
-          disabled={isPending}
-          className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-xl"
+          required
+          disabled={isPending || branches.length === 0}
+          className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-xl"
         >
-          <option value="">اختر الشركة</option>
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name_ar}
+          <option value="">اختر الفرع</option>
+          {branches.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
             </option>
           ))}
         </select>
-      ) : (
-        <input type="hidden" name="companyId" value={companyId ?? ""} />
-      )}
 
-      <select
-        name="branchId"
-        value={selectedBranchId}
-        onChange={(e) => {
-          const nextBranchId = e.target.value;
-          setSelectedBranchId(nextBranchId);
-          navigate({ branchId: nextBranchId });
-        }}
-        required
-        disabled={isPending || branches.length === 0}
-        className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-xl"
-      >
-        <option value="">اختر الفرع</option>
-        {branches.map((b) => (
-          <option key={b.id} value={b.id}>
-            {b.name}
-          </option>
-        ))}
-      </select>
+        <input
+          type="month"
+          name="month"
+          value={selectedMonth}
+          onChange={(e) => {
+            const nextMonth = e.target.value;
+            setSelectedMonth(nextMonth);
+            navigate({ month: nextMonth });
+          }}
+          required
+          disabled={isPending}
+          className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-xl"
+        />
+      </div>
 
-      <input
-        type="month"
-        name="month"
-        value={selectedMonth}
-        onChange={(e) => {
-          const nextMonth = e.target.value;
-          setSelectedMonth(nextMonth);
-          navigate({ month: nextMonth });
-        }}
-        required
-        disabled={isPending}
-        className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-xl"
-      />
-
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
         <button
           type="submit"
           disabled={isPending}
-          className="flex-1 min-w-[100px] px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm"
+          className="w-full sm:w-auto sm:flex-1 sm:min-w-[100px] px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm"
         >
           {isPending ? "جاري العرض..." : "عرض"}
         </button>
         {selectedCompanyId ? (
           <Link
             href={`/portal/attendance/branches?companyId=${selectedCompanyId}${selectedBranchId ? `&branchId=${selectedBranchId}` : ""}`}
-            className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold text-center"
+            className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold text-center"
           >
             الفروع
           </Link>
         ) : (
           <Link
             href="/portal/attendance/branches"
-            className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold text-center"
+            className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold text-center"
           >
             الفروع
           </Link>
@@ -171,7 +170,7 @@ export function MonthlyFilters({
         {selectedBranchId ? (
           <Link
             href={`/portal/attendance/branches?companyId=${selectedCompanyId}&branchId=${selectedBranchId}#shifts`}
-            className="px-4 py-2.5 border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 rounded-xl text-sm font-semibold text-center"
+            className="w-full sm:w-auto px-4 py-2.5 border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 rounded-xl text-sm font-semibold text-center"
           >
             إدارة الورديات
           </Link>
@@ -179,7 +178,7 @@ export function MonthlyFilters({
         {basePath === "/portal/attendance" && selectedCompanyId && selectedBranchId ? (
           <Link
             href={`/portal/attendance/summary?companyId=${selectedCompanyId}&branchId=${selectedBranchId}&month=${selectedMonth}`}
-            className="px-4 py-2.5 border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 rounded-xl text-sm font-semibold text-center"
+            className="w-full sm:w-auto px-4 py-2.5 border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 rounded-xl text-sm font-semibold text-center"
           >
             الملخص
           </Link>

@@ -37,6 +37,7 @@ import {
   AttendanceSummaryCards,
 } from "./attendance-summary-cards";
 import { buildBranchAttendanceHref } from "./attendance-navigation";
+import { AttendanceExportActions } from "./attendance-export-actions";
 import { AttendanceToolbar } from "./attendance-toolbar";
 import { MonthlyFilters } from "./monthly-filters";
 
@@ -161,9 +162,11 @@ export default async function AttendancePage({
       ? `/api/attendance/export.pdf?companyId=${companyId}&branchId=${branchId}&month=${month}`
       : "#";
 
-  const hasData = allRecords.length > 0;
+  const canExport = Boolean(companyId && branchId && importRow);
+  const showExportHint = Boolean(companyId && branchId && !importRow);
   const noSearchResults =
-    hasSearch && hasData && filteredRecords.length === 0 && filteredPeople.length === 0;
+    hasSearch && allRecords.length > 0 && filteredRecords.length === 0 && filteredPeople.length === 0;
+  const hasData = allRecords.length > 0;
 
   return (
     <div>
@@ -171,7 +174,7 @@ export default async function AttendancePage({
         title="الحضور الشهري"
         description="تقويم شهري، ملخص، واستيراد/تصدير الحضور."
         action={
-          companyId && branchId && hasData ? (
+          canExport ? (
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 href={exportPdfHref}
@@ -200,6 +203,15 @@ export default async function AttendancePage({
         month={month}
         showCompanyPicker={profile.is_super_admin}
       />
+
+      {companyId && branchId ? (
+        <AttendanceExportActions
+          pdfHref={exportPdfHref}
+          excelHref={exportHref}
+          canExport={canExport}
+          showHint={showExportHint}
+        />
+      ) : null}
 
       {!companyId ? (
         <p className="text-sm text-gray-500">اختر شركة لعرض الحضور.</p>

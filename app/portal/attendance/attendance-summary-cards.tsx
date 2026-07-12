@@ -49,13 +49,13 @@ export function AttendanceSummaryCards({ summary }: Props) {
   };
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
           <div
             key={card.key}
-            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4"
+            className="min-w-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4"
           >
             <div className={`inline-flex p-2 rounded-xl mb-2 ${card.color}`}>
               <Icon className="w-4 h-4" />
@@ -132,13 +132,13 @@ export function AttendancePersonSummaryCards({
 
   if (compact) {
     return (
-      <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-3">
         {personCards.map((card) => {
           const Icon = card.icon;
           return (
             <div
               key={card.key}
-              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-2 flex items-center gap-2"
+              className="min-w-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-2 flex items-center gap-2"
             >
               <div className={`inline-flex p-1.5 rounded-lg shrink-0 ${card.color}`}>
                 <Icon className="w-3.5 h-3.5" />
@@ -159,13 +159,13 @@ export function AttendancePersonSummaryCards({
   }
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-6">
+    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
       {personCards.map((card) => {
         const Icon = card.icon;
         return (
           <div
             key={card.key}
-            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4"
+            className="min-w-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4"
           >
             <div className={`inline-flex p-2 rounded-xl mb-2 ${card.color}`}>
               <Icon className="w-4 h-4" />

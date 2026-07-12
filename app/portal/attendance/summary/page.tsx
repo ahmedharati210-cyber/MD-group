@@ -14,6 +14,7 @@ import {
 } from "@/lib/data/monthly-attendance";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { MonthlyFilters } from "../monthly-filters";
+import { AttendanceExportActions } from "../attendance-export-actions";
 import { AttendancePayrollSummary } from "../attendance-payroll-summary";
 
 export const metadata = { title: "ملخص الحضور والخصومات" };
@@ -68,6 +69,8 @@ export default async function AttendanceSummaryPage({
   const records = importRow ? await getMonthlyAttendanceRecords(importRow.id) : [];
   const { rows, totals } = buildBranchPayrollSummary(month, records, people);
   const selectedBranch = branches.find((b) => b.id === branchId) ?? null;
+  const canExport = Boolean(companyId && branchId && importRow);
+  const showExportHint = Boolean(companyId && branchId && !importRow);
   const hasData = records.length > 0;
   const exportHref =
     companyId && branchId
@@ -96,7 +99,7 @@ export default async function AttendanceSummaryPage({
             : "تقرير شهري لساعات العمل والخصومات."
         }
         action={
-          companyId && branchId && hasData ? (
+          canExport ? (
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 href={exportPdfHref}
@@ -126,6 +129,15 @@ export default async function AttendanceSummaryPage({
         showCompanyPicker={profile.is_super_admin}
         basePath="/portal/attendance/summary"
       />
+
+      {companyId && branchId ? (
+        <AttendanceExportActions
+          pdfHref={exportPdfHref}
+          excelHref={exportHref}
+          canExport={canExport}
+          showHint={showExportHint}
+        />
+      ) : null}
 
       {!companyId ? (
         <p className="text-sm text-gray-500">اختر شركة لعرض الملخص.</p>

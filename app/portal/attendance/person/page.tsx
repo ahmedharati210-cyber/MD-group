@@ -21,6 +21,7 @@ import { PageHeader } from "@/components/portal/PageHeader";
 import { buildBranchAttendanceHref } from "../attendance-navigation";
 import { AttendancePersonMonthTable } from "../attendance-person-month-table";
 import { AttendancePersonSummaryCards } from "../attendance-summary-cards";
+import { AttendanceExportActions } from "../attendance-export-actions";
 import { MonthlyFilters } from "../monthly-filters";
 
 type SearchParams = Promise<{
@@ -105,6 +106,9 @@ export default async function AttendancePersonPage({
   const calendarDays = buildPersonCalendarDays(month, personRecords);
   const personStats = buildPersonMonthStats(month, personRecords);
   const selectedBranch = branches.find((b) => b.id === branchId);
+  const canExport = Boolean(importRow);
+  const exportHref = `/api/attendance/export.xlsx?companyId=${companyId}&branchId=${branchId}&month=${month}`;
+  const exportPdfHref = `/api/attendance/export.pdf?companyId=${companyId}&branchId=${branchId}&month=${month}`;
 
   return (
     <div>
@@ -142,6 +146,13 @@ export default async function AttendancePersonPage({
           preservePersonId={person.id}
         />
       </div>
+
+      <AttendanceExportActions
+        pdfHref={exportPdfHref}
+        excelHref={exportHref}
+        canExport={canExport}
+        showHint={!canExport}
+      />
 
       {importRow ? (
         <AttendancePersonSummaryCards stats={personStats} compact />

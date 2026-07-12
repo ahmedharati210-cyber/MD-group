@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import toast from "react-hot-toast";
 import type { AttendanceMonthlyRecord, AttendancePerson, AttendanceShift } from "@/types/db";
 import { hasOnePunch } from "@/lib/attendance/calendar-shared";
@@ -97,6 +97,15 @@ const compactCellClass = "px-2 py-2 border-t border-gray-100 dark:border-gray-80
 const compactBadgeClass =
   "text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap";
 
+/** Shared column template for person month table rows. */
+export const PERSON_MONTH_GRID_STYLE: CSSProperties = {
+  gridTemplateColumns:
+    "2.25rem 3.75rem 2.75rem minmax(5.5rem,1fr) 5rem 5rem minmax(5rem,1fr) minmax(6rem,1fr) minmax(6rem,1.5fr) 4rem 3.5rem 2.25rem",
+};
+
+export const PERSON_MONTH_TH =
+  "sticky top-0 z-10 px-2 py-2 bg-gray-50 dark:bg-gray-800/60 text-xs font-semibold text-gray-500 border-b border-gray-200 dark:border-gray-700";
+
 /** Shared column template for day-panel record rows. */
 export const dayPanelFormGridClass =
   "grid w-full grid-cols-[4.5rem_4.5rem_5.5rem_6.5rem_minmax(8rem,1fr)_3.75rem] gap-2 items-center";
@@ -142,7 +151,9 @@ function RecordDayMeta({ record }: { record: AttendanceMonthlyRecord }) {
 
 function recordDayStatus(record: AttendanceMonthlyRecord): string {
   if (record.is_absent) return ABSENT_STATUS;
-  return record.leave_type ?? "";
+  if (record.leave_type) return record.leave_type;
+  if (record.is_holiday) return HOLIDAY_LEAVE_TYPE;
+  return "";
 }
 
 function hidesAttendanceTimes(status: string): boolean {
@@ -164,6 +175,7 @@ type CreateLeaveFormProps = {
   companyId: string;
   branchId: string;
   compact?: boolean;
+  defaultStatus?: string;
 };
 
 export function AttendanceCreateLeaveForm({
@@ -172,78 +184,100 @@ export function AttendanceCreateLeaveForm({
   companyId,
   branchId,
   compact = false,
+  defaultStatus = HOLIDAY_LEAVE_TYPE,
 }: CreateLeaveFormProps) {
   const [state, action, pending] = useActionState<ActionState | undefined, FormData>(
     createLeaveRecordAction,
     undefined,
   );
 
-  return (
-    <form
-      action={action}
-      className={
-        compact
-          ? dayPanelFormGridClass
-          : "px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-teal-50/60 dark:bg-teal-950/20 space-y-2"
-      }
+  const statusSelect = (
+    <select
+      name="leave_type"
+      required
+      defaultValue={defaultStatus}
+      className={dayPanelControlClass}
     >
+      {CREATE_DAY_STATUS_OPTIONS.map((type) => (
+        <option key={type} value={type}>
+          {type}
+        </option>
+      ))}
+    </select>
+  );
+
+  return (
+    <form action={action}>
       <input type="hidden" name="attendance_person_id" value={person.id} />
       <input type="hidden" name="date" value={date} />
       <input type="hidden" name="company_id" value={companyId} />
       <input type="hidden" name="branch_id" value={branchId} />
       {!compact ? (
-        <p className="text-sm font-semibold w-full col-span-full">
-          تسجيل عطلة / إجازة — {person.full_name}
-        </p>
+        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-teal-50/60 dark:bg-teal-950/20 space-y-2">
+          <p className="text-sm font-semibold w-full">
+            تسجيل عطلة / إجازة — {person.full_name}
+          </p>
+          <div className="space-y-1">
+            <label className="text-xs text-gray-500">حالة اليوم</label>
+            {statusSelect}
+          </div>
+          <button type="submit" disabled={pending} className={dayPanelSaveClass}>
+            {pending ? "..." : "حفظ"}
+          </button>
+          {state?.error ? (
+            <p className="text-xs text-red-600">{state.error}</p>
+          ) : null}
+          {state?.ok ? (
+            <p className="text-xs text-teal-700">تم التسجيل</p>
+          ) : null}
+        </div>
       ) : (
         <>
-          <DayPanelCell>
-            <div className={dayPanelEmptyClass} aria-hidden>
-              —
+          <div className={`hidden md:grid ${dayPanelFormGridClass}`}>
+            <DayPanelCell>
+              <div className={dayPanelEmptyClass} aria-hidden>
+                —
+              </div>
+            </DayPanelCell>
+            <DayPanelCell>
+              <div className={dayPanelEmptyClass} aria-hidden>
+                —
+              </div>
+            </DayPanelCell>
+            <DayPanelCell>
+              <div className={dayPanelEmptyClass} aria-hidden>
+                —
+              </div>
+            </DayPanelCell>
+            <DayPanelCell>{statusSelect}</DayPanelCell>
+            <DayPanelCell>
+              <div className={dayPanelEmptyClass} aria-hidden>
+                —
+              </div>
+            </DayPanelCell>
+            <DayPanelCell>
+              <button type="submit" disabled={pending} className={dayPanelSaveClass}>
+                {pending ? "..." : "حفظ"}
+              </button>
+            </DayPanelCell>
+          </div>
+          <div className="md:hidden space-y-2">
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">حالة اليوم</label>
+              {statusSelect}
             </div>
-          </DayPanelCell>
-          <DayPanelCell>
-            <div className={dayPanelEmptyClass} aria-hidden>
-              —
-            </div>
-          </DayPanelCell>
-          <DayPanelCell>
-            <div className={dayPanelEmptyClass} aria-hidden>
-              —
-            </div>
-          </DayPanelCell>
+            <button type="submit" disabled={pending} className={dayPanelSaveClass}>
+              {pending ? "..." : "حفظ"}
+            </button>
+          </div>
+          {state?.error ? (
+            <p className="text-xs text-red-600 mt-1">{state.error}</p>
+          ) : null}
+          {state?.ok ? (
+            <p className="text-xs text-teal-700 mt-1">تم التسجيل</p>
+          ) : null}
         </>
       )}
-      <DayPanelCell>
-        <select
-          name="leave_type"
-          required
-          defaultValue={HOLIDAY_LEAVE_TYPE}
-          className={dayPanelControlClass}
-        >
-          {CREATE_DAY_STATUS_OPTIONS.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
-      </DayPanelCell>
-      <DayPanelCell>
-        <div className={dayPanelEmptyClass} aria-hidden>
-          —
-        </div>
-      </DayPanelCell>
-      <DayPanelCell>
-        <button type="submit" disabled={pending} className={dayPanelSaveClass}>
-          {pending ? "..." : "حفظ"}
-        </button>
-      </DayPanelCell>
-      {state?.error ? (
-        <p className="col-span-full text-xs text-red-600">{state.error}</p>
-      ) : null}
-      {state?.ok ? (
-        <p className="col-span-full text-xs text-teal-700">تم التسجيل</p>
-      ) : null}
     </form>
   );
 }
@@ -254,12 +288,16 @@ export function AttendanceCreateLeaveTableRow({
   companyId,
   branchId,
   dayMeta,
+  defaultStatus = HOLIDAY_LEAVE_TYPE,
+  gridStyle,
 }: {
   date: string;
   person: AttendancePerson;
   companyId: string;
   branchId: string;
   dayMeta: DayTableMeta;
+  defaultStatus?: string;
+  gridStyle: CSSProperties;
 }) {
   const [state, action, pending] = useActionState<ActionState | undefined, FormData>(
     createLeaveRecordAction,
@@ -267,39 +305,31 @@ export function AttendanceCreateLeaveTableRow({
   );
 
   const cb = `${compactCellClass} ${dayMeta.rowClassName}`;
+  const stickySave = `${cb} sticky left-[2.25rem] z-[5] bg-inherit`;
 
   return (
-    <form action={action} className="contents">
-      {/* hidden fields first — they don't affect grid layout */}
+    <form action={action} className="grid w-full" style={gridStyle}>
       <input type="hidden" name="attendance_person_id" value={person.id} />
       <input type="hidden" name="date" value={date} />
       <input type="hidden" name="company_id" value={companyId} />
       <input type="hidden" name="branch_id" value={branchId} />
 
-      {/* col 1: # */}
       <div className={`${cb} text-xs text-gray-500 justify-center`}>{dayMeta.index}</div>
-      {/* col 2: date */}
       <div className={`${cb} text-xs font-medium`} dir="ltr">{dayMeta.shortDate}</div>
-      {/* col 3: day */}
       <div className={`${cb} text-xs text-gray-500`}>{dayMeta.weekday}</div>
-      {/* col 4: status */}
       <div className={cb}>
         <span className={`${compactBadgeClass} ${dayMeta.statusBadgeClass}`}>
           {dayMeta.statusLabel}
         </span>
       </div>
-      {/* col 5: check-in — empty for new rows */}
       <div className={cb} />
-      {/* col 6: check-out — empty for new rows */}
       <div className={cb} />
-      {/* col 7: shift — empty for new rows */}
       <div className={cb} />
-      {/* col 8: leave/status select */}
       <div className={cb}>
         <select
           name="leave_type"
           required
-          defaultValue={HOLIDAY_LEAVE_TYPE}
+          defaultValue={defaultStatus}
           className={compactSelectClass}
         >
           {CREATE_DAY_STATUS_OPTIONS.map((type) => (
@@ -309,12 +339,9 @@ export function AttendanceCreateLeaveTableRow({
           ))}
         </select>
       </div>
-      {/* col 9: notes — empty for new rows */}
       <div className={cb} />
-      {/* col 10: late/deduction — empty for new rows */}
       <div className={cb} />
-      {/* col 11: save button */}
-      <div className={cb}>
+      <div className={stickySave}>
         <button
           type="submit"
           disabled={pending}
@@ -326,8 +353,7 @@ export function AttendanceCreateLeaveTableRow({
           <p className="text-[10px] text-red-600 mt-0.5 leading-tight">{state.error}</p>
         ) : null}
       </div>
-      {/* col 12: delete — empty for new rows */}
-      <div className={cb} />
+      <div className={`${cb} sticky left-0 z-[5] bg-inherit`} />
     </form>
   );
 }
@@ -337,11 +363,13 @@ export function AttendanceRecordTableRow({
   shifts,
   isSuperAdmin,
   dayMeta,
+  gridStyle,
 }: {
   record: AttendanceMonthlyRecord;
   shifts: AttendanceShift[];
   isSuperAdmin: boolean;
   dayMeta: DayTableMeta;
+  gridStyle: CSSProperties;
 }) {
   const [state, action, pending] = useActionState<ActionState | undefined, FormData>(
     updateMonthlyRecordAction,
@@ -362,9 +390,11 @@ export function AttendanceRecordTableRow({
       : "—";
 
   const cellBase = `${compactCellClass} ${dayMeta.rowClassName}`;
+  const stickySave = `${cellBase} sticky left-[2.25rem] z-[5] bg-inherit`;
+  const stickyDelete = `${cellBase} sticky left-0 z-[5] bg-inherit`;
 
   return (
-    <form action={action} className="contents">
+    <form action={action} className="grid w-full" style={gridStyle}>
       <div className={`${cellBase} text-xs text-gray-500 justify-center`}>
         <input type="hidden" name="id" value={record.id} />
         {dayMeta.index}
@@ -458,11 +488,11 @@ export function AttendanceRecordTableRow({
       <div className={`${cellBase} text-xs text-gray-500 whitespace-nowrap`} dir="ltr">
         {lateDeduction}
       </div>
-      <div className={cellBase}>
+      <div className={stickySave}>
         <button
           type="submit"
           disabled={pending}
-          className="text-xs px-3 py-1.5 bg-primary-600 text-white rounded whitespace-nowrap"
+          className="text-xs px-3 py-1.5 bg-primary-600 text-white rounded whitespace-nowrap w-full"
         >
           {pending ? "جاري الحفظ..." : "حفظ"}
         </button>
@@ -472,7 +502,7 @@ export function AttendanceRecordTableRow({
           </p>
         ) : null}
       </div>
-      <div className={cellBase}>
+      <div className={stickyDelete}>
         {isSuperAdmin ? (
           <DeleteConfirmButton
             label=""
@@ -483,6 +513,219 @@ export function AttendanceRecordTableRow({
           />
         ) : null}
       </div>
+    </form>
+  );
+}
+
+const mobileCardClass =
+  "rounded-xl border border-gray-200 dark:border-gray-800 p-3 space-y-3";
+
+export function AttendanceCreateLeaveMobileCard({
+  date,
+  person,
+  companyId,
+  branchId,
+  dayMeta,
+  defaultStatus = HOLIDAY_LEAVE_TYPE,
+}: {
+  date: string;
+  person: AttendancePerson;
+  companyId: string;
+  branchId: string;
+  dayMeta: DayTableMeta;
+  defaultStatus?: string;
+}) {
+  const [state, action, pending] = useActionState<ActionState | undefined, FormData>(
+    createLeaveRecordAction,
+    undefined,
+  );
+
+  return (
+    <form
+      action={action}
+      className={`${mobileCardClass} ${dayMeta.rowClassName}`}
+    >
+      <input type="hidden" name="attendance_person_id" value={person.id} />
+      <input type="hidden" name="date" value={date} />
+      <input type="hidden" name="company_id" value={companyId} />
+      <input type="hidden" name="branch_id" value={branchId} />
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold" dir="ltr">
+            {dayMeta.shortDate}
+          </p>
+          <p className="text-xs text-gray-500">{dayMeta.weekday}</p>
+        </div>
+        <span className={`${compactBadgeClass} ${dayMeta.statusBadgeClass}`}>
+          {dayMeta.statusLabel}
+        </span>
+      </div>
+      <div className="space-y-1">
+        <label className="text-xs text-gray-500">حالة اليوم</label>
+        <select
+          name="leave_type"
+          required
+          defaultValue={defaultStatus}
+          className={compactSelectClass}
+        >
+          {CREATE_DAY_STATUS_OPTIONS.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+      </div>
+      <button
+        type="submit"
+        disabled={pending}
+        className="w-full text-sm px-3 py-2 bg-teal-600 text-white rounded-lg font-semibold"
+      >
+        {pending ? "جاري الحفظ..." : "حفظ"}
+      </button>
+      {state?.error ? (
+        <p className="text-xs text-red-600">{state.error}</p>
+      ) : null}
+    </form>
+  );
+}
+
+export function AttendanceRecordMobileCard({
+  record,
+  shifts,
+  isSuperAdmin,
+  dayMeta,
+}: {
+  record: AttendanceMonthlyRecord;
+  shifts: AttendanceShift[];
+  isSuperAdmin: boolean;
+  dayMeta: DayTableMeta;
+}) {
+  const [state, action, pending] = useActionState<ActionState | undefined, FormData>(
+    updateMonthlyRecordAction,
+    undefined,
+  );
+  useSaveSuccessToast(state);
+  const [dayStatus, setDayStatus] = useState(() => recordDayStatus(record));
+  const hideTimes = hidesAttendanceTimes(dayStatus);
+
+  const lateDeduction =
+    record.late_minutes > 0 || record.deduction_minutes > 0
+      ? [
+          record.late_minutes > 0 ? `تأخير ${record.late_minutes} د` : null,
+          record.deduction_minutes > 0 ? `خصم ${record.deduction_minutes} د` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : null;
+
+  return (
+    <form
+      action={action}
+      className={`${mobileCardClass} ${dayMeta.rowClassName}`}
+    >
+      <input type="hidden" name="id" value={record.id} />
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold" dir="ltr">
+            {dayMeta.shortDate}
+          </p>
+          <p className="text-xs text-gray-500">{dayMeta.weekday}</p>
+        </div>
+        <span className={`${compactBadgeClass} ${dayMeta.statusBadgeClass}`}>
+          {dayMeta.statusLabel}
+        </span>
+      </div>
+      {!hideTimes ? (
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <label className="text-xs text-gray-500">دخول</label>
+            <input
+              name="first_check_in"
+              {...timeInputProps}
+              defaultValue={record.first_check_in?.slice(0, 5) ?? ""}
+              className={compactInputClass}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-gray-500">خروج</label>
+            <input
+              name="last_check_out"
+              {...timeInputProps}
+              defaultValue={record.last_check_out?.slice(0, 5) ?? ""}
+              className={compactInputClass}
+            />
+          </div>
+        </div>
+      ) : null}
+      {!hideTimes && shifts.length > 0 ? (
+        <div className="space-y-1">
+          <label className="text-xs text-gray-500">وردية</label>
+          <select
+            name="shift_id"
+            defaultValue={record.shift_id ?? ""}
+            className={compactSelectClass}
+          >
+            <option value="">—</option>
+            {shifts
+              .filter((s) => s.active)
+              .map((shift) => (
+                <option key={shift.id} value={shift.id}>
+                  {shift.name}
+                </option>
+              ))}
+          </select>
+        </div>
+      ) : null}
+      <div className="space-y-1">
+        <label className="text-xs text-gray-500">حالة اليوم</label>
+        <select
+          name="leave_type"
+          value={dayStatus}
+          onChange={(e) => setDayStatus(e.target.value)}
+          className={compactSelectClass}
+        >
+          <option value="">عادي</option>
+          <option value={ABSENT_STATUS}>{ABSENT_STATUS}</option>
+          {LEAVE_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="space-y-1">
+        <label className="text-xs text-gray-500">ملاحظة</label>
+        <input
+          name="notes"
+          defaultValue={record.notes ?? ""}
+          placeholder="ملاحظة"
+          className={compactNotesClass}
+        />
+      </div>
+      {lateDeduction ? (
+        <p className="text-xs text-gray-500">{lateDeduction}</p>
+      ) : null}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={pending}
+          className="flex-1 text-sm px-3 py-2 bg-primary-600 text-white rounded-lg font-semibold"
+        >
+          {pending ? "جاري الحفظ..." : "حفظ"}
+        </button>
+        {isSuperAdmin ? (
+          <DeleteConfirmButton
+            label="حذف"
+            confirmMessage="حذف هذا السجل نهائياً؟"
+            action={deleteMonthlyRecordAction}
+            hiddenFields={{ id: record.id }}
+            className="px-3 py-2 text-sm text-red-600 border border-red-200 dark:border-red-900 rounded-lg"
+          />
+        ) : null}
+      </div>
+      {state?.error ? (
+        <p className="text-xs text-red-600">{state.error}</p>
+      ) : null}
     </form>
   );
 }
@@ -538,85 +781,159 @@ export function AttendanceRecordEditRow({
           ) : null}
         </div>
       ) : null}
-      <form action={action} className={dayPanelFormGridClass}>
+      <form action={action}>
         <input type="hidden" name="id" value={record.id} />
-        <DayPanelCell>
-          {hideTimes ? (
-            <div className={dayPanelEmptyClass}>—</div>
-          ) : (
-            <input
-              name="first_check_in"
-              {...timeInputProps}
-              defaultValue={record.first_check_in?.slice(0, 5) ?? ""}
-              className={dayPanelControlClass}
-            />
-          )}
-        </DayPanelCell>
-        <DayPanelCell>
-          {hideTimes ? (
-            <div className={dayPanelEmptyClass}>—</div>
-          ) : (
-            <input
-              name="last_check_out"
-              {...timeInputProps}
-              defaultValue={record.last_check_out?.slice(0, 5) ?? ""}
-              className={dayPanelControlClass}
-            />
-          )}
-        </DayPanelCell>
-        <DayPanelCell>
-          {hideTimes ? (
-            <div className={dayPanelEmptyClass}>—</div>
-          ) : shifts.length > 0 ? (
+        <div className={`hidden md:grid ${dayPanelFormGridClass}`}>
+          <DayPanelCell>
+            {hideTimes ? (
+              <div className={dayPanelEmptyClass}>—</div>
+            ) : (
+              <input
+                name="first_check_in"
+                {...timeInputProps}
+                defaultValue={record.first_check_in?.slice(0, 5) ?? ""}
+                className={dayPanelControlClass}
+              />
+            )}
+          </DayPanelCell>
+          <DayPanelCell>
+            {hideTimes ? (
+              <div className={dayPanelEmptyClass}>—</div>
+            ) : (
+              <input
+                name="last_check_out"
+                {...timeInputProps}
+                defaultValue={record.last_check_out?.slice(0, 5) ?? ""}
+                className={dayPanelControlClass}
+              />
+            )}
+          </DayPanelCell>
+          <DayPanelCell>
+            {hideTimes ? (
+              <div className={dayPanelEmptyClass}>—</div>
+            ) : shifts.length > 0 ? (
+              <select
+                name="shift_id"
+                defaultValue={record.shift_id ?? ""}
+                className={dayPanelControlClass}
+              >
+                <option value="">—</option>
+                {shifts
+                  .filter((s) => s.active)
+                  .map((shift) => (
+                    <option key={shift.id} value={shift.id}>
+                      {shift.name}
+                    </option>
+                  ))}
+              </select>
+            ) : (
+              <div className={dayPanelEmptyClass}>—</div>
+            )}
+          </DayPanelCell>
+          <DayPanelCell>
             <select
-              name="shift_id"
-              defaultValue={record.shift_id ?? ""}
+              name="leave_type"
+              value={dayStatus}
+              onChange={(e) => setDayStatus(e.target.value)}
               className={dayPanelControlClass}
             >
-              <option value="">—</option>
-              {shifts
-                .filter((s) => s.active)
-                .map((shift) => (
-                  <option key={shift.id} value={shift.id}>
-                    {shift.name}
-                  </option>
-                ))}
+              <option value="">عادي</option>
+              <option value={ABSENT_STATUS}>{ABSENT_STATUS}</option>
+              {LEAVE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
             </select>
-          ) : (
-            <div className={dayPanelEmptyClass}>—</div>
-          )}
-        </DayPanelCell>
-        <DayPanelCell>
-          <select
-            name="leave_type"
-            value={dayStatus}
-            onChange={(e) => setDayStatus(e.target.value)}
-            className={dayPanelControlClass}
-          >
-            <option value="">عادي</option>
-            <option value={ABSENT_STATUS}>{ABSENT_STATUS}</option>
-            {LEAVE_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </DayPanelCell>
-        <DayPanelCell>
-          <input
-            name="notes"
-            defaultValue={record.notes ?? ""}
-            placeholder="ملاحظة"
-            className={dayPanelControlClass}
-          />
-        </DayPanelCell>
-        <DayPanelCell>
+          </DayPanelCell>
+          <DayPanelCell>
+            <input
+              name="notes"
+              defaultValue={record.notes ?? ""}
+              placeholder="ملاحظة"
+              className={dayPanelControlClass}
+            />
+          </DayPanelCell>
+          <DayPanelCell>
+            <button type="submit" disabled={pending} className={dayPanelSaveClass}>
+              {pending ? "…" : "حفظ"}
+            </button>
+          </DayPanelCell>
+        </div>
+        <div className="md:hidden space-y-2">
+          {!hideTimes ? (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">الدخول</label>
+                <input
+                  name="first_check_in"
+                  {...timeInputProps}
+                  defaultValue={record.first_check_in?.slice(0, 5) ?? ""}
+                  className={dayPanelControlClass}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">الخروج</label>
+                <input
+                  name="last_check_out"
+                  {...timeInputProps}
+                  defaultValue={record.last_check_out?.slice(0, 5) ?? ""}
+                  className={dayPanelControlClass}
+                />
+              </div>
+            </div>
+          ) : null}
+          {!hideTimes && shifts.length > 0 ? (
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">الوردية</label>
+              <select
+                name="shift_id"
+                defaultValue={record.shift_id ?? ""}
+                className={dayPanelControlClass}
+              >
+                <option value="">—</option>
+                {shifts
+                  .filter((s) => s.active)
+                  .map((shift) => (
+                    <option key={shift.id} value={shift.id}>
+                      {shift.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          ) : null}
+          <div className="space-y-1">
+            <label className="text-xs text-gray-500">حالة اليوم</label>
+            <select
+              name="leave_type"
+              value={dayStatus}
+              onChange={(e) => setDayStatus(e.target.value)}
+              className={dayPanelControlClass}
+            >
+              <option value="">عادي</option>
+              <option value={ABSENT_STATUS}>{ABSENT_STATUS}</option>
+              {LEAVE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-gray-500">ملاحظة</label>
+            <input
+              name="notes"
+              defaultValue={record.notes ?? ""}
+              placeholder="ملاحظة"
+              className={dayPanelControlClass}
+            />
+          </div>
           <button type="submit" disabled={pending} className={dayPanelSaveClass}>
             {pending ? "…" : "حفظ"}
           </button>
-        </DayPanelCell>
+        </div>
         {state?.error ? (
-          <p className="col-span-full text-xs text-red-600">{state.error}</p>
+          <p className="text-xs text-red-600 mt-1">{state.error}</p>
         ) : null}
       </form>
       {showPunchTimeline && !hideTimes ? (
