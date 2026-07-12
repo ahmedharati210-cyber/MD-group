@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { DaySummary } from "@/lib/attendance/calendar-shared";
+import { AR_WEEKDAY_LABELS } from "@/lib/attendance/calendar-shared";
 import { ABSENT_STATUS } from "@/lib/attendance/leave-types";
-
-const AR_DAYS = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
 
 function dayAriaLabel(day: DaySummary, dayNum: number, personMode: boolean): string {
   const parts = [`يوم ${dayNum}`];
@@ -97,7 +96,7 @@ export function AttendanceCalendar({
         </div>
       ) : null}
       <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-2">
-        {AR_DAYS.map((d) => (
+        {AR_WEEKDAY_LABELS.map((d) => (
           <div key={d} className="py-1 font-semibold">
             {d}
           </div>

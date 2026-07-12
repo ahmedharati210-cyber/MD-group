@@ -50,6 +50,7 @@ export function UserEditForm({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole>(profile.role);
   const formRef = useRef<HTMLFormElement>(null);
   const authFormRef = useRef<HTMLFormElement>(null);
 
@@ -81,6 +82,8 @@ export function UserEditForm({
     },
     init,
   );
+
+  const isGroupWideRole = selectedRole === "md_admin" || selectedRole === "owner";
 
   // Collapsed row view
   if (!isOpen) {
@@ -134,7 +137,12 @@ export function UserEditForm({
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
               الدور
             </label>
-            <select name="role" defaultValue={profile.role} className={inputCls}>
+            <select
+              name="role"
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value as UserRole)}
+              className={inputCls}
+            >
               <option value="employee">موظف</option>
               <option value="company_manager">مدير شركة</option>
               <option value="md_admin">مدير MD Group</option>
@@ -142,24 +150,30 @@ export function UserEditForm({
             </select>
           </div>
 
-          {/* Company */}
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-              الشركة المُعيَّن إليها
-            </label>
-            <select
-              name="company_id"
-              defaultValue={profile.company_id ?? ""}
-              className={inputCls}
-            >
-              <option value="">— بدون شركة (مدير عام) —</option>
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name_ar}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Company — not applicable for group-wide roles */}
+          {isGroupWideRole ? (
+            <p className="text-xs text-gray-500 dark:text-gray-400 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2">
+              مدير MD Group والمالك لا يرتبطان بشركة ثابتة — يتم اختيار الشركة النشطة من لوحة الشركات.
+            </p>
+          ) : (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                الشركة المُعيَّن إليها
+              </label>
+              <select
+                name="company_id"
+                defaultValue={profile.company_id ?? ""}
+                className={inputCls}
+              >
+                <option value="">— بدون شركة —</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name_ar}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Job title */}
           <div>

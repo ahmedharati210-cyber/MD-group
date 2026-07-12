@@ -99,7 +99,7 @@ const compactBadgeClass =
 
 /** Shared column template for person month table rows. */
 export const PERSON_MONTH_GRID_COLUMNS =
-  "2.25rem 3.75rem 2.75rem minmax(5.5rem,1fr) 5rem 5rem minmax(5rem,1fr) minmax(6rem,1fr) minmax(6rem,1.5fr) 4rem 3.5rem 2.25rem";
+  "2.25rem 3.75rem 3.5rem minmax(5.5rem,1fr) 5rem 5rem minmax(5rem,1fr) minmax(6rem,1fr) minmax(6rem,1.5fr) 4rem 3.5rem 2.25rem";
 
 export const PERSON_MONTH_GRID_STYLE: CSSProperties = {
   gridTemplateColumns: PERSON_MONTH_GRID_COLUMNS,

@@ -6,6 +6,7 @@ import { profileCacheTag, requireSuperAdmin } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { isPlatformFeatureEnabled } from "@/lib/features";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
+import { companyIdForProfileRole } from "@/lib/portal-active-company";
 import { ALL_FEATURES } from "@/types/db";
 import type { AppFeature, RoleFeatures } from "@/types/db";
 
@@ -301,7 +302,10 @@ export async function setUserRoleAction(
     .from("profiles")
     .update({
       role: parsed.data.role,
-      company_id: parsed.data.company_id ?? null,
+      company_id: companyIdForProfileRole(
+        parsed.data.role,
+        parsed.data.company_id,
+      ),
       // If demoting from md_admin, remove super_admin flag
       ...(parsed.data.role !== "md_admin" ? { is_super_admin: false } : {}),
     })
@@ -356,7 +360,10 @@ export async function editProfileAction(
     .update({
       full_name: parsed.data.full_name,
       role: parsed.data.role,
-      company_id: parsed.data.company_id ?? null,
+      company_id: companyIdForProfileRole(
+        parsed.data.role,
+        parsed.data.company_id,
+      ),
       job_title: parsed.data.job_title ?? null,
       is_active: parsed.data.is_active,
       // Strip super_admin flag when not an md_admin

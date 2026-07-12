@@ -1,6 +1,7 @@
 "use client";
 
 import type { DaySummary } from "@/lib/attendance/calendar-shared";
+import { weekdayLabelAr } from "@/lib/attendance/calendar-shared";
 import { ABSENT_STATUS, HOLIDAY_LEAVE_TYPE } from "@/lib/attendance/leave-types";
 import type { AttendancePerson, AttendanceShift } from "@/types/db";
 import {
@@ -18,11 +19,6 @@ import {
   type DayTableMeta,
 } from "./attendance-record-edit-row";
 
-const AR_DAYS = ["أحد", "إثن", "ثلا", "أرب", "خمي", "جمع", "سبت"];
-
-function weekdayLabel(date: string): string {
-  return AR_DAYS[new Date(`${date}T12:00:00`).getDay()];
-}
 
 function shortDate(date: string): string {
   return `${date.slice(8, 10)}-${date.slice(5, 7)}`;
@@ -63,7 +59,7 @@ function buildDayMeta(day: DaySummary, index: number): DayTableMeta {
   return {
     index,
     shortDate: shortDate(day.date),
-    weekday: weekdayLabel(day.date),
+    weekday: weekdayLabelAr(day.date),
     statusLabel: statusLabel(day),
     statusBadgeClass: statusBadgeClass(day),
     rowClassName: rowClassName(day),

@@ -16,23 +16,30 @@ export function parseValidCompanyId(
   return UUID_RE.test(raw) ? raw : null;
 }
 
+/** md_admin/owner are group-wide roles — never persist a fixed company_id. */
+export function companyIdForProfileRole(
+  role: Pick<Profile, "role">["role"],
+  companyId: string | null | undefined,
+): string | null {
+  if (role === "md_admin" || role === "owner") return null;
+  return companyId ?? null;
+}
+
 /**
  * Company context for portal shell and guards.
  * - Super admins: no shell (full bypass elsewhere).
+ * - MD Group managers (`md_admin`, not super) and owners: validated active-company cookie.
  * - Company managers / employees: `profile.company_id`.
- * - MD Group managers (`md_admin`, not super): validated active-company cookie.
- * - Owners (`owner`): same cookie-based approach as md_admin (global view, drill-down per company).
  */
 export function resolveShellCompanyIdFromSources(args: {
   profile: Pick<Profile, "role" | "company_id" | "is_super_admin">;
   activeCompanyCookie: string | undefined;
 }): string | null {
   if (args.profile.is_super_admin) return null;
-  if (args.profile.company_id) return args.profile.company_id;
   if (args.profile.role === "md_admin" || args.profile.role === "owner") {
     return parseValidCompanyId(args.activeCompanyCookie);
   }
-  return null;
+  return args.profile.company_id ?? null;
 }
 
 export async function getShellCompanyIdForProfile(

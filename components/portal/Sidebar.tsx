@@ -235,10 +235,7 @@ export function Sidebar({
         return false;
       }
       if (!isPlatformFeatureEnabled("attendance")) return false;
-      if (isSuperAdmin) return true;
-      if (role === "md_admin") {
-        return isMdManagerFeatureAllowed("attendance", enabledFeatures);
-      }
+      if (isSuperAdmin || role === "md_admin") return true;
       if (visibleFeatures === null) return true;
       return visibleFeatures.includes("attendance");
     }

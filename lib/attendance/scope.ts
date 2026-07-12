@@ -23,7 +23,10 @@ export async function resolveAttendanceCompanyId(
     pickDefaultAttendanceCompanyId(companies);
 
   if (profile.role === "md_admin" && !profile.is_super_admin) {
-    companyId = (await getShellCompanyIdForProfile(profile)) ?? companyId;
+    const shellId = await getShellCompanyIdForProfile(profile);
+    if (shellId && companies.some((company) => company.id === shellId)) {
+      companyId = shellId;
+    }
   }
   if (profile.role === "company_manager" && profile.company_id) {
     companyId = profile.company_id;
@@ -66,10 +69,6 @@ export async function assertAttendanceCompanyAccess(
   }
 
   if (profile.role === "md_admin") {
-    const shellId = await getShellCompanyIdForProfile(profile);
-    if (shellId && shellId !== companyId) {
-      return { error: "صلاحيات غير كافية لهذه الشركة" };
-    }
     return { ok: true };
   }
 

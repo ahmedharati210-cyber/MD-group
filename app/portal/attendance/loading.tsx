@@ -1,7 +1,6 @@
 import { PageHeaderSkeleton } from "@/components/portal/skeletons/page-header-skeleton";
 import { CardGridSkeleton } from "@/components/portal/skeletons/card-grid-skeleton";
-
-const AR_DAYS = ["أحد", "إثن", "ثلا", "أرب", "خمي", "جمع", "سبت"];
+import { AR_WEEKDAY_LABELS } from "@/lib/attendance/calendar-shared";
 
 function AttendanceCalendarSkeleton() {
   const blanks = Array.from({ length: 3 });
@@ -19,7 +18,7 @@ function AttendanceCalendarSkeleton() {
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1 text-center mb-2">
-        {AR_DAYS.map((day) => (
+        {AR_WEEKDAY_LABELS.map((day) => (
           <div key={day} className="py-1 text-xs text-gray-400 font-semibold">
             {day}
           </div>

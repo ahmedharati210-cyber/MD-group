@@ -37,11 +37,7 @@ const statusLabels: Record<ProjectStatus, { label: string; cls: string }> = {
 export default async function PortalDashboard() {
   const { profile } = await requireUser();
 
-  const shellCompanyId =
-    profile.company_id ??
-    ((profile.role === "md_admin" || profile.role === "owner") && !(profile.is_super_admin ?? false)
-      ? await getShellCompanyIdForProfile(profile)
-      : null);
+  const shellCompanyId = await getShellCompanyIdForProfile(profile);
 
   const companyRow = shellCompanyId
     ? await getCompanyData(shellCompanyId)

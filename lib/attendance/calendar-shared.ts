@@ -16,6 +16,21 @@ export type DaySummary = {
   records: AttendanceMonthlyRecord[];
 };
 
+/** Arabic weekday labels (Sunday = index 0), aligned with attendance-calendar. */
+export const AR_WEEKDAY_LABELS = [
+  "أحد",
+  "إثنين",
+  "ثلاثاء",
+  "أربعاء",
+  "خميس",
+  "جمعة",
+  "سبت",
+] as const;
+
+export function weekdayLabelAr(date: string): string {
+  return AR_WEEKDAY_LABELS[new Date(`${date}T12:00:00`).getDay()];
+}
+
 /** Fridays are treated as the weekly weekend across the attendance UI. */
 export function isFriday(date: string): boolean {
   return new Date(`${date}T12:00:00`).getDay() === 5;

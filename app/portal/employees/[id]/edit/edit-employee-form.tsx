@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Loader2, Save, User, Briefcase, FileText, Phone, StickyNote } from "lucide-react";
 import { updateEmployeeAction, type ActionState } from "../../actions";
-import type { Profile } from "@/types/db";
+import type { Profile, UserRole } from "@/types/db";
 
 type Company = { id: string; name_ar: string };
 
@@ -48,6 +48,9 @@ export function EditEmployeeForm({
   canChangeCompany,
   canSeeHrNotes,
 }: Props) {
+  const [selectedRole, setSelectedRole] = useState<UserRole>(profile.role);
+  const isGroupWideRole = selectedRole === "md_admin";
+
   const [state, formAction, pending] = useActionState<
     ActionState | undefined,
     FormData
@@ -206,26 +209,33 @@ export function EditEmployeeForm({
             />
           </Field>
 
-          <Field label="الشركة">
-            <select
-              name="company_id"
-              defaultValue={profile.company_id ?? ""}
-              disabled={!canChangeCompany}
-              className={inputClasses}
-            >
-              <option value="">— بدون —</option>
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name_ar}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {isGroupWideRole ? (
+            <p className="sm:col-span-2 text-sm text-gray-500 dark:text-gray-400 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3 py-2.5">
+              مدير MD Group لا يرتبط بشركة ثابتة — يتم اختيار الشركة النشطة من لوحة الشركات.
+            </p>
+          ) : (
+            <Field label="الشركة">
+              <select
+                name="company_id"
+                defaultValue={profile.company_id ?? ""}
+                disabled={!canChangeCompany}
+                className={inputClasses}
+              >
+                <option value="">— بدون —</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name_ar}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
 
           <Field label="الدور">
             <select
               name="role"
-              defaultValue={profile.role}
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value as UserRole)}
               disabled={!canChangeRole}
               className={inputClasses}
             >

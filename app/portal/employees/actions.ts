@@ -13,7 +13,7 @@ import {
   DOLCE_SIGNUP_INVITE_MAX_USES,
   DOLCE_SIGNUP_INVITE_VALIDITY_DAYS,
 } from "@/lib/dolce-signup-invite-config";
-import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
+import { getShellCompanyIdForProfile, companyIdForProfileRole } from "@/lib/portal-active-company";
 import { getCompanyData } from "@/lib/company";
 import { logAudit } from "@/lib/audit";
 
@@ -270,7 +270,13 @@ export async function updateEmployeeAction(
   const payload: Record<string, unknown> = { ...rest };
   if (current.profile.role === "md_admin") {
     if (role) payload.role = role;
-    if (company_id !== undefined) payload.company_id = company_id || null;
+    const effectiveRole = role ?? target.role;
+    if (company_id !== undefined || role) {
+      payload.company_id = companyIdForProfileRole(
+        effectiveRole,
+        company_id !== undefined ? company_id : target.company_id,
+      );
+    }
   }
   // hr_notes is only writable by managers/admins
   if (current.profile.role !== "employee") {
@@ -280,12 +286,14 @@ export async function updateEmployeeAction(
   const { error } = await admin.from("profiles").update(payload).eq("id", id);
   if (error) return { error: error.message };
 
-  const effectiveCompanyId =
-    current.profile.role === "md_admin" && company_id !== undefined
-      ? company_id || null
-      : target.company_id;
   const effectiveRole =
     current.profile.role === "md_admin" && role ? role : target.role;
+  const effectiveCompanyId = companyIdForProfileRole(
+    effectiveRole,
+    current.profile.role === "md_admin" && company_id !== undefined
+      ? company_id
+      : target.company_id,
+  );
 
   void logAudit(current.userId, "update", "profile", id, {
     full_name: parsed.data.full_name,

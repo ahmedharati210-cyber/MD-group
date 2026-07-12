@@ -169,5 +169,41 @@ export async function requireFeature(
 
 /** Monthly attendance: MD admins, company managers, and super admins only. */
 export async function requireAttendanceAccess() {
-  return requireFeature("attendance", ["md_admin", "company_manager"]);
+  const current = await requireUser();
+
+  if (!isPlatformFeatureEnabled("attendance")) {
+    redirect("/portal");
+  }
+
+  if (current.profile.is_super_admin) {
+    return current;
+  }
+
+  if (
+    current.profile.role !== "md_admin" &&
+    current.profile.role !== "company_manager"
+  ) {
+    redirect("/portal");
+  }
+
+  // md_admin chooses the working company inside attendance (no shell required).
+  if (current.profile.role === "md_admin") {
+    return current;
+  }
+
+  if (current.profile.company_id) {
+    const companyData = await getCompanyData(current.profile.company_id);
+    if (companyData) {
+      const visible = getVisibleFeatures(
+        current.profile.role,
+        companyData.enabled_features,
+        companyData.role_features,
+      );
+      if (visible !== null && !visible.includes("attendance")) {
+        redirect("/portal");
+      }
+    }
+  }
+
+  return current;
 }
