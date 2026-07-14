@@ -34,5 +34,15 @@ describe("monthly-calculations", () => {
       lastCheckOut: "22:30",
     });
     expect(result.shiftType).toBe("دوام كامل");
+    expect(result.lateMinutes).toBe(0);
+  });
+
+  it("counts late minutes for full-time day using 09:00 fallback", () => {
+    const result = computeDayRecord({
+      firstCheckIn: "09:20",
+      lastCheckOut: "19:20",
+    });
+    expect(result.shiftType).toBe("دوام كامل");
+    expect(result.lateMinutes).toBe(5);
   });
 });

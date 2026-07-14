@@ -18,14 +18,13 @@ type StatField = {
 
 function buildRowStats(row: PersonPayrollSummary): StatField[] {
   return [
-    { label: "حضور", value: row.presentDays },
+    { label: "عدد ايام الدوام الكامل", value: row.fullTimeDays },
     { label: "غياب", value: row.absentDays, valueClassName: "text-red-600" },
     { label: "بصمة واحدة", value: row.onePunchDays, valueClassName: "text-orange-600" },
     { label: "إجازات", value: row.leaveDays, valueClassName: "text-teal-600" },
     { label: "تأخير", value: row.lateDays, valueClassName: "text-amber-600" },
-    { label: "خروج مبكر", value: row.earlyLeaveDays },
+    { label: "عدد ايام الخروج المبكر", value: row.earlyLeaveDays },
     { label: "إضافي", value: row.overtimeDays, valueClassName: "text-emerald-600" },
-    { label: "دوام كامل", value: row.fullTimeDays },
     { label: "ساعات العمل", value: hours(row.totalWorkedMinutes), valueClassName: "font-mono text-xs" },
     { label: "المطلوب", value: hours(row.totalExpectedMinutes), valueClassName: "font-mono text-xs" },
     {
@@ -53,14 +52,13 @@ function buildRowStats(row: PersonPayrollSummary): StatField[] {
 
 function buildTotalsStats(totals: BranchPayrollTotals): StatField[] {
   return [
-    { label: "حضور", value: totals.presentDays },
+    { label: "عدد ايام الدوام الكامل", value: totals.fullTimeDays },
     { label: "غياب", value: totals.absentDays },
     { label: "بصمة واحدة", value: totals.onePunchDays },
     { label: "إجازات", value: totals.leaveDays },
     { label: "تأخير", value: totals.lateDays },
-    { label: "خروج مبكر", value: totals.earlyLeaveDays },
+    { label: "عدد ايام الخروج المبكر", value: totals.earlyLeaveDays },
     { label: "إضافي", value: totals.overtimeDays },
-    { label: "دوام كامل", value: totals.fullTimeDays },
     { label: "ساعات العمل", value: hours(totals.totalWorkedMinutes), valueClassName: "font-mono text-xs" },
     { label: "المطلوب", value: hours(totals.totalExpectedMinutes), valueClassName: "font-mono text-xs" },
     { label: "تأخير (س)", value: hours(totals.totalLateMinutes), valueClassName: "font-mono text-xs" },
@@ -146,14 +144,13 @@ export function AttendancePayrollSummary({ rows, totals }: Props) {
             <tr className="text-right">
               <th className="px-3 py-3">الموظف</th>
               <th className="px-3 py-3">#</th>
-              <th className="px-3 py-3">حضور</th>
+              <th className="px-3 py-3">عدد ايام الدوام الكامل</th>
               <th className="px-3 py-3">غياب</th>
               <th className="px-3 py-3">بصمة واحدة</th>
               <th className="px-3 py-3">إجازات</th>
               <th className="px-3 py-3">تأخير</th>
-              <th className="px-3 py-3">خروج مبكر</th>
+              <th className="px-3 py-3">عدد ايام الخروج المبكر</th>
               <th className="px-3 py-3">إضافي</th>
-              <th className="px-3 py-3">دوام كامل</th>
               <th className="px-3 py-3">ساعات العمل</th>
               <th className="px-3 py-3">المطلوب</th>
               <th className="px-3 py-3">تأخير (س)</th>
@@ -172,14 +169,13 @@ export function AttendancePayrollSummary({ rows, totals }: Props) {
                 <td className="px-3 py-2.5 text-gray-500" dir="ltr">
                   {row.externalEmployeeNumber}
                 </td>
-                <td className="px-3 py-2.5">{row.presentDays}</td>
+                <td className="px-3 py-2.5">{row.fullTimeDays}</td>
                 <td className="px-3 py-2.5 text-red-600">{row.absentDays}</td>
                 <td className="px-3 py-2.5 text-orange-600">{row.onePunchDays}</td>
                 <td className="px-3 py-2.5 text-teal-600">{row.leaveDays}</td>
                 <td className="px-3 py-2.5 text-amber-600">{row.lateDays}</td>
                 <td className="px-3 py-2.5">{row.earlyLeaveDays}</td>
                 <td className="px-3 py-2.5 text-emerald-600">{row.overtimeDays}</td>
-                <td className="px-3 py-2.5">{row.fullTimeDays}</td>
                 <td className="px-3 py-2.5 font-mono text-xs" dir="ltr">
                   {hours(row.totalWorkedMinutes)}
                 </td>
@@ -206,14 +202,13 @@ export function AttendancePayrollSummary({ rows, totals }: Props) {
               <td className="px-3 py-3" colSpan={2}>
                 الإجمالي
               </td>
-              <td className="px-3 py-3">{totals.presentDays}</td>
+              <td className="px-3 py-3">{totals.fullTimeDays}</td>
               <td className="px-3 py-3">{totals.absentDays}</td>
               <td className="px-3 py-3">{totals.onePunchDays}</td>
               <td className="px-3 py-3">{totals.leaveDays}</td>
               <td className="px-3 py-3">{totals.lateDays}</td>
               <td className="px-3 py-3">{totals.earlyLeaveDays}</td>
               <td className="px-3 py-3">{totals.overtimeDays}</td>
-              <td className="px-3 py-3">{totals.fullTimeDays}</td>
               <td className="px-3 py-3 font-mono text-xs" dir="ltr">
                 {hours(totals.totalWorkedMinutes)}
               </td>

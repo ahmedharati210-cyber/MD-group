@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FileText, Plus, Building2 } from "lucide-react";
+import { PortalLink } from "@/components/portal/PortalLink";
 import { requireFeature } from "@/lib/auth";
 import { getPapersData, type PaperDoc } from "@/lib/data/papers";
 import {
@@ -230,7 +231,7 @@ export default async function PapersPage({
               const company = d.companies;
               const expSt = paperExpiryVisualState(d.expires_on ?? null);
               return (
-                <Link
+                <PortalLink
                   key={d.id}
                   href={`/portal/papers/${d.id}`}
                   className="block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs hover:shadow-md transition-shadow"
@@ -281,7 +282,7 @@ export default async function PapersPage({
                       </span>
                     </div>
                   </div>
-                </Link>
+                </PortalLink>
               );
             })}
           </div>
@@ -311,13 +312,13 @@ export default async function PapersPage({
                         className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
                       >
                         <td className="px-5 py-3">
-                          <Link
+                          <PortalLink
                             href={`/portal/papers/${d.id}`}
                             className="font-semibold text-gray-900 dark:text-gray-100 hover:text-primary-700 dark:hover:text-primary-400 inline-flex items-center gap-2"
                           >
                             <FileText className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                             {d.title}
-                          </Link>
+                          </PortalLink>
                         </td>
                         <td className="px-5 py-3 text-gray-700 dark:text-gray-300">
                           {paperCategoryLabelFor(d.category)}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Plus, Receipt, CalendarDays, FileText, MapPin } from "lucide-react";
+import { PortalLink } from "@/components/portal/PortalLink";
 import { requireFeature } from "@/lib/auth";
 import { getClaimsData } from "@/lib/data/claims";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
@@ -75,7 +76,7 @@ export default async function ClaimsPage({
       ) : (
         <div className="space-y-3">
           {claims.map((c) => (
-            <Link key={c.id} href={`/portal/claims/${c.id}`} className="flex items-start gap-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-md transition-all">
+            <PortalLink key={c.id} href={`/portal/claims/${c.id}`} className="flex items-start gap-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-md transition-all">
               <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center shrink-0">
                 <Receipt className="w-5 h-5 text-primary-600 dark:text-primary-400" />
               </div>
@@ -108,7 +109,7 @@ export default async function ClaimsPage({
                   ) : null}
                 </div>
               </div>
-            </Link>
+            </PortalLink>
           ))}
         </div>
       )}

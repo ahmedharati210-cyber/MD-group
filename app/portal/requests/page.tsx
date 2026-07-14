@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Plus, ClipboardEdit, CalendarDays, User } from "lucide-react";
+import { PortalLink } from "@/components/portal/PortalLink";
 import { requireFeature } from "@/lib/auth";
 import { getRequestsData } from "@/lib/data/requests";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
@@ -93,7 +94,7 @@ export default async function RequestsPage({
           {requests.map((r) => {
             const { label: sLabel, cls: sCls } = statusMap[r.status];
             return (
-              <Link key={r.id} href={`/portal/requests/${r.id}`} className="flex items-start gap-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all">
+              <PortalLink key={r.id} href={`/portal/requests/${r.id}`} className="flex items-start gap-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all">
                 <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center shrink-0">
                   <ClipboardEdit className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                 </div>
@@ -108,7 +109,7 @@ export default async function RequestsPage({
                     {isManager && r.requester ? <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500"><User className="w-3.5 h-3.5" />{r.requester.full_name}</span> : null}
                   </div>
                 </div>
-              </Link>
+              </PortalLink>
             );
           })}
         </div>

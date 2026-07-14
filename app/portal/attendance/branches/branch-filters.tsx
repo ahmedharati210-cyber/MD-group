@@ -57,7 +57,9 @@ export function BranchFilters({
     else params.delete("q");
 
     startTransition(() => {
-      router.push(`/portal/attendance/branches?${params.toString()}`);
+      router.push(`/portal/attendance/branches?${params.toString()}`, {
+        scroll: false,
+      });
     });
   }
 

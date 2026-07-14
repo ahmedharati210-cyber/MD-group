@@ -157,13 +157,20 @@ export function computeDayRecord(
   const totalMinutes = diffMinutes(firstCheckIn, lastCheckOut);
 
   if (shiftType === SHIFT_FULL) {
+    const checkInMinutes = parseTimeToMinutes(firstCheckIn);
+    const startExpected = expectedStartMinutes(shiftType);
+    let lateMinutes = 0;
+    if (startExpected != null && checkInMinutes != null) {
+      lateMinutes = Math.max(0, checkInMinutes - startExpected - LATE_GRACE_MINUTES);
+    }
     const overtimeMinutes = Math.max(0, totalMinutes - fullTimeRule.expectedMinutes);
-    const deductionMinutes = Math.max(0, fullTimeRule.expectedMinutes - totalMinutes);
+    const shortfallMinutes = Math.max(0, fullTimeRule.expectedMinutes - totalMinutes);
+    const deductionMinutes = lateMinutes + shortfallMinutes;
     return {
       shiftType,
       expectedMinutes: fullTimeRule.expectedMinutes,
       totalMinutes,
-      lateMinutes: 0,
+      lateMinutes,
       earlyLeaveMinutes: 0,
       overtimeMinutes,
       deductionMinutes,

@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { requireFeature } from "@/lib/auth";
+import { requireAttendanceAccess } from "@/lib/auth";
 import {
   attendanceReportFileName,
   buildAttendanceReportHtml,
 } from "@/lib/attendance/attendance-pdf";
+import { buildAttendanceReport } from "@/lib/attendance/attendance-report";
 import { assertAttendanceCompanyAccess, assertBranchBelongsToCompany } from "@/lib/attendance/scope";
 import {
   getAttendanceImport,
@@ -17,7 +18,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 const monthSchema = z.string().regex(/^\d{4}-\d{2}$/);
 
 export async function GET(req: NextRequest) {
-  const { profile } = await requireFeature("attendance", ["md_admin", "company_manager"]);
+  const { profile } = await requireAttendanceAccess();
 
   const { searchParams } = new URL(req.url);
   const companyId = searchParams.get("companyId");
@@ -68,7 +69,7 @@ export async function GET(req: NextRequest) {
   const companyName =
     (companyRes.data as { name_ar: string } | null)?.name_ar ?? "الشركة";
 
-  const html = buildAttendanceReportHtml({
+  const report = buildAttendanceReport({
     companyName,
     branch,
     month: monthDate,
@@ -76,6 +77,7 @@ export async function GET(req: NextRequest) {
     people,
   });
 
+  const html = buildAttendanceReportHtml(report);
   const pdfBytes = await renderPdfFromHtml(html);
   const fileName = attendanceReportFileName(companyName, branch.name, monthDate);
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Users, Plus, Building2 } from "lucide-react";
+import { PortalLink } from "@/components/portal/PortalLink";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
@@ -106,7 +107,7 @@ export default async function EmployeesPage({
                 }
               ).companies;
               return (
-                <Link
+                <PortalLink
                   key={e.id}
                   href={`/portal/employees/${e.id}`}
                   className="block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs hover:shadow-md transition-shadow"
@@ -152,7 +153,7 @@ export default async function EmployeesPage({
                       {formatDate(e.hired_at) || "—"}
                     </div>
                   </div>
-                </Link>
+                </PortalLink>
               );
             })}
           </div>
@@ -183,12 +184,12 @@ export default async function EmployeesPage({
                         className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
                       >
                         <td className="px-5 py-3">
-                          <Link
+                          <PortalLink
                             href={`/portal/employees/${e.id}`}
                             className="font-semibold text-gray-900 dark:text-gray-100 hover:text-primary-700 dark:hover:text-primary-400"
                           >
                             {e.full_name}
-                          </Link>
+                          </PortalLink>
                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             {e.role === "md_admin"
                               ? "مدير MD Group"

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Plus, FileBarChart2, CalendarDays, MapPin, User, StickyNote, Clock } from "lucide-react";
+import { PortalLink } from "@/components/portal/PortalLink";
 import { requireFeature } from "@/lib/auth";
 import { getReportsData } from "@/lib/data/reports";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
@@ -133,7 +134,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
         <>
           <div className="space-y-3">
             {reports.map((r) => (
-              <Link key={r.id} href={`/portal/reports/${r.id}`} className="flex items-start gap-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all">
+              <PortalLink key={r.id} href={`/portal/reports/${r.id}`} className="flex items-start gap-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all">
                 <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center shrink-0">
                   <FileBarChart2 className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                 </div>
@@ -168,7 +169,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
                     </p>
                   ) : null}
                 </div>
-              </Link>
+              </PortalLink>
             ))}
           </div>
           <Pagination

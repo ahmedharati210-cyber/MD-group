@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Building2, Users, ArrowLeft, Plus } from "lucide-react";
+import { PortalLink } from "@/components/portal/PortalLink";
 import { requireRole } from "@/lib/auth";
 import { getCompaniesWithCounts } from "@/lib/data/companies";
 import { PageHeader } from "@/components/portal/PageHeader";
@@ -70,7 +71,7 @@ export default async function CompaniesPage({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {rows.map((c) => (
-            <Link
+            <PortalLink
               key={c.id}
               href={`/portal/companies/${c.id}`}
               className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs hover:shadow-lg hover:border-primary-200 dark:hover:border-primary-800 transition-all"
@@ -98,7 +99,7 @@ export default async function CompaniesPage({
                 <Users className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                 {c.employeeCount} موظف
               </div>
-            </Link>
+            </PortalLink>
           ))}
         </div>
       )}

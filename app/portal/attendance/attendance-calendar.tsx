@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { PortalLink } from "@/components/portal/PortalLink";
 import { useSearchParams } from "next/navigation";
+import { LinkPendingSpinner } from "@/components/portal/LinkPendingSpinner";
 import type { DaySummary } from "@/lib/attendance/calendar-shared";
 import { AR_WEEKDAY_LABELS } from "@/lib/attendance/calendar-shared";
 import { ABSENT_STATUS } from "@/lib/attendance/leave-types";
@@ -116,13 +117,14 @@ export function AttendanceCalendar({
             day.missingPunch > 0 ||
             day.leave > 0;
           return (
-            <Link
+            <PortalLink
               key={day.date}
               href={dayHref(day.date)}
               aria-label={dayAriaLabel(day, dayNum, personMode)}
               aria-current={isSelected ? "date" : undefined}
-              className={`min-h-[56px] md:min-h-[72px] rounded-xl border p-1.5 text-right transition-colors ${dayCellClass(day, isSelected)}`}
+              className={`relative min-h-[56px] md:min-h-[72px] rounded-xl border p-1.5 text-right transition-colors ${dayCellClass(day, isSelected)}`}
             >
+              <LinkPendingSpinner className="absolute top-1 left-1 z-10" />
               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {dayNum}
               </span>
@@ -179,7 +181,7 @@ export function AttendanceCalendar({
                   ) : null}
                 </div>
               ) : null}
-            </Link>
+            </PortalLink>
           );
         })}
       </div>

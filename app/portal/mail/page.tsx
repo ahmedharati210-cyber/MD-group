@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PortalLink } from "@/components/portal/PortalLink";
 import {
   Mail,
   Plus,
@@ -189,7 +190,7 @@ export default async function MailPage({
               const inbound = m.direction === "inbound";
               return (
                 <li key={m.id}>
-                  <Link
+                  <PortalLink
                     href={`/portal/mail/${m.id}`}
                     className="block p-4 sm:p-5 hover:bg-gray-50 dark:hover:bg-gray-800/40"
                   >
@@ -235,7 +236,7 @@ export default async function MailPage({
                         ) : null}
                       </div>
                     </div>
-                  </Link>
+                  </PortalLink>
                 </li>
               );
             })}

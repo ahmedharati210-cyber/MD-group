@@ -1,16 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { requireFeature } from "@/lib/auth";
+import { requireAttendanceAccess } from "@/lib/auth";
 import {
   assertAttendanceCompanyAccess,
   assertBranchBelongsToCompany,
 } from "@/lib/attendance/scope";
+import { buildAttendanceReport } from "@/lib/attendance/attendance-report";
 import {
   buildMonthlyAttendanceWorkbook,
   monthExportFileName,
 } from "@/lib/attendance/monthly-export";
 import {
   getAttendanceImport,
+  getAttendancePeople,
   getMonthlyAttendanceRecords,
 } from "@/lib/data/monthly-attendance";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -18,7 +20,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 const monthSchema = z.string().regex(/^\d{4}-\d{2}$/);
 
 export async function GET(req: NextRequest) {
-  const { profile } = await requireFeature("attendance", ["md_admin", "company_manager"]);
+  const { profile } = await requireAttendanceAccess();
 
   const { searchParams } = new URL(req.url);
   const companyId = searchParams.get("companyId");
@@ -56,8 +58,9 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const [records, companyRes] = await Promise.all([
+  const [records, people, companyRes] = await Promise.all([
     getMonthlyAttendanceRecords(importRow.id),
+    getAttendancePeople(companyId, branchId),
     createSupabaseServerClient()
       .then((sb) =>
         sb.from("companies").select("name_ar").eq("id", companyId).single(),
@@ -69,12 +72,15 @@ export async function GET(req: NextRequest) {
   const companyName =
     (companyRes.data as { name_ar: string } | null)?.name_ar ?? "الشركة";
 
-  const buffer = await buildMonthlyAttendanceWorkbook({
+  const report = buildAttendanceReport({
     companyName,
     branch,
     month: monthDate,
     records,
+    people,
   });
+
+  const buffer = await buildMonthlyAttendanceWorkbook(report);
 
   const fileName = monthExportFileName(companyName, branch.name, monthDate);
 

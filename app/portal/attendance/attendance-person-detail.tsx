@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PortalLink } from "@/components/portal/PortalLink";
 import { X } from "lucide-react";
 
 type Props = {
@@ -31,13 +31,13 @@ export function AttendancePersonHeader({
         </p>
       </div>
       {closeHref ? (
-        <Link
+        <PortalLink
           href={closeHref}
           className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 shrink-0"
         >
           <X className="w-4 h-4" />
           إغلاق
-        </Link>
+        </PortalLink>
       ) : null}
     </div>
   );

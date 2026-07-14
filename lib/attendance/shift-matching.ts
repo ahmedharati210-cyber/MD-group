@@ -33,20 +33,39 @@ function circularDistance(a: number, b: number): number {
   return Math.min(diff, 24 * 60 - diff);
 }
 
+const FALLBACK_START_MINUTES = 9 * 60;
+const FALLBACK_LATE_GRACE_MINUTES = 15;
+
+function computeLateMinutesForFullTime(
+  firstCheckIn: string | null,
+  shift: AttendanceShift | null,
+): number {
+  if (!firstCheckIn) return 0;
+  const checkInMinutes = timeToMinutes(firstCheckIn);
+  const startExpected = shift
+    ? timeToMinutes(shift.start_time.slice(0, 5))
+    : FALLBACK_START_MINUTES;
+  const grace = shift?.late_grace_minutes ?? FALLBACK_LATE_GRACE_MINUTES;
+  return Math.max(0, checkInMinutes - startExpected - grace);
+}
+
 function computeFullTimeRecord(
   session: PunchSession,
   config: FullTimeConfig,
+  shift: AttendanceShift | null = null,
 ): ComputedDay {
   const totalMinutes = calcSessionMinutes(session);
   const expectedMinutes = config.expectedMinutes;
+  const lateMinutes = computeLateMinutesForFullTime(session.firstCheckIn, shift);
   const overtimeMinutes = Math.max(0, totalMinutes - expectedMinutes);
-  const deductionMinutes = Math.max(0, expectedMinutes - totalMinutes);
+  const shortfallMinutes = Math.max(0, expectedMinutes - totalMinutes);
+  const deductionMinutes = lateMinutes + shortfallMinutes;
 
   return {
     shiftType: SHIFT_FULL,
     expectedMinutes,
     totalMinutes,
-    lateMinutes: 0,
+    lateMinutes,
     earlyLeaveMinutes: 0,
     overtimeMinutes,
     deductionMinutes,
@@ -172,9 +191,10 @@ export function computeSessionRecord(
 
   const totalMinutes = calcSessionMinutes(session);
   if (totalMinutes >= fullTimeConfig.thresholdMinutes) {
+    const shift = resolveShiftForSession(session, shifts);
     return {
-      computed: computeFullTimeRecord(session, fullTimeConfig),
-      shift: null,
+      computed: computeFullTimeRecord(session, fullTimeConfig, shift),
+      shift,
     };
   }
 

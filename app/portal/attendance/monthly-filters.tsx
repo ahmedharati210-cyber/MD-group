@@ -72,7 +72,7 @@ export function MonthlyFilters({
     }
 
     startTransition(() => {
-      router.push(`${basePath}?${params.toString()}`);
+      router.push(`${basePath}?${params.toString()}`, { scroll: false });
     });
   }
 
@@ -106,7 +106,10 @@ export function MonthlyFilters({
   }
 
   return (
-    <form onSubmit={onSubmit} className="mb-6 space-y-3">
+    <form
+      onSubmit={onSubmit}
+      className={`mb-6 space-y-3 transition-opacity ${filtersDisabled ? "opacity-60 pointer-events-none" : ""}`}
+    >
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {showCompanyPicker ? (
           <select

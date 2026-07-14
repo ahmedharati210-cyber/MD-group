@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PortalLink } from "@/components/portal/PortalLink";
 import {
   Building2,
   Users,
@@ -150,7 +151,7 @@ export default async function PortalDashboard() {
               const pct = total > 0 ? Math.round((done / total) * 100) : 0;
               const { label, cls } = statusLabels[p.status];
               return (
-                <Link
+                <PortalLink
                   key={p.id}
                   href={`/portal/timeline/${p.id}`}
                   className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all"
@@ -169,7 +170,7 @@ export default async function PortalDashboard() {
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                </Link>
+                </PortalLink>
               );
             })}
           </div>

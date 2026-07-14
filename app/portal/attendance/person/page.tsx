@@ -1,11 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
 import { notFound } from "next/navigation";
 import { requireAttendanceAccess } from "@/lib/auth";
-import {
-  buildPersonCalendarDays,
-  buildPersonMonthStats,
-} from "@/lib/attendance/attendance-view";
 import { getDefaultAttendanceMonth } from "@/lib/attendance/import-month";
 import {
   attendanceShowCompanyPicker,
@@ -17,15 +14,13 @@ import {
   getAttendanceCompanies,
   getAttendanceImport,
   getAttendancePeople,
-  getAttendanceShifts,
-  getMonthlyAttendanceRecords,
 } from "@/lib/data/monthly-attendance";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { buildBranchAttendanceHref } from "../attendance-navigation";
-import { AttendancePersonMonthTable } from "../attendance-person-month-table";
-import { AttendancePersonSummaryCards } from "../attendance-summary-cards";
 import { AttendanceExportActions } from "../attendance-export-actions";
 import { MonthlyFilters } from "../monthly-filters";
+import { AttendancePersonDetailSection } from "../attendance-person-detail-section";
+import { AttendancePersonDetailSkeleton } from "../attendance-section-skeletons";
 
 type SearchParams = Promise<{
   personId?: string;
@@ -84,26 +79,22 @@ export default async function AttendancePersonPage({
 
   const monthDate = `${month}-01`;
   const navContext = { companyId, branchId, month };
+  const personId = params.personId;
 
-  const [importRow, people, branchShifts] = await Promise.all([
-    getAttendanceImport(companyId, branchId, monthDate),
+  const [people, importRow] = await Promise.all([
     getAttendancePeople(companyId, branchId),
-    getAttendanceShifts(branchId),
+    getAttendanceImport(companyId, branchId, monthDate),
   ]);
 
-  const person = people.find((p) => p.id === params.personId);
+  const person = people.find((p) => p.id === personId);
   if (!person) notFound();
 
-  const allRecords = importRow ? await getMonthlyAttendanceRecords(importRow.id) : [];
-  const personRecords = allRecords.filter(
-    (record) => record.attendance_person_id === person.id,
-  );
-  const calendarDays = buildPersonCalendarDays(month, personRecords);
-  const personStats = buildPersonMonthStats(month, personRecords);
   const selectedBranch = branches.find((b) => b.id === branchId);
   const canExport = Boolean(importRow);
   const exportHref = `/api/attendance/export.xlsx?companyId=${companyId}&branchId=${branchId}&month=${month}`;
   const exportPdfHref = `/api/attendance/export.pdf?companyId=${companyId}&branchId=${branchId}&month=${month}`;
+
+  const detailKey = `${month}-${personId}`;
 
   return (
     <div>
@@ -120,12 +111,8 @@ export default async function AttendancePersonPage({
         title={`حضور ${person.full_name}`}
         description={
           selectedBranch
-            ? `${selectedBranch.name} — ${month} · #${person.external_employee_number} · ${personRecords.length} سجل${
-                personStats.leaveDays > 0 ? ` · إجازات: ${personStats.leaveDays}` : ""
-              }`
-            : `${month} · #${person.external_employee_number} · ${personRecords.length} سجل${
-                personStats.leaveDays > 0 ? ` · إجازات: ${personStats.leaveDays}` : ""
-              }`
+            ? `${selectedBranch.name} — ${month} · #${person.external_employee_number}`
+            : `${month} · #${person.external_employee_number}`
         }
       />
 
@@ -149,24 +136,16 @@ export default async function AttendancePersonPage({
         showHint={!canExport}
       />
 
-      {importRow ? (
-        <AttendancePersonSummaryCards stats={personStats} compact />
-      ) : null}
-
-      {!importRow ? (
-        <p className="text-sm text-gray-500 py-8 text-center">
-          لا يوجد استيراد لهذا الشهر. قم باستيراد ملف البصمة من صفحة الفرع أولاً.
-        </p>
-      ) : (
-        <AttendancePersonMonthTable
-          days={calendarDays}
-          person={person}
-          shifts={branchShifts}
+      <Suspense key={detailKey} fallback={<AttendancePersonDetailSkeleton />}>
+        <AttendancePersonDetailSection
           companyId={companyId}
           branchId={branchId}
+          personId={personId}
+          month={month}
+          monthDate={monthDate}
           isSuperAdmin={profile.is_super_admin}
         />
-      )}
+      </Suspense>
     </div>
   );
 }

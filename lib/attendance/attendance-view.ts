@@ -289,6 +289,8 @@ export type PersonMonthStats = {
   lateDays: number;
   leaveDays: number;
   weekendDays: number;
+  fullTimeDays: number;
+  earlyLeaveDays: number;
   totalDeductionMinutes: number;
 };
 
@@ -305,6 +307,8 @@ export function buildPersonMonthStats(
       lateDays: 0,
       leaveDays: 0,
       weekendDays: 0,
+      fullTimeDays: 0,
+      earlyLeaveDays: 0,
       totalDeductionMinutes: 0,
     };
   }
@@ -317,6 +321,8 @@ export function buildPersonMonthStats(
   let lateDays = 0;
   let leaveDays = 0;
   let weekendDays = 0;
+  let fullTimeDays = 0;
+  let earlyLeaveDays = 0;
   let totalDeductionMinutes = 0;
 
   for (const date of days) {
@@ -336,6 +342,8 @@ export function buildPersonMonthStats(
     if (hasOnePunch(record)) onePunchDays += 1;
     else presentDays += 1;
     if (record.late_minutes > 0) lateDays += 1;
+    if (record.early_leave_minutes > 0) earlyLeaveDays += 1;
+    if (record.shift_type === "دوام كامل") fullTimeDays += 1;
     totalDeductionMinutes += record.deduction_minutes;
   }
 
@@ -346,6 +354,8 @@ export function buildPersonMonthStats(
     lateDays,
     leaveDays,
     weekendDays,
+    fullTimeDays,
+    earlyLeaveDays,
     totalDeductionMinutes,
   };
 }

@@ -1,108 +1,39 @@
 import "server-only";
 
 import {
-  buildBranchPayrollSummary,
-  type PersonPayrollSummary,
-} from "@/lib/attendance/attendance-view";
-import { formatAttendanceRecordNotes } from "@/lib/attendance/leave-types";
-import {
-  enumerateMonthDays,
-  formatMinutesAsHours,
-  parseMonthParam,
-} from "@/lib/attendance/monthly-calculations";
+  buildEmployeeMonthFooterLines,
+  DAILY_COLUMN_HEADERS,
+  type AttendanceReportPayload,
+  formatReportHours,
+  REPORT_LABELS,
+  reportFileName,
+} from "@/lib/attendance/attendance-report";
+import type { BranchPayrollTotals, PersonPayrollSummary } from "@/lib/attendance/attendance-view";
 import { escapeHtml } from "@/lib/pdf/render-html-to-pdf";
-import type {
-  AttendanceBranch,
-  AttendanceMonthlyRecord,
-  AttendancePerson,
-} from "@/types/db";
-
-const AR_DAYS = [
-  "الأحد",
-  "الإثنين",
-  "الثلاثاء",
-  "الأربعاء",
-  "الخميس",
-  "الجمعة",
-  "السبت",
-];
-
-function dayNameAr(isoDate: string): string {
-  const d = new Date(`${isoDate}T12:00:00`);
-  return AR_DAYS[d.getDay()] ?? "";
-}
 
 function shortDate(isoDate: string): string {
   return isoDate.slice(5);
 }
 
-function timeOrEmpty(value: string | null): string {
-  if (!value) return "";
-  return value.slice(0, 5);
-}
-
-function hours(minutes: number): string {
-  return formatMinutesAsHours(minutes);
-}
-
-function monthLabel(month: string): string {
-  const parsed = parseMonthParam(month.slice(0, 7));
-  if (!parsed) return month;
-  const date = new Date(parsed.year, parsed.month - 1, 1);
-  return date.toLocaleDateString("ar-LY", {
-    year: "numeric",
-    month: "long",
-    timeZone: "Africa/Tripoli",
-  });
-}
-
-type EmployeeGroup = {
-  externalEmployeeNumber: string;
-  employeeName: string;
-  recordsByDate: Map<string, AttendanceMonthlyRecord>;
-};
-
-function groupRecords(records: AttendanceMonthlyRecord[]): EmployeeGroup[] {
-  const map = new Map<string, EmployeeGroup>();
-  for (const r of records) {
-    let group = map.get(r.external_employee_number);
-    if (!group) {
-      group = {
-        externalEmployeeNumber: r.external_employee_number,
-        employeeName: r.employee_name,
-        recordsByDate: new Map(),
-      };
-      map.set(r.external_employee_number, group);
-    }
-    group.recordsByDate.set(r.date, r);
-  }
-  return Array.from(map.values()).sort((a, b) =>
-    a.employeeName.localeCompare(b.employeeName, "ar"),
-  );
-}
-
-function recordNotes(rec: AttendanceMonthlyRecord): string {
-  return formatAttendanceRecordNotes(rec);
-}
-
 function buildSummaryTableHtml(
-  rows: ReturnType<typeof buildBranchPayrollSummary>["rows"],
-  totals: ReturnType<typeof buildBranchPayrollSummary>["totals"],
+  rows: PersonPayrollSummary[],
+  totals: BranchPayrollTotals,
 ): string {
   const header = `
     <thead>
       <tr>
-        <th>الموظف</th>
-        <th>#</th>
-        <th>حضور</th>
-        <th>غياب</th>
-        <th>بصمة واحدة</th>
-        <th>إجازات</th>
-        <th>تأخير</th>
-        <th>إضافي</th>
-        <th>ساعات العمل</th>
-        <th>المطلوب</th>
-        <th>الخصم</th>
+        <th>${REPORT_LABELS.employee}</th>
+        <th>${REPORT_LABELS.employeeNumber}</th>
+        <th>${REPORT_LABELS.fullTimeDays}</th>
+        <th>${REPORT_LABELS.absentDays}</th>
+        <th>${REPORT_LABELS.onePunchDays}</th>
+        <th>${REPORT_LABELS.leaveDays}</th>
+        <th>${REPORT_LABELS.lateDays}</th>
+        <th>${REPORT_LABELS.earlyLeaveDays}</th>
+        <th>${REPORT_LABELS.overtimeDays}</th>
+        <th>${REPORT_LABELS.workedHours}</th>
+        <th>${REPORT_LABELS.expectedHours}</th>
+        <th>${REPORT_LABELS.deductionHours}</th>
       </tr>
     </thead>`;
 
@@ -112,15 +43,16 @@ function buildSummaryTableHtml(
       <tr>
         <td class="name">${escapeHtml(row.employeeName)}</td>
         <td class="ltr">${escapeHtml(row.externalEmployeeNumber)}</td>
-        <td>${row.presentDays}</td>
+        <td>${row.fullTimeDays}</td>
         <td class="red">${row.absentDays}</td>
         <td class="orange">${row.onePunchDays}</td>
         <td class="teal">${row.leaveDays}</td>
         <td class="amber">${row.lateDays}</td>
+        <td>${row.earlyLeaveDays}</td>
         <td class="green">${row.overtimeDays}</td>
-        <td class="ltr">${hours(row.totalWorkedMinutes)}</td>
-        <td class="ltr">${hours(row.totalExpectedMinutes)}</td>
-        <td class="ltr violet">${hours(row.totalDeductionMinutes)}</td>
+        <td class="ltr">${formatReportHours(row.totalWorkedMinutes)}</td>
+        <td class="ltr">${formatReportHours(row.totalExpectedMinutes)}</td>
+        <td class="ltr violet">${formatReportHours(row.totalDeductionMinutes)}</td>
       </tr>`,
     )
     .join("");
@@ -128,16 +60,17 @@ function buildSummaryTableHtml(
   const footer = `
     <tfoot>
       <tr>
-        <td colspan="2">الإجمالي</td>
-        <td>${totals.presentDays}</td>
+        <td colspan="2">${REPORT_LABELS.total}</td>
+        <td>${totals.fullTimeDays}</td>
         <td>${totals.absentDays}</td>
         <td>${totals.onePunchDays}</td>
         <td>${totals.leaveDays}</td>
         <td>${totals.lateDays}</td>
+        <td>${totals.earlyLeaveDays}</td>
         <td>${totals.overtimeDays}</td>
-        <td class="ltr">${hours(totals.totalWorkedMinutes)}</td>
-        <td class="ltr">${hours(totals.totalExpectedMinutes)}</td>
-        <td class="ltr violet">${hours(totals.totalDeductionMinutes)}</td>
+        <td class="ltr">${formatReportHours(totals.totalWorkedMinutes)}</td>
+        <td class="ltr">${formatReportHours(totals.totalExpectedMinutes)}</td>
+        <td class="ltr violet">${formatReportHours(totals.totalDeductionMinutes)}</td>
       </tr>
     </tfoot>`;
 
@@ -148,82 +81,61 @@ function buildEmployeeHeaderStats(row: PersonPayrollSummary): string {
   return `
     <div class="employee-stats">
       <p class="stats-line">
-        حضور: <strong>${row.presentDays}</strong>
-        · غياب: <strong class="red">${row.absentDays}</strong>
-        · بصمة واحدة: <strong class="orange">${row.onePunchDays}</strong>
-        · إجازات: <strong class="teal">${row.leaveDays}</strong>
-        · تأخير: <strong class="amber">${row.lateDays}</strong>
-        · خروج مبكر: <strong>${row.earlyLeaveDays}</strong>
-        · إضافي: <strong class="green">${row.overtimeDays}</strong>
+        ${REPORT_LABELS.fullTimeDays}: <strong>${row.fullTimeDays}</strong>
+        · ${REPORT_LABELS.absentDays}: <strong class="red">${row.absentDays}</strong>
+        · ${REPORT_LABELS.onePunchDays}: <strong class="orange">${row.onePunchDays}</strong>
+        · ${REPORT_LABELS.leaveDays}: <strong class="teal">${row.leaveDays}</strong>
+        · ${REPORT_LABELS.lateDays}: <strong class="amber">${row.lateDays}</strong>
+        · ${REPORT_LABELS.earlyLeaveDays}: <strong>${row.earlyLeaveDays}</strong>
+        · ${REPORT_LABELS.overtimeDays}: <strong class="green">${row.overtimeDays}</strong>
       </p>
       <p class="stats-line">
-        ساعات العمل: <strong class="ltr">${hours(row.totalWorkedMinutes)}</strong>
-        · المطلوب: <strong class="ltr">${hours(row.totalExpectedMinutes)}</strong>
-        · إجمالي الخصم: <strong class="ltr violet">${hours(row.totalDeductionMinutes)}</strong>
+        ${REPORT_LABELS.workedHours}: <strong class="ltr">${formatReportHours(row.totalWorkedMinutes)}</strong>
+        · ${REPORT_LABELS.expectedHours}: <strong class="ltr">${formatReportHours(row.totalExpectedMinutes)}</strong>
+        · ${REPORT_LABELS.totalDeductionHours}: <strong class="ltr violet">${formatReportHours(row.totalDeductionMinutes)}</strong>
       </p>
     </div>`;
 }
 
-function buildEmployeeDailyTableHtml(
-  group: EmployeeGroup,
-  monthDays: string[],
-): string {
-  const rows = monthDays
-    .map((date, index) => {
-      const rec = group.recordsByDate.get(date);
-      if (!rec) {
-        return `
-        <tr>
-          <td class="nowrap">${index + 1}</td>
-          <td class="ltr nowrap">${escapeHtml(shortDate(date))}</td>
-          <td class="nowrap">${escapeHtml(dayNameAr(date))}</td>
-          <td class="nowrap" colspan="7"></td>
-        </tr>`;
-      }
+function buildEmployeeFooterStats(row: PersonPayrollSummary): string {
+  const lines = buildEmployeeMonthFooterLines(row)
+    .map((line) => `<p class="stats-line">${escapeHtml(line)}</p>`)
+    .join("");
+  return `<div class="employee-footer">${lines}</div>`;
+}
 
-      return `
+function buildEmployeeDailyTableHtml(
+  payload: AttendanceReportPayload["employees"][number],
+): string {
+  const headerCells = DAILY_COLUMN_HEADERS.map(
+    (label) => `<th>${escapeHtml(label)}</th>`,
+  ).join("");
+
+  const rows = payload.days
+    .map(
+      (day) => `
       <tr>
-        <td class="nowrap">${index + 1}</td>
-        <td class="ltr nowrap">${escapeHtml(shortDate(date))}</td>
-        <td class="nowrap">${escapeHtml(dayNameAr(date))}</td>
-        <td class="ltr nowrap">${escapeHtml(timeOrEmpty(rec.first_check_in))}</td>
-        <td class="ltr nowrap">${escapeHtml(timeOrEmpty(rec.last_check_out))}</td>
-        <td class="ltr nowrap">${rec.total_minutes != null ? hours(rec.total_minutes) : ""}</td>
-        <td class="nowrap">${escapeHtml(rec.shift_type ?? "")}</td>
-        <td class="nowrap">${rec.late_minutes || ""}</td>
-        <td class="nowrap">${rec.early_leave_minutes || ""}</td>
-        <td class="notes">${escapeHtml(recordNotes(rec))}</td>
-      </tr>`;
-    })
+        <td class="nowrap">${day.index}</td>
+        <td class="ltr nowrap">${escapeHtml(shortDate(day.date))}</td>
+        <td class="nowrap">${escapeHtml(day.weekday)}</td>
+        <td class="ltr nowrap">${escapeHtml(day.checkIn)}</td>
+        <td class="ltr nowrap">${escapeHtml(day.checkOut)}</td>
+        <td class="ltr nowrap">${escapeHtml(day.totalTime)}</td>
+        <td class="nowrap">${escapeHtml(day.shiftType)}</td>
+        <td class="ltr nowrap">${escapeHtml(day.expectedHours)}</td>
+        <td class="ltr nowrap">${escapeHtml(day.overtimeDelta)}</td>
+        <td class="nowrap">${escapeHtml(day.lateMinutes)}</td>
+        <td class="nowrap">${escapeHtml(day.earlyLeaveMinutes)}</td>
+        <td class="ltr nowrap">${escapeHtml(day.deductionHours)}</td>
+        <td class="notes">${escapeHtml(day.notes)}</td>
+      </tr>`,
+    )
     .join("");
 
   return `
     <table class="daily-table">
-      <colgroup>
-        <col style="width:4%">
-        <col style="width:6%">
-        <col style="width:9%">
-        <col style="width:8%">
-        <col style="width:8%">
-        <col style="width:8%">
-        <col style="width:11%">
-        <col style="width:7%">
-        <col style="width:8%">
-        <col style="width:31%">
-      </colgroup>
       <thead>
-        <tr>
-          <th>م</th>
-          <th>التاريخ</th>
-          <th>اليوم</th>
-          <th>دخول</th>
-          <th>خروج</th>
-          <th>الإجمالي</th>
-          <th>الدوام</th>
-          <th>تأخير</th>
-          <th>خروج مبكر</th>
-          <th>ملاحظات</th>
-        </tr>
+        <tr>${headerCells}</tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>`;
@@ -278,7 +190,8 @@ function pdfStyles(): string {
     .employee-section:first-of-type {
       break-before: auto;
     }
-    .employee-stats {
+    .employee-stats,
+    .employee-footer {
       margin-bottom: 8px;
       font-size: 8.5pt;
       line-height: 1.5;
@@ -296,12 +209,12 @@ function pdfStyles(): string {
     }
     .summary-table { font-size: 8pt; }
     .summary-table th, .summary-table td { padding: 4px 6px; }
-    .daily-table { font-size: 8pt; }
-    .daily-table th, .daily-table td { padding: 2px 4px; }
+    .daily-table { font-size: 7pt; }
+    .daily-table th, .daily-table td { padding: 2px 3px; }
     th { background: #f3f4f6; font-weight: 700; }
     tfoot td { background: #f9fafb; font-weight: 700; }
     .nowrap { white-space: nowrap; }
-    .notes { word-wrap: break-word; font-size: 7.5pt; }
+    .notes { word-wrap: break-word; font-size: 7pt; }
     .ltr { direction: ltr; text-align: center; font-family: monospace; }
     .name { font-weight: 600; }
     .red { color: #b91c1c; }
@@ -326,62 +239,41 @@ export function attendanceReportFileName(
   branchName: string,
   month: string,
 ): string {
-  const [y, m] = month.slice(0, 7).split("-");
-  return `تقرير الحضور - ${companyName} ${branchName} - ${m}-${y}`;
+  return reportFileName(companyName, branchName, month);
 }
 
-export function buildAttendanceReportHtml(options: {
-  companyName: string;
-  branch: AttendanceBranch;
-  month: string;
-  records: AttendanceMonthlyRecord[];
-  people: AttendancePerson[];
-}): string {
-  const parsed = parseMonthParam(options.month.slice(0, 7));
-  if (!parsed) throw new Error("شهر غير صالح");
-
-  const monthDays = enumerateMonthDays(parsed.year, parsed.month);
-  const monthStr = options.month.slice(0, 7);
-  const { rows, totals } = buildBranchPayrollSummary(
-    monthStr,
-    options.records,
-    options.people,
-  );
-  const groups = groupRecords(options.records);
-  const rowByEmployee = new Map(
-    rows.map((row) => [row.externalEmployeeNumber, row]),
+export function buildAttendanceReportHtml(
+  payload: AttendanceReportPayload,
+): string {
+  const summaryHtml = buildSummaryTableHtml(
+    payload.summary.rows,
+    payload.summary.totals,
   );
 
-  const printDate = new Date().toLocaleDateString("ar-LY", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "Africa/Tripoli",
-  });
-
-  const summaryHtml = buildSummaryTableHtml(rows, totals);
-
-  const employeeSections = groups
-    .map((group) => {
-      const row = rowByEmployee.get(group.externalEmployeeNumber);
-      const statsHtml = row
-        ? buildEmployeeHeaderStats(row)
-        : '<p class="stats-line" style="color:#999;">لا توجد بيانات ملخص</p>';
-      return `
+  const employeeSections = payload.employees
+    .map(
+      (employee) => `
       <div class="employee-section">
-        <h3>${escapeHtml(group.employeeName)} <span class="ltr">#${escapeHtml(group.externalEmployeeNumber)}</span></h3>
-        ${statsHtml}
-        ${buildEmployeeDailyTableHtml(group, monthDays)}
-      </div>`;
-    })
+        <h3>${escapeHtml(employee.employeeName)} <span class="ltr">#${escapeHtml(employee.externalEmployeeNumber)}</span></h3>
+        ${buildEmployeeHeaderStats(employee.payroll)}
+        ${buildEmployeeDailyTableHtml(employee)}
+        ${buildEmployeeFooterStats(employee.payroll)}
+      </div>`,
+    )
     .join("");
+
+  const fileTitle = attendanceReportFileName(
+    payload.meta.companyName,
+    payload.meta.branchName,
+    payload.meta.month,
+  );
 
   return `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${escapeHtml(attendanceReportFileName(options.companyName, options.branch.name, options.month))}</title>
+  <title>${escapeHtml(fileTitle)}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -391,30 +283,30 @@ export function buildAttendanceReportHtml(options: {
   <div class="page-header">
     <div class="header-top">
       <div>
-        <h1>تقرير الحضور الشهري</h1>
-        <p class="subtitle">${escapeHtml(options.companyName)} / ${escapeHtml(options.branch.name)}</p>
-        <p class="subtitle">${escapeHtml(monthLabel(options.month))}</p>
+        <h1>${REPORT_LABELS.reportTitle}</h1>
+        <p class="subtitle">${escapeHtml(payload.meta.companyName)} / ${escapeHtml(payload.meta.branchName)}</p>
+        <p class="subtitle">${escapeHtml(payload.meta.monthLabel)}</p>
       </div>
       <div class="header-meta">
-        <div>تاريخ التقرير</div>
-        <div>${escapeHtml(printDate)}</div>
+        <div>${REPORT_LABELS.printDate}</div>
+        <div>${escapeHtml(payload.meta.printDate)}</div>
       </div>
     </div>
   </div>
 
   <div class="section">
-    <h2>ملخص الفرع</h2>
+    <h2>${REPORT_LABELS.branchSummary}</h2>
     ${summaryHtml}
   </div>
 
   <div class="section details-section">
-    <h2>تفاصيل الموظفين</h2>
-    ${groups.length === 0 ? '<p style="color:#999;">لا توجد سجلات لهذا الشهر.</p>' : employeeSections}
+    <h2>${REPORT_LABELS.employeeDetails}</h2>
+    ${payload.employees.length === 0 ? '<p style="color:#999;">لا توجد سجلات لهذا الشهر.</p>' : employeeSections}
   </div>
 
   <div class="footer">
-    <span>MD Group — ${escapeHtml(options.branch.name)}</span>
-    <span>${escapeHtml(printDate)}</span>
+    <span>MD Group — ${escapeHtml(payload.meta.branchName)}</span>
+    <span>${escapeHtml(payload.meta.printDate)}</span>
   </div>
 </body>
 </html>`;

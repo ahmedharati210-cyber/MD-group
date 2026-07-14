@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { PortalLink } from "@/components/portal/PortalLink";
 import { Eye } from "lucide-react";
+import { LinkPendingSpinner } from "@/components/portal/LinkPendingSpinner";
 import type { AttendancePerson } from "@/types/db";
 import {
   buildBranchPersonHref,
@@ -41,18 +42,19 @@ export function AttendancePersonList({
             const isSelected = selectedPersonId === person.id;
             return (
               <li key={person.id} className="flex items-stretch">
-                <Link
+                <PortalLink
                   href={buildBranchPersonHref(navContext, person.id, selectedPersonId)}
-                  className={`flex-1 min-w-0 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+                  className={`relative flex-1 min-w-0 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
                     isSelected ? "bg-primary-50 dark:bg-primary-900/20" : ""
                   }`}
                 >
+                  <LinkPendingSpinner className="absolute top-2 left-2" />
                   <p className="font-semibold text-sm">{person.full_name}</p>
                   <p className="text-xs text-gray-500 flex justify-between mt-0.5">
                     <span dir="ltr">#{person.external_employee_number}</span>
                     <span>{person.recordCount} سجل</span>
                   </p>
-                </Link>
+                </PortalLink>
                 <a
                   href={buildPersonMonthHref(navContext, person.id)}
                   target="_blank"
