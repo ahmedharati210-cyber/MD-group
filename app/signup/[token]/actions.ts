@@ -4,6 +4,7 @@ import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { passportStorageFileName, passportUploadUserMessage } from "@/lib/passport-archive-name";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { rejectIfBot } from "@/lib/botid/verify-public-form";
 
 function normalizeGenderStored(input: string | null | undefined): string | null {
   const t = input?.trim() ?? "";
@@ -99,6 +100,9 @@ export async function submitEmployeeSignupAction(
   _prev: SignupSubmitState | undefined,
   formData: FormData,
 ): Promise<SignupSubmitState> {
+  const botError = await rejectIfBot();
+  if (botError) return { error: botError };
+
   const honeypot = formData.get("website");
   if (typeof honeypot === "string" && honeypot.trim() !== "") {
     return { ok: true };

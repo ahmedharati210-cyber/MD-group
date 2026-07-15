@@ -19,12 +19,21 @@ const apiNetworkOnly = {
   handler: new NetworkOnly(),
 };
 
+/**
+ * Never cache HTML/RSC navigations — stale PPR "postponed state" shells from a
+ * prior deployment cause "Failed to parse postponed state" on resume after deploy.
+ */
+const navigationNetworkOnly = {
+  matcher: ({ request }: { request: Request }) => request.mode === "navigate",
+  handler: new NetworkOnly(),
+};
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: false,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: [apiNetworkOnly, ...defaultCache],
+  runtimeCaching: [apiNetworkOnly, navigationNetworkOnly, ...defaultCache],
   fallbacks: {
     entries: [
       {

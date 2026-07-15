@@ -1,4 +1,4 @@
-import { revalidateTag } from "next/cache";
+import { revalidateNotificationInbox } from "@/lib/cache/revalidate-notifications";
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { sendWhatsAppTemplate } from "@/lib/whatsapp";
@@ -156,8 +156,7 @@ async function runPaperExpiryCron(req: Request) {
   }
 
   if (documentsNotified > 0) {
-    revalidateTag("warnings", "default");
-    revalidateTag("badges", "default");
+    revalidateNotificationInbox();
   }
 
   return NextResponse.json({

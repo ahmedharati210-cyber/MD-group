@@ -1,4 +1,6 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "fluid": true,
   "regions": ["lhr1"],
   "crons": [
     {
@@ -9,5 +11,13 @@
       "path": "/api/cron/task-due-notifications",
       "schedule": "0 6 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "app/api/attendance/export.pdf/route.ts": {
+      "maxDuration": 120
+    },
+    "app/api/timeline/[id]/pdf/route.ts": {
+      "maxDuration": 120
+    }
+  }
 }

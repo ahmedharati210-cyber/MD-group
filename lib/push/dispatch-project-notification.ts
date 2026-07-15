@@ -1,6 +1,6 @@
 import "server-only";
 
-import { revalidateTag } from "next/cache";
+import { revalidateNotificationInbox } from "@/lib/cache/revalidate-notifications";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { dispatchWarningWebPushTargets } from "@/lib/push/dispatch-warning";
 
@@ -63,6 +63,5 @@ export async function dispatchProjectNotification(options: {
     });
   }
 
-  revalidateTag("warnings", "default");
-  revalidateTag("badges", "default");
+  revalidateNotificationInbox();
 }

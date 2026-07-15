@@ -55,16 +55,15 @@ export function AttendancePersonList({
                     <span>{person.recordCount} سجل</span>
                   </p>
                 </PortalLink>
-                <a
+                <PortalLink
                   href={buildPersonMonthHref(navContext, person.id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   title="فتح شهر الموظف للتعديل"
                   aria-label={`فتح شهر ${person.full_name} للتعديل`}
                   className="relative z-10 shrink-0 px-3 my-2 ml-2 rounded-lg text-gray-500 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
+                  <LinkPendingSpinner className="absolute top-1 left-1" />
                   <Eye className="w-4 h-4" />
-                </a>
+                </PortalLink>
               </li>
             );
           })}

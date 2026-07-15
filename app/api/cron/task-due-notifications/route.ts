@@ -1,4 +1,4 @@
-import { revalidateTag } from "next/cache";
+import { revalidateNotificationInbox } from "@/lib/cache/revalidate-notifications";
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { dispatchProjectNotification } from "@/lib/push/dispatch-project-notification";
@@ -108,8 +108,7 @@ async function runTaskDueNotificationsCron(req: Request) {
   }
 
   if (tasksNotified > 0) {
-    revalidateTag("warnings", "default");
-    revalidateTag("badges", "default");
+    revalidateNotificationInbox();
   }
 
   return NextResponse.json({

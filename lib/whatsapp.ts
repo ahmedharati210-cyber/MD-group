@@ -126,7 +126,16 @@ export async function sendWhatsAppTemplate(
 
     if (!res.ok) {
       const errText = await res.text();
-      console.error("[whatsapp] API error", res.status, errText);
+      if (res.status === 401) {
+        console.error(
+          "[whatsapp] API error 401 — WHATSAPP_TOKEN is invalid or expired. " +
+            "Generate a new token in Meta Business Suite and update WHATSAPP_TOKEN " +
+            "in Vercel project settings (md-group → Settings → Environment Variables).",
+          errText,
+        );
+      } else {
+        console.error("[whatsapp] API error", res.status, errText);
+      }
     }
   } catch (e) {
     console.error("[whatsapp] Request failed", e);

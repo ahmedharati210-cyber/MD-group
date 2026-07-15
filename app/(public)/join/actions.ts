@@ -6,6 +6,7 @@ import { z } from "zod";
 import { passportStorageFileName, passportUploadUserMessage } from "@/lib/passport-archive-name";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getDolceSignupCompanyId } from "@/lib/dolce-signup-company";
+import { rejectIfBot } from "@/lib/botid/verify-public-form";
 
 function normalizeGenderStored(input: string | null | undefined): string | null {
   const t = input?.trim() ?? "";
@@ -101,6 +102,9 @@ export async function submitOpenDolceSignupAction(
   _prev: JoinSubmitState | undefined,
   formData: FormData,
 ): Promise<JoinSubmitState> {
+  const botError = await rejectIfBot();
+  if (botError) return { error: botError };
+
   const honeypot = formData.get("website");
   if (typeof honeypot === "string" && honeypot.trim() !== "") {
     return { ok: true };

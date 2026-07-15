@@ -54,9 +54,24 @@ export async function updateSession(request: NextRequest) {
   // warning. The JWT sub claim is the Supabase user UUID — identical to what
   // auth.getUser() would return, and the database still verifies the JWT
   // signature on every query via PostgREST.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  let session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"] = null;
+  try {
+    ({
+      data: { session },
+    } = await supabase.auth.getSession());
+  } catch (error) {
+    const isAuthError =
+      typeof error === "object" &&
+      error !== null &&
+      ("__isAuthError" in error || "code" in error);
+    if (isAuthError) {
+      // Stale/rotated refresh token — clear cookies instead of throwing on every request.
+      await supabase.auth.signOut();
+      session = null;
+    } else {
+      throw error;
+    }
+  }
 
   let userId: string | null = null;
   if (session?.access_token) {

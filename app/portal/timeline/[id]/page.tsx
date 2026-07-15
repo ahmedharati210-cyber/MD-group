@@ -285,7 +285,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 {/* Category header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-2 min-w-0">
-                    <h3 className="text-sm sm:text-base font-bold text-gray-800 dark:text-gray-100 line-clamp-2">{cat.name}</h3>
+                    <h3 className="text-lg sm:text-xl font-bold tracking-tight text-gray-900 dark:text-gray-50 line-clamp-2">{cat.name}</h3>
                     {canManage ? (
                       <EditCategoryButton
                         categoryId={cat.id}

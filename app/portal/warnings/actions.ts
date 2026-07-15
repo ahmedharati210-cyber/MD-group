@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidateNotificationInbox } from "@/lib/cache/revalidate-notifications";
 import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
@@ -104,10 +104,7 @@ export async function sendWarningAction(
     void logAudit(userId, "create", "warning", null, {
       ...(broadcastCo?.name ? { company_name: broadcastCo.name } : {}),
     });
-    revalidatePath("/portal/notifications");
-    revalidateTag("warnings", "default");
-    revalidateTag("badges", "default");
-    revalidateTag("dashboard", "default");
+    revalidateNotificationInbox();
     return { ok: true };
   }
 
@@ -196,10 +193,7 @@ export async function sendWarningAction(
     ...(targetCo?.name ? { company_name: targetCo.name } : {}),
   });
 
-  revalidatePath("/portal/notifications");
-  revalidateTag("warnings", "default");
-  revalidateTag("badges", "default");
-  revalidateTag("dashboard", "default");
+  revalidateNotificationInbox();
   return { ok: true };
 }
 
@@ -208,9 +202,7 @@ export async function markWarningReadAction(id: string): Promise<ActionState> {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("warnings").update({ is_read: true }).eq("id", id);
   if (error) return { error: error.message };
-  revalidatePath("/portal/notifications");
-  revalidateTag("badges", "default");
-  revalidateTag("dashboard", "default");
+  revalidateNotificationInbox();
   return { ok: true };
 }
 
@@ -237,10 +229,7 @@ export async function markAllWarningsReadAction(): Promise<ActionState> {
 
   if (error) return { error: error.message };
 
-  revalidatePath("/portal/notifications");
-  revalidateTag("warnings", "default");
-  revalidateTag("badges", "default");
-  revalidateTag("dashboard", "default");
+  revalidateNotificationInbox();
   return { ok: true };
 }
 
@@ -252,9 +241,6 @@ export async function deleteWarningAction(id: string): Promise<ActionState> {
 
   void logAudit(userId, "delete", "warning", id);
 
-  revalidatePath("/portal/notifications");
-  revalidateTag("warnings", "default");
-  revalidateTag("badges", "default");
-  revalidateTag("dashboard", "default");
+  revalidateNotificationInbox();
   return { ok: true };
 }

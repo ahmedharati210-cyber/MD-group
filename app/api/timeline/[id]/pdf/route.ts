@@ -7,7 +7,7 @@ import { formatDate, tripoliTodayIso } from "@/lib/utils";
 import { toDateOnlyIso } from "@/lib/paper-expiry";
 import type { ProjectStatus, TaskWorkStatus } from "@/types/db";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const statusLabels: Record<ProjectStatus, string> = {
   planning:    "تصميم",

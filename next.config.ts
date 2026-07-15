@@ -3,6 +3,7 @@ import { networkInterfaces } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import withSerwistInit from "@serwist/next";
+import { withBotId } from "botid/next/config";
 
 const projectDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -128,4 +129,4 @@ const withSerwist = withSerwistInit({
   disable: process.env.NODE_ENV === "development",
 });
 
-export default withSerwist(nextConfig);
+export default withSerwist(withBotId(nextConfig));
