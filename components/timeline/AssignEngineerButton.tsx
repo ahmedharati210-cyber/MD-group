@@ -69,7 +69,7 @@ export function AssignEngineerButton({
       </button>
 
       {open ? (
-        <div className="absolute z-50 top-full mt-1 right-0 w-52 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl overflow-hidden">
+        <div className="absolute z-50 top-full mt-1 right-0 w-52 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl overflow-hidden">
           <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400">
             تعيين مهندس
           </div>

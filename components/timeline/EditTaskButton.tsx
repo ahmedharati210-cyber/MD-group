@@ -78,7 +78,7 @@ export function EditTaskButton({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="p-1 text-gray-300 dark:text-gray-600 hover:text-primary-500 dark:hover:text-primary-400 transition-colors opacity-0 group-hover:opacity-100"
+        className="p-2 text-gray-300 dark:text-gray-600 hover:text-primary-500 dark:hover:text-primary-400 transition-colors opacity-60 sm:opacity-0 sm:group-hover:opacity-100"
         aria-label="تعديل المهمة"
       >
         <Pencil className="w-3.5 h-3.5" />

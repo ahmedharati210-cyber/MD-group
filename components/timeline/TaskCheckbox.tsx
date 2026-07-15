@@ -45,7 +45,7 @@ export function TaskCheckbox({
             : "عرض فقط — لا يمكن تعديل المهمة"
           : undefined
       }
-      className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${
+      className={`w-7 h-7 sm:w-6 sm:h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${
         isPending
           ? "opacity-50 cursor-not-allowed"
           : isLocked && isCompleted

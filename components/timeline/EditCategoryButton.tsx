@@ -55,7 +55,7 @@ export function EditCategoryButton({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="p-1.5 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+        className="p-2 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
         aria-label="تعديل الفئة"
       >
         <Pencil className="w-4 h-4" />

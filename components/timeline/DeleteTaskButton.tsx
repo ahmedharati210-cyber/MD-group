@@ -21,7 +21,7 @@ export function DeleteTaskButton({ taskId, projectId }: { taskId: string; projec
     <button
       onClick={handleDelete}
       disabled={isPending}
-      className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 disabled:opacity-60 transition-colors opacity-0 group-hover:opacity-100"
+      className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 disabled:opacity-60 transition-colors opacity-60 sm:opacity-0 sm:group-hover:opacity-100"
       aria-label="حذف المهمة"
     >
       <X className="w-3.5 h-3.5" />

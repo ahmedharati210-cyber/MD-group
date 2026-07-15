@@ -151,7 +151,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         title={project.name}
         description={project.description ?? undefined}
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <SaveAsPdfButton projectId={id} />
             <Link
               href={`/portal/timeline/${id}/print`}
@@ -283,9 +283,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             return (
               <div key={cat.id} id={`cat-${cat.id}`} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
                 {/* Category header */}
-                <div className="flex items-center justify-between gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <h3 className="font-bold text-gray-800 dark:text-gray-100 truncate">{cat.name}</h3>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h3 className="text-sm sm:text-base font-bold text-gray-800 dark:text-gray-100 line-clamp-2">{cat.name}</h3>
                     {canManage ? (
                       <EditCategoryButton
                         categoryId={cat.id}
@@ -294,7 +294,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                       />
                     ) : null}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2">
                     <CategoryEstimatedDaysField
                       categoryId={cat.id}
                       projectId={id}
