@@ -48,8 +48,10 @@ export function TaskCheckbox({
       className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${
         isPending
           ? "opacity-50 cursor-not-allowed"
-          : isLocked
+          : isLocked && isCompleted
           ? "bg-green-500 border-green-500 dark:bg-green-600 dark:border-green-600 cursor-default"
+          : isLocked
+          ? "border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 opacity-60 cursor-not-allowed"
           : isCompleted
           ? "bg-green-500 border-green-500 dark:bg-green-600 dark:border-green-600 hover:bg-green-600 dark:hover:bg-green-700"
           : "border-gray-300 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500 bg-white dark:bg-gray-900"

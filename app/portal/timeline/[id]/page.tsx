@@ -81,6 +81,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const { profile } = await requireUser();
   const supabase = await createSupabaseServerClient();
   const canManage = profile.role !== "employee" && profile.role !== "owner";
+  const canToggleTask = profile.role !== "owner";
 
   const [{ data: rawProject }, { data: rawCategories }, { data: engineers }] = await Promise.all([
     supabase
@@ -336,7 +337,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                           isCompleted={task.is_completed}
                           title={task.title}
                           canUncheck={canManage}
-                          canCheck={canManage}
+                          canCheck={canToggleTask}
                         />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -352,7 +353,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                             projectId={id}
                             initialStatus={task.task_status ?? null}
                             isCompleted={task.is_completed}
-                            canEdit={canManage}
+                            canEdit={canToggleTask}
                           />
                           {canManage && !task.is_completed ? (
                             <AssignEngineerButton
