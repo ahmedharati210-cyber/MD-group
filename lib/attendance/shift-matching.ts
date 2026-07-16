@@ -101,6 +101,74 @@ export function resolveShiftForSession(
   return best;
 }
 
+/**
+ * One-punch day: count lateness for lateDays, but never deduct time or early leave.
+ */
+export function computeOnePunchRecord(
+  session: PunchSession,
+  shifts: AttendanceShift[],
+): { computed: ComputedDay; shift: AttendanceShift | null } {
+  const punchTime = session.firstCheckIn ?? session.lastCheckOut;
+  if (!punchTime) {
+    return { computed: incompletePunchDay(), shift: null };
+  }
+
+  const sessionForShift: PunchSession = {
+    ...session,
+    firstCheckIn: punchTime,
+  };
+  const shift = resolveShiftForSession(sessionForShift, shifts);
+
+  let lateMinutes = 0;
+  if (shift) {
+    const startExpected = timeToMinutes(shift.start_time.slice(0, 5));
+    const checkInMinutes = timeToMinutes(punchTime);
+    lateMinutes = Math.max(
+      0,
+      checkInMinutes - startExpected - shift.late_grace_minutes,
+    );
+  }
+
+  return {
+    computed: {
+      shiftType: shift?.name ?? null,
+      expectedMinutes: null,
+      totalMinutes: null,
+      lateMinutes,
+      earlyLeaveMinutes: 0,
+      overtimeMinutes: 0,
+      deductionMinutes: 0,
+      isAbsent: false,
+      notes: incompletePunchDay().notes,
+    },
+    shift,
+  };
+}
+
+function onePunchComputedForShift(
+  punchTime: string,
+  shift: AttendanceShift,
+): ComputedDay {
+  const startExpected = timeToMinutes(shift.start_time.slice(0, 5));
+  const checkInMinutes = timeToMinutes(punchTime);
+  const lateMinutes = Math.max(
+    0,
+    checkInMinutes - startExpected - shift.late_grace_minutes,
+  );
+
+  return {
+    shiftType: shift.name,
+    expectedMinutes: null,
+    totalMinutes: null,
+    lateMinutes,
+    earlyLeaveMinutes: 0,
+    overtimeMinutes: 0,
+    deductionMinutes: 0,
+    isAbsent: false,
+    notes: incompletePunchDay().notes,
+  };
+}
+
 export function computeDayRecordWithShift(
   session: PunchSession,
   shift: AttendanceShift,
@@ -110,7 +178,15 @@ export function computeDayRecordWithShift(
   const totalMinutes = calcSessionMinutes(session);
 
   if (!firstCheckIn || !lastCheckOut) {
-    return computeDayRecord({ firstCheckIn, lastCheckOut });
+    const punchTime = firstCheckIn ?? lastCheckOut;
+    if (!punchTime) {
+      return computeDayRecord({ firstCheckIn, lastCheckOut });
+    }
+    return onePunchComputedForShift(punchTime, shift);
+  }
+
+  if (firstCheckIn === lastCheckOut) {
+    return onePunchComputedForShift(firstCheckIn, shift);
   }
 
   const startExpected = timeToMinutes(shift.start_time.slice(0, 5));
@@ -179,14 +255,11 @@ export function computeSessionRecord(
   }
 
   if (!firstCheckIn || !lastCheckOut) {
-    return {
-      computed: computeDayRecord({ firstCheckIn, lastCheckOut }),
-      shift: null,
-    };
+    return computeOnePunchRecord(session, shifts);
   }
 
   if (firstCheckIn === lastCheckOut) {
-    return { computed: incompletePunchDay(), shift: null };
+    return computeOnePunchRecord(session, shifts);
   }
 
   const totalMinutes = calcSessionMinutes(session);

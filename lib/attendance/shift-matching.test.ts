@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  computeOnePunchRecord,
   computeSessionRecord,
   DEFAULT_FULL_TIME_CONFIG,
 } from "@/lib/attendance/shift-matching";
@@ -93,5 +94,53 @@ describe("computeSessionRecord full-time late", () => {
       DEFAULT_FULL_TIME_CONFIG.expectedMinutes - (computed.totalMinutes ?? 0),
     );
     expect(computed.deductionMinutes).toBe(computed.lateMinutes + shortfall);
+  });
+});
+
+describe("computeSessionRecord one-punch late", () => {
+  function onePunchSession(time: string, date = "2026-06-05"): PunchSession {
+    return {
+      shiftDate: date,
+      firstCheckIn: time,
+      lastCheckOut: null,
+      firstPunchDate: date,
+      lastPunchDate: date,
+      punchCount: 1,
+      allPunchTimes: [{ date, time }],
+    };
+  }
+
+  it("counts late minutes for one-punch after grace without deduction", () => {
+    const { computed, shift } = computeSessionRecord(
+      onePunchSession("10:00"),
+      [MORNING_SHIFT],
+    );
+
+    expect(shift?.name).toBe("صباحي");
+    expect(computed.lateMinutes).toBe(15);
+    expect(computed.deductionMinutes).toBe(0);
+    expect(computed.earlyLeaveMinutes).toBe(0);
+    expect(computed.totalMinutes).toBeNull();
+  });
+
+  it("counts zero late when one-punch is within grace", () => {
+    const { computed } = computeSessionRecord(
+      onePunchSession("09:40"),
+      [MORNING_SHIFT],
+    );
+
+    expect(computed.lateMinutes).toBe(0);
+    expect(computed.deductionMinutes).toBe(0);
+  });
+
+  it("treats identical in/out as one-punch late day", () => {
+    const { computed } = computeOnePunchRecord(
+      makeSession("10:30", "10:30"),
+      [MORNING_SHIFT],
+    );
+
+    expect(computed.lateMinutes).toBe(45);
+    expect(computed.deductionMinutes).toBe(0);
+    expect(computed.earlyLeaveMinutes).toBe(0);
   });
 });

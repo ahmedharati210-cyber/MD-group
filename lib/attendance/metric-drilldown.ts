@@ -134,6 +134,9 @@ function detailForMetric(
         detailValue: record?.punch_count != null ? String(record.punch_count) : EMPTY,
       };
     case "lateDays":
+      if (record && hasOnePunch(record) && record.late_minutes > 0) {
+        return { detailLabel: "التأخير", detailValue: "يوم تأخير" };
+      }
       return {
         detailLabel: "دقائق التأخير",
         detailValue:

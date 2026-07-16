@@ -339,12 +339,15 @@ export function buildPersonMonthStats(
       absentDays += 1;
       continue;
     }
-    if (hasOnePunch(record)) onePunchDays += 1;
+      if (hasOnePunch(record)) onePunchDays += 1;
     else presentDays += 1;
     if (record.late_minutes > 0) lateDays += 1;
     if (record.early_leave_minutes > 0) earlyLeaveDays += 1;
     if (record.shift_type === "دوام كامل") fullTimeDays += 1;
-    totalDeductionMinutes += record.deduction_minutes;
+    // One-punch late days are counted above, but never contribute deducted time.
+    if (!hasOnePunch(record)) {
+      totalDeductionMinutes += record.deduction_minutes;
+    }
   }
 
   return {
@@ -470,10 +473,13 @@ export function buildBranchPayrollSummary(
 
       row.totalWorkedMinutes += record.total_minutes ?? 0;
       row.totalExpectedMinutes += record.expected_minutes ?? 0;
-      row.totalLateMinutes += record.late_minutes;
-      row.totalEarlyLeaveMinutes += record.early_leave_minutes;
-      row.totalOvertimeMinutes += record.overtime_minutes;
-      row.totalDeductionMinutes += record.deduction_minutes;
+      // One-punch late is a day flag only — do not accumulate late/deduction minutes.
+      if (!hasOnePunch(record)) {
+        row.totalLateMinutes += record.late_minutes;
+        row.totalEarlyLeaveMinutes += record.early_leave_minutes;
+        row.totalOvertimeMinutes += record.overtime_minutes;
+        row.totalDeductionMinutes += record.deduction_minutes;
+      }
     }
 
     rows.push(row);

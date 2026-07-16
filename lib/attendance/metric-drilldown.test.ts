@@ -106,4 +106,20 @@ describe("filterPersonMetricDays", () => {
     expect(rows[0]?.detailValue).toBe("15 د");
     expect(rows[0]?.checkIn).toBe("08:00");
   });
+
+  it("shows day-late detail for one-punch late days without minute deduction", () => {
+    const onePunchLate = [
+      makeRecord("2026-06-06", {
+        last_check_out: null,
+        punch_count: 1,
+        late_minutes: 20,
+        early_leave_minutes: 0,
+        deduction_minutes: 0,
+      }),
+    ];
+    const rows = filterPersonMetricDays(month, onePunchLate, "lateDays");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.detailValue).toBe("يوم تأخير");
+    expect(rows[0]?.detailLabel).toBe("التأخير");
+  });
 });

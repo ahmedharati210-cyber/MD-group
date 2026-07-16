@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildPersonMonthStats } from "@/lib/attendance/attendance-view";
-import type { AttendanceMonthlyRecord } from "@/types/db";
+import {
+  buildBranchPayrollSummary,
+  buildPersonMonthStats,
+} from "@/lib/attendance/attendance-view";
+import type { AttendanceMonthlyRecord, AttendancePerson } from "@/types/db";
 
 function makeRecord(
   overrides: Partial<AttendanceMonthlyRecord> & Pick<AttendanceMonthlyRecord, "date">,
@@ -80,5 +83,67 @@ describe("buildPersonMonthStats", () => {
     expect(stats.weekendDays).toBe(1);
     expect(stats.leaveDays).toBe(1);
     expect(stats.absentDays).toBeGreaterThanOrEqual(1);
+  });
+
+  it("counts one-punch late as a late day without deducted minutes", () => {
+    const stats = buildPersonMonthStats("2026-06", [
+      makeRecord({
+        date: "2026-06-01",
+        last_check_out: null,
+        punch_count: 1,
+        late_minutes: 25,
+        deduction_minutes: 25,
+      }),
+      makeRecord({
+        date: "2026-06-02",
+        late_minutes: 10,
+        deduction_minutes: 10,
+      }),
+    ]);
+
+    expect(stats.onePunchDays).toBe(1);
+    expect(stats.lateDays).toBe(2);
+    expect(stats.totalDeductionMinutes).toBe(10);
+  });
+});
+
+describe("buildBranchPayrollSummary one-punch late", () => {
+  const person: AttendancePerson = {
+    id: "p1",
+    company_id: "c1",
+    branch_id: "b1",
+    external_employee_number: "100",
+    full_name: "موظف",
+    active: true,
+    first_seen_at: "2026-01-01T00:00:00Z",
+    last_seen_at: "2026-01-01T00:00:00Z",
+    notes: null,
+    raw_department_hint: null,
+    shift_id: null,
+    created_at: "2026-01-01T00:00:00Z",
+  };
+
+  it("counts late day but excludes one-punch late minutes from totals", () => {
+    const { rows, totals } = buildBranchPayrollSummary(
+      "2026-06",
+      [
+        makeRecord({
+          date: "2026-06-01",
+          last_check_out: null,
+          punch_count: 1,
+          late_minutes: 40,
+          deduction_minutes: 40,
+          total_minutes: null,
+        }),
+      ],
+      [person],
+    );
+
+    expect(rows[0]?.onePunchDays).toBe(1);
+    expect(rows[0]?.lateDays).toBe(1);
+    expect(rows[0]?.totalLateMinutes).toBe(0);
+    expect(rows[0]?.totalDeductionMinutes).toBe(0);
+    expect(totals.lateDays).toBe(1);
+    expect(totals.totalLateMinutes).toBe(0);
   });
 });
