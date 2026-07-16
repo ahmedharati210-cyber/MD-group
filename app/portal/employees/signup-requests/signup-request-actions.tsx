@@ -47,7 +47,14 @@ function RejectButton() {
   );
 }
 
-export function SignupRequestActions({ requestId }: { requestId: string }) {
+export function SignupRequestActions({
+  requestId,
+  redirectTo,
+}: {
+  requestId: string;
+  /** After success, navigate here (e.g. back to the queue). */
+  redirectTo?: string;
+}) {
   const router = useRouter();
   const [approveState, approveAction] = useActionState<
     SignupReviewState,
@@ -68,16 +75,30 @@ export function SignupRequestActions({ requestId }: { requestId: string }) {
         id: `approve-${requestId}`,
         duration: 12000,
       });
-      router.refresh();
+      if (redirectTo) {
+        router.push(redirectTo);
+      } else {
+        router.refresh();
+      }
     }
-  }, [approveState?.ok, approveState?.internalAuthEmail, requestId, router]);
+  }, [
+    approveState?.ok,
+    approveState?.internalAuthEmail,
+    requestId,
+    redirectTo,
+    router,
+  ]);
 
   useEffect(() => {
     if (rejectState?.ok) {
       toast.success("تم رفض الطلب.", { id: `reject-${requestId}` });
-      router.refresh();
+      if (redirectTo) {
+        router.push(redirectTo);
+      } else {
+        router.refresh();
+      }
     }
-  }, [rejectState?.ok, requestId, router]);
+  }, [rejectState?.ok, requestId, redirectTo, router]);
 
   const err = approveState?.error ?? rejectState?.error;
 

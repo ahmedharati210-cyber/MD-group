@@ -5,7 +5,6 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { profileCacheTag, requireRole } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
-import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import type { BloodType, Gender } from "@/types/db";
 
 const BLOOD_VALUES: readonly BloodType[] = [
@@ -78,20 +77,11 @@ export async function approveSignupRequestAction(
     return { error: "الطلب غير موجود أو تمت معالجته." };
   }
 
-  if (!current.profile.is_super_admin) {
-    if (
-      current.profile.role === "company_manager" &&
-      row.company_id !== current.profile.company_id
-    ) {
-      return { error: "صلاحيات غير كافية." };
-    }
-
-    if (current.profile.role === "md_admin") {
-      const shellId = await getShellCompanyIdForProfile(current.profile);
-      if (shellId && row.company_id !== shellId) {
-        return { error: "صلاحيات غير كافية." };
-      }
-    }
+  if (
+    current.profile.role === "company_manager" &&
+    row.company_id !== current.profile.company_id
+  ) {
+    return { error: "صلاحيات غير كافية." };
   }
 
   const full_name = row.full_name?.trim();
@@ -231,20 +221,11 @@ export async function rejectSignupRequestAction(
     return { error: "الطلب غير موجود أو تمت معالجته." };
   }
 
-  if (!current.profile.is_super_admin) {
-    if (
-      current.profile.role === "company_manager" &&
-      row.company_id !== current.profile.company_id
-    ) {
-      return { error: "صلاحيات غير كافية." };
-    }
-
-    if (current.profile.role === "md_admin") {
-      const shellId = await getShellCompanyIdForProfile(current.profile);
-      if (shellId && row.company_id !== shellId) {
-        return { error: "صلاحيات غير كافية." };
-      }
-    }
+  if (
+    current.profile.role === "company_manager" &&
+    row.company_id !== current.profile.company_id
+  ) {
+    return { error: "صلاحيات غير كافية." };
   }
 
   if (row.passport_image_path) {

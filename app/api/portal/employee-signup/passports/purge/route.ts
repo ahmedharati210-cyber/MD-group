@@ -15,11 +15,10 @@ export async function POST() {
     return NextResponse.json({ error: "غير مصرّح" }, { status: 403 });
   }
 
-  const queryCompanyId = current.profile.is_super_admin
-    ? null
-    : current.profile.role === "md_admin"
-      ? shellId
-      : current.profile.company_id;
+  const queryCompanyId =
+    current.profile.role === "company_manager"
+      ? current.profile.company_id
+      : null;
 
   const admin = createSupabaseAdminClient();
   let query = admin

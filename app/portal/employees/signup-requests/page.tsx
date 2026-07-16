@@ -8,9 +8,8 @@ import { getCompanyData } from "@/lib/company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
-import { ImageIcon, UserPlus } from "lucide-react";
+import { Eye, ImageIcon, UserPlus } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import { SignupRequestActions } from "./signup-request-actions";
 import { PassportArchiveToolbar } from "./passport-archive-toolbar";
 
 export const metadata = { title: "طلبات التوظيف" };
@@ -184,15 +183,25 @@ export default async function SignupRequestsPage() {
                 key={r.id}
                 className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs space-y-3"
               >
-                <div className="flex justify-between gap-2">
+                <div className="flex justify-between gap-2 items-start">
                   <div className="min-w-0">
-                    <div className="font-semibold text-gray-900 dark:text-gray-50 truncate">
+                    <Link
+                      href={`/portal/employees/signup-requests/${r.id}`}
+                      className="font-semibold text-gray-900 dark:text-gray-50 hover:text-emerald-700 dark:hover:text-emerald-400 truncate block"
+                    >
                       {r.full_name ?? "—"}
-                    </div>
+                    </Link>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                       {r.companies?.name_ar ?? "—"}
                     </div>
                   </div>
+                  <Link
+                    href={`/portal/employees/signup-requests/${r.id}`}
+                    className="inline-flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700"
+                  >
+                    <Eye className="w-3.5 h-3.5" aria-hidden />
+                    مراجعة
+                  </Link>
                 </div>
                 <dl className="grid grid-cols-1 gap-1.5 text-xs text-gray-600 dark:text-gray-400">
                   <div>
@@ -229,7 +238,6 @@ export default async function SignupRequestsPage() {
                     )}
                   </div>
                 </dl>
-                <SignupRequestActions requestId={r.id} />
               </div>
             ))}
           </div>
@@ -246,14 +254,19 @@ export default async function SignupRequestsPage() {
                     <th className="px-5 py-3 font-semibold">الوظيفة / الفرع</th>
                     <th className="px-5 py-3 font-semibold">التاريخ</th>
                     <th className="px-5 py-3 font-semibold text-center">صورة</th>
-                    <th className="px-5 py-3 font-semibold w-[220px]">إجراءات</th>
+                    <th className="px-5 py-3 font-semibold">مراجعة</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {list.map((r) => (
                     <tr key={r.id}>
                       <td className="px-5 py-3 font-medium text-gray-900 dark:text-gray-100">
-                        {r.full_name ?? "—"}
+                        <Link
+                          href={`/portal/employees/signup-requests/${r.id}`}
+                          className="hover:text-emerald-700 dark:hover:text-emerald-400"
+                        >
+                          {r.full_name ?? "—"}
+                        </Link>
                       </td>
                       <td className="px-5 py-3 text-gray-700 dark:text-gray-300">
                         {r.companies?.name_ar ?? "—"}
@@ -291,8 +304,14 @@ export default async function SignupRequestsPage() {
                           <span className="text-gray-400">—</span>
                         )}
                       </td>
-                      <td className="px-5 py-3 align-top">
-                        <SignupRequestActions requestId={r.id} />
+                      <td className="px-5 py-3">
+                        <Link
+                          href={`/portal/employees/signup-requests/${r.id}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700"
+                        >
+                          <Eye className="w-3.5 h-3.5" aria-hidden />
+                          مراجعة
+                        </Link>
                       </td>
                     </tr>
                   ))}
@@ -321,14 +340,26 @@ export default async function SignupRequestsPage() {
               >
                 <div className="flex justify-between gap-2 items-start">
                   <div className="min-w-0">
-                    <div className="font-semibold text-gray-900 dark:text-gray-50 truncate">
+                    <Link
+                      href={`/portal/employees/signup-requests/${r.id}`}
+                      className="font-semibold text-gray-900 dark:text-gray-50 hover:text-emerald-700 dark:hover:text-emerald-400 truncate block"
+                    >
                       {r.full_name ?? "—"}
-                    </div>
+                    </Link>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                       {r.companies?.name_ar ?? "—"}
                     </div>
                   </div>
-                  <StatusBadge status={r.status as "approved" | "rejected"} />
+                  <div className="flex flex-col items-end gap-2">
+                    <StatusBadge status={r.status as "approved" | "rejected"} />
+                    <Link
+                      href={`/portal/employees/signup-requests/${r.id}`}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                    >
+                      <Eye className="w-3.5 h-3.5" aria-hidden />
+                      عرض
+                    </Link>
+                  </div>
                 </div>
                 <dl className="grid grid-cols-1 gap-1.5 text-xs text-gray-600 dark:text-gray-400">
                   <div>
@@ -372,13 +403,19 @@ export default async function SignupRequestsPage() {
                     <th className="px-5 py-3 font-semibold">الوظيفة / الفرع</th>
                     <th className="px-5 py-3 font-semibold">تاريخ المراجعة</th>
                     <th className="px-5 py-3 font-semibold">سبب الرفض</th>
+                    <th className="px-5 py-3 font-semibold">عرض</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {history.map((r) => (
                     <tr key={r.id}>
                       <td className="px-5 py-3 font-medium text-gray-900 dark:text-gray-100">
-                        {r.full_name ?? "—"}
+                        <Link
+                          href={`/portal/employees/signup-requests/${r.id}`}
+                          className="hover:text-emerald-700 dark:hover:text-emerald-400"
+                        >
+                          {r.full_name ?? "—"}
+                        </Link>
                       </td>
                       <td className="px-5 py-3 text-gray-700 dark:text-gray-300">
                         {r.companies?.name_ar ?? "—"}
@@ -407,6 +444,15 @@ export default async function SignupRequestsPage() {
                         {r.status === "rejected" && r.rejection_reason
                           ? r.rejection_reason
                           : "—"}
+                      </td>
+                      <td className="px-5 py-3">
+                        <Link
+                          href={`/portal/employees/signup-requests/${r.id}`}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                        >
+                          <Eye className="w-3.5 h-3.5" aria-hidden />
+                          عرض
+                        </Link>
                       </td>
                     </tr>
                   ))}
