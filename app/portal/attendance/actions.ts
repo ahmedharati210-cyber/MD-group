@@ -16,8 +16,10 @@ import {
 import {
   customSchedulePayloadSnapshot,
   isSyntheticCustomShiftId,
+  personHasCustomSchedule,
   personToSyntheticShift,
 } from "@/lib/attendance/person-schedule";
+import { buildRecalculatedRecordPatch } from "@/lib/attendance/recalculate-person-month";
 import type { AttendancePerson } from "@/types/db";
 import {
   punchSessionFromManualEdit,
@@ -50,7 +52,12 @@ import {
 
 import type { Profile } from "@/types/db";
 
-export type ActionState = { error?: string; ok?: boolean };
+export type ActionState = {
+  error?: string;
+  ok?: boolean;
+  message?: string;
+  updatedCount?: number;
+};
 
 export type ImportPreviewState = {
   error?: string;
@@ -570,25 +577,9 @@ export async function updateMonthlyRecordAction(
     const fullTimeConfig = fullTimeConfigFromBranch(branch);
     const preferredShift = personRow ? personToSyntheticShift(personRow) : null;
 
-    if (shiftId) {
-      const shift = shifts.find((s) => s.id === shiftId);
-      if (shift) {
-        computed = computeDayRecordWithShift(session, shift);
-        resolvedShiftId = shift.id;
-      } else {
-        const result = computeSessionRecord(
-          session,
-          shifts,
-          fullTimeConfig,
-          preferredShift,
-        );
-        computed = result.computed;
-        resolvedShiftId =
-          result.shift && !isSyntheticCustomShiftId(result.shift.id)
-            ? result.shift.id
-            : null;
-      }
-    } else {
+    // Custom schedule wins over a stored branch shift_id unless no custom exists
+    // and an explicit branch shift was selected on the form.
+    if (preferredShift) {
       const result = computeSessionRecord(
         session,
         shifts,
@@ -600,12 +591,25 @@ export async function updateMonthlyRecordAction(
         result.shift && !isSyntheticCustomShiftId(result.shift.id)
           ? result.shift.id
           : null;
-    }
-
-    if (preferredShift && personRow && !shiftId) {
-      updatedPayloadBase = {
-        custom_schedule: customSchedulePayloadSnapshot(personRow),
-      };
+      if (personRow) {
+        updatedPayloadBase = {
+          custom_schedule: customSchedulePayloadSnapshot(personRow),
+        };
+      }
+    } else if (shiftId) {
+      const shift = shifts.find((s) => s.id === shiftId);
+      if (shift) {
+        computed = computeDayRecordWithShift(session, shift);
+        resolvedShiftId = shift.id;
+      } else {
+        const result = computeSessionRecord(session, shifts, fullTimeConfig);
+        computed = result.computed;
+        resolvedShiftId = result.shift?.id ?? null;
+      }
+    } else {
+      const result = computeSessionRecord(session, shifts, fullTimeConfig);
+      computed = result.computed;
+      resolvedShiftId = result.shift?.id ?? null;
     }
   }
 
@@ -655,6 +659,126 @@ export async function updateMonthlyRecordAction(
 
   revalidateAttendanceData();
   return { ok: true };
+}
+
+const recalculatePersonMonthSchema = z.object({
+  attendance_person_id: z.string().uuid(),
+  company_id: z.string().uuid(),
+  branch_id: z.string().uuid(),
+  month: z.string().regex(/^\d{4}-\d{2}$/),
+});
+
+export async function recalculatePersonMonthAction(
+  _prev: ActionState | undefined,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAttendanceAccess();
+  const current = await requireRole(["md_admin", "company_manager"]);
+
+  const parsed = recalculatePersonMonthSchema.safeParse({
+    attendance_person_id: formData.get("attendance_person_id"),
+    company_id: formData.get("company_id"),
+    branch_id: formData.get("branch_id"),
+    month: formData.get("month"),
+  });
+  if (!parsed.success) return { error: "بيانات غير صالحة" };
+
+  if (
+    current.profile.role === "company_manager" &&
+    parsed.data.company_id !== current.profile.company_id
+  ) {
+    return { error: "صلاحيات غير كافية" };
+  }
+
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    parsed.data.company_id,
+  );
+  if ("error" in companyAccess) return { error: companyAccess.error };
+
+  const branchCheck = await assertBranchBelongsToCompany(
+    parsed.data.company_id,
+    parsed.data.branch_id,
+  );
+  if ("error" in branchCheck) return { error: branchCheck.error };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: personRow } = await supabase
+    .from("attendance_people")
+    .select("*")
+    .eq("id", parsed.data.attendance_person_id)
+    .eq("company_id", parsed.data.company_id)
+    .eq("branch_id", parsed.data.branch_id)
+    .maybeSingle<AttendancePerson>();
+
+  if (!personRow) return { error: "الموظف غير موجود" };
+  if (!personHasCustomSchedule(personRow)) {
+    return { error: "لا يوجد جدول مخصص لهذا الموظف" };
+  }
+
+  const [y, m] = parsed.data.month.split("-").map(Number);
+  const monthStart = `${parsed.data.month}-01`;
+  const lastDay = new Date(y, m, 0).getDate();
+  const monthEnd = `${parsed.data.month}-${String(lastDay).padStart(2, "0")}`;
+
+  const { data: records, error: loadError } = await supabase
+    .from("attendance_monthly_records")
+    .select(
+      "id, date, first_check_in, last_check_out, punch_count, leave_type, raw_payload",
+    )
+    .eq("company_id", parsed.data.company_id)
+    .eq("branch_id", parsed.data.branch_id)
+    .eq("attendance_person_id", parsed.data.attendance_person_id)
+    .gte("date", monthStart)
+    .lte("date", monthEnd);
+
+  if (loadError) return { error: loadError.message };
+  if (!records?.length) {
+    return { error: "لا توجد سجلات لهذا الشهر" };
+  }
+
+  const [shifts, branch] = await Promise.all([
+    getAttendanceShifts(parsed.data.branch_id),
+    getAttendanceBranch(parsed.data.branch_id),
+  ]);
+  const fullTimeConfig = fullTimeConfigFromBranch(branch);
+
+  let updatedCount = 0;
+  for (const record of records) {
+    const patch = buildRecalculatedRecordPatch(
+      record,
+      personRow,
+      shifts,
+      fullTimeConfig,
+    );
+    if (!patch) continue;
+
+    const { error } = await supabase
+      .from("attendance_monthly_records")
+      .update({
+        shift_id: patch.shift_id,
+        total_minutes: patch.total_minutes,
+        shift_type: patch.shift_type,
+        expected_minutes: patch.expected_minutes,
+        late_minutes: patch.late_minutes,
+        early_leave_minutes: patch.early_leave_minutes,
+        overtime_minutes: patch.overtime_minutes,
+        deduction_minutes: patch.deduction_minutes,
+        is_absent: patch.is_absent,
+        raw_payload: patch.raw_payload,
+      })
+      .eq("id", record.id);
+
+    if (error) return { error: error.message };
+    updatedCount += 1;
+  }
+
+  revalidateAttendanceData();
+  return {
+    ok: true,
+    updatedCount,
+    message: `تم إعادة احتساب ${updatedCount} يومًا بالجدول المخصص`,
+  };
 }
 
 const createLeaveSchema = z.object({

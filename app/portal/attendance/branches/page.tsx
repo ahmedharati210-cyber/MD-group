@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { requireAttendanceAccess } from "@/lib/auth";
+import { getDefaultAttendanceMonth } from "@/lib/attendance/import-month";
 import {
   attendanceShowCompanyPicker,
   resolveAttendanceBranchId,
@@ -19,6 +20,7 @@ import { AttendanceSearch } from "../attendance-search";
 import { ShiftManager } from "./shift-manager";
 import { BranchFilters } from "./branch-filters";
 import { BranchFullTimeSettings } from "./branch-full-time-settings";
+import { buildBranchAttendanceHref } from "../attendance-navigation";
 
 export const metadata = { title: "فروع الحضور" };
 
@@ -51,11 +53,22 @@ export default async function AttendanceBranchesPage({
     ? allShifts.filter((s) => s.branch_id === selectedBranchId)
     : [];
   const selectedBranch = branches.find((b) => b.id === selectedBranchId) ?? null;
+  const month = getDefaultAttendanceMonth();
+  const backHref =
+    companyId && selectedBranchId
+      ? buildBranchAttendanceHref({
+          companyId,
+          branchId: selectedBranchId,
+          month,
+        })
+      : companyId
+        ? `/portal/attendance?companyId=${companyId}&month=${month}`
+        : "/portal/attendance";
 
   return (
     <div>
       <Link
-        href="/portal/attendance"
+        href={backHref}
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-3"
       >
         <ArrowRight className="w-4 h-4" />

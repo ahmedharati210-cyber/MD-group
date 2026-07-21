@@ -19,6 +19,7 @@ import { PageHeader } from "@/components/portal/PageHeader";
 import { MonthlyFilters } from "../monthly-filters";
 import { AttendanceExportActions } from "../attendance-export-actions";
 import { AttendancePayrollSummary } from "../attendance-payroll-summary";
+import { buildBranchAttendanceHref } from "../attendance-navigation";
 
 export const metadata = { title: "ملخص الحضور والخصومات" };
 
@@ -79,7 +80,13 @@ export default async function AttendanceSummaryPage({
   return (
     <div>
       <Link
-        href="/portal/attendance"
+        href={
+          companyId && branchId
+            ? buildBranchAttendanceHref({ companyId, branchId, month })
+            : companyId
+              ? `/portal/attendance?companyId=${companyId}&month=${month}`
+              : "/portal/attendance"
+        }
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-3"
       >
         <ArrowRight className="w-4 h-4" />

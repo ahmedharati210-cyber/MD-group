@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { Download, FileText } from "lucide-react";
 import { requireAttendanceAccess } from "@/lib/auth";
 import { getDefaultAttendanceMonth } from "@/lib/attendance/import-month";
@@ -26,6 +27,7 @@ import {
   AttendanceOverviewSkeleton,
   PersonListSkeleton,
 } from "./attendance-section-skeletons";
+import { buildBranchAttendanceHref } from "./attendance-navigation";
 
 export const metadata = { title: "الحضور الشهري" };
 
@@ -64,6 +66,26 @@ export default async function AttendancePage({
 
   const branches = companyId ? await getAttendanceBranches(companyId) : [];
   const branchId = resolveAttendanceBranchId(params.branchId, branches);
+
+  // Keep URL in sync with resolved company/branch/month so back links land correctly.
+  if (
+    companyId &&
+    branchId &&
+    (params.companyId !== companyId ||
+      params.branchId !== branchId ||
+      params.month !== month)
+  ) {
+    redirect(
+      buildBranchAttendanceHref(
+        { companyId, branchId, month },
+        {
+          day: selectedDay,
+          personId: selectedPersonId,
+          q: searchQuery || null,
+        },
+      ),
+    );
+  }
 
   const importRow =
     companyId && branchId

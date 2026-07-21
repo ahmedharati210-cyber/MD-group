@@ -16,9 +16,10 @@ import {
   getAttendancePeople,
 } from "@/lib/data/monthly-attendance";
 import { PageHeader } from "@/components/portal/PageHeader";
-import { formatPersonCustomScheduleLabel } from "@/lib/attendance/person-schedule";
+import { formatPersonCustomScheduleLabel, personHasCustomSchedule } from "@/lib/attendance/person-schedule";
 import { buildBranchAttendanceHref } from "../attendance-navigation";
 import { AttendanceExportActions } from "../attendance-export-actions";
+import { RecalculatePersonMonthButton } from "../recalculate-person-month-button";
 import { MonthlyFilters } from "../monthly-filters";
 import { AttendancePersonDetailSection } from "../attendance-person-detail-section";
 import { AttendancePersonDetailSkeleton } from "../attendance-section-skeletons";
@@ -135,12 +136,23 @@ export default async function AttendancePersonPage({
         />
       </div>
 
-      <AttendanceExportActions
-        pdfHref={exportPdfHref}
-        excelHref={exportHref}
-        canExport={canExport}
-        showHint={!canExport}
-      />
+      <div className="mb-6 flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center">
+        <AttendanceExportActions
+          pdfHref={exportPdfHref}
+          excelHref={exportHref}
+          canExport={canExport}
+          showHint={!canExport}
+          className="mb-0"
+        />
+        {personHasCustomSchedule(person) ? (
+          <RecalculatePersonMonthButton
+            personId={person.id}
+            companyId={companyId}
+            branchId={branchId}
+            month={month}
+          />
+        ) : null}
+      </div>
 
       <Suspense key={detailKey} fallback={<AttendancePersonDetailSkeleton />}>
         <AttendancePersonDetailSection

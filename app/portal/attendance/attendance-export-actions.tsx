@@ -6,6 +6,7 @@ type Props = {
   excelHref: string;
   canExport: boolean;
   showHint?: boolean;
+  className?: string;
 };
 
 export function AttendanceExportActions({
@@ -13,11 +14,12 @@ export function AttendanceExportActions({
   excelHref,
   canExport,
   showHint = false,
+  className = "mb-6",
 }: Props) {
   if (!canExport && !showHint) return null;
 
   return (
-    <div className="mb-6">
+    <div className={className}>
       {canExport ? (
         <div className="flex flex-col sm:flex-row gap-2">
           <Link
