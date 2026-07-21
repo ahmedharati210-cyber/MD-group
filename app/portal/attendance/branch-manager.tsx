@@ -15,6 +15,29 @@ import {
 import { DeleteConfirmButton } from "./delete-confirm-button";
 import type { AttendanceBranch, AttendancePerson } from "@/types/db";
 import { normalizeSearchQuery, matchesAttendanceSearch } from "@/lib/attendance/search";
+import {
+  formatPersonCustomScheduleLabel,
+  personHasCustomSchedule,
+} from "@/lib/attendance/person-schedule";
+
+const WEEKDAY_OPTIONS = [
+  { value: 0, label: "أحد" },
+  { value: 1, label: "إثن" },
+  { value: 2, label: "ثلا" },
+  { value: 3, label: "أرب" },
+  { value: 4, label: "خمي" },
+  { value: 5, label: "جمع" },
+  { value: 6, label: "سبت" },
+] as const;
+
+const timeInputProps = {
+  type: "text" as const,
+  inputMode: "numeric" as const,
+  pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+  placeholder: "HH:MM",
+  maxLength: 5,
+  dir: "ltr" as const,
+};
 
 function submitAssociatedForm(
   formId: string,
@@ -214,10 +237,10 @@ export function BranchManager({
           {needle ? ` — نتائج البحث` : ""}
         </h3>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[640px]">
+          <table className="w-full text-sm min-w-[900px]">
             <thead className="bg-gray-50 dark:bg-gray-800/60">
               <tr className="text-right">
-                <th className="px-4 py-3">الاسم</th>
+                <th className="px-4 py-3">الاسم والجدول</th>
                 <th className="px-4 py-3">رقم البصمة</th>
                 <th className="px-4 py-3">الفرع</th>
                 <th className="px-4 py-3">الحالة</th>
@@ -295,10 +318,12 @@ function PersonRow({
     updateAttendancePersonAction,
     undefined,
   );
+  const scheduleLabel = formatPersonCustomScheduleLabel(person);
+  const workDays = person.custom_work_days ?? [];
 
   return (
-    <tr className="border-t border-gray-100 dark:border-gray-800">
-      <td className="px-4 py-3">
+    <tr className="border-t border-gray-100 dark:border-gray-800 align-top">
+      <td className="px-4 py-3 space-y-2 min-w-[18rem]">
         <form id={formId} className="contents" onSubmit={(e) => e.preventDefault()}>
           <input type="hidden" name="id" value={person.id} />
           <input
@@ -307,6 +332,86 @@ function PersonRow({
             className="w-full px-2 py-1 border rounded-lg text-xs"
           />
         </form>
+        {scheduleLabel ? (
+          <span className="inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 dark:bg-teal-900/30 dark:text-teal-200">
+            {scheduleLabel}
+          </span>
+        ) : (
+          <span className="text-[10px] text-gray-400">بدون جدول مخصص (أقرب وردية فرع)</span>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            form={formId}
+            name="custom_start_time"
+            {...timeInputProps}
+            defaultValue={person.custom_start_time?.slice(0, 5) ?? ""}
+            title="بداية الدوام"
+            className="w-[4.5rem] px-1.5 py-1 border rounded-lg text-[11px] font-mono"
+          />
+          <span className="text-gray-400 text-xs">–</span>
+          <input
+            form={formId}
+            name="custom_end_time"
+            {...timeInputProps}
+            defaultValue={person.custom_end_time?.slice(0, 5) ?? ""}
+            title="نهاية الدوام"
+            className="w-[4.5rem] px-1.5 py-1 border rounded-lg text-[11px] font-mono"
+          />
+          <label className="inline-flex items-center gap-1 text-[10px] text-gray-600">
+            <input
+              form={formId}
+              type="checkbox"
+              name="custom_crosses_midnight"
+              value="true"
+              defaultChecked={person.custom_crosses_midnight}
+            />
+            منتصف الليل
+          </label>
+          <input
+            form={formId}
+            type="number"
+            name="custom_late_grace_minutes"
+            min={0}
+            max={180}
+            defaultValue={person.custom_late_grace_minutes ?? 15}
+            title="سماح التأخير (د)"
+            className="w-14 px-1.5 py-1 border rounded-lg text-[11px]"
+          />
+          <input
+            form={formId}
+            type="number"
+            name="custom_early_leave_grace_minutes"
+            min={0}
+            max={180}
+            defaultValue={person.custom_early_leave_grace_minutes ?? 15}
+            title="سماح الخروج المبكر (د)"
+            className="w-14 px-1.5 py-1 border rounded-lg text-[11px]"
+          />
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {WEEKDAY_OPTIONS.map((day) => (
+            <label
+              key={day.value}
+              className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700"
+            >
+              <input
+                form={formId}
+                type="checkbox"
+                name="custom_work_days"
+                value={day.value}
+                defaultChecked={
+                  personHasCustomSchedule(person)
+                    ? workDays.includes(day.value)
+                    : true
+                }
+              />
+              {day.label}
+            </label>
+          ))}
+        </div>
+        <p className="text-[10px] text-gray-400">
+          اترك الأوقات فارغة للعودة لمطابقة ورديات الفرع.
+        </p>
       </td>
       <td className="px-4 py-3">
         <input

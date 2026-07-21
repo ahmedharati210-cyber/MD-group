@@ -11,6 +11,7 @@ import {
   classifyPersonDayStatus,
   type PersonDayStatus,
 } from "@/lib/attendance/status-labels";
+import { isPersonWorkDay } from "@/lib/attendance/person-schedule";
 import type { AttendanceMonthlyRecord, AttendancePerson } from "@/types/db";
 
 export type { DaySummary } from "@/lib/attendance/calendar-shared";
@@ -236,10 +237,12 @@ export function formatDeductionHours(minutes: number): string {
  * Per-person calendar days: unlike buildCalendarDays (which only reflects days
  * that have a record row), a missing record counts as absent so
  * "didn't show up" days are always visible.
+ * Non-work weekdays from the person's custom schedule are not counted absent.
  */
 export function buildPersonCalendarDays(
   month: string,
   records: AttendanceMonthlyRecord[],
+  workDays: number[] | null = null,
 ): DaySummary[] {
   const parsed = parseMonthParam(month.slice(0, 7));
   if (!parsed) return [];
@@ -260,7 +263,11 @@ export function buildPersonCalendarDays(
     if (record && hasLeave(record)) {
       leave = 1;
       leaveLabel = recordLeaveLabel(record);
-    } else if (!record || record.is_absent) {
+    } else if (!record) {
+      if (isPersonWorkDay(date, workDays)) {
+        absent = 1;
+      }
+    } else if (record.is_absent) {
       absent = 1;
     } else if (hasOnePunch(record)) {
       missingPunch = 1;
@@ -297,6 +304,7 @@ export type PersonMonthStats = {
 export function buildPersonMonthStats(
   month: string,
   records: AttendanceMonthlyRecord[],
+  workDays: number[] | null = null,
 ): PersonMonthStats {
   const parsed = parseMonthParam(month.slice(0, 7));
   if (!parsed) {
@@ -335,11 +343,17 @@ export function buildPersonMonthStats(
       leaveDays += 1;
       continue;
     }
-    if (!record || record.is_absent) {
+    if (!record) {
+      if (isPersonWorkDay(date, workDays)) {
+        absentDays += 1;
+      }
+      continue;
+    }
+    if (record.is_absent) {
       absentDays += 1;
       continue;
     }
-      if (hasOnePunch(record)) onePunchDays += 1;
+    if (hasOnePunch(record)) onePunchDays += 1;
     else presentDays += 1;
     if (record.late_minutes > 0) lateDays += 1;
     if (record.early_leave_minutes > 0) earlyLeaveDays += 1;
@@ -457,7 +471,13 @@ export function buildBranchPayrollSummary(
         row.leaveDays += 1;
         continue;
       }
-      if (!record || record.is_absent) {
+      if (!record) {
+        if (isPersonWorkDay(date, person?.custom_work_days ?? null)) {
+          row.absentDays += 1;
+        }
+        continue;
+      }
+      if (record.is_absent) {
         row.absentDays += 1;
         continue;
       }

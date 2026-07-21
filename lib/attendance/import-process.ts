@@ -68,15 +68,9 @@ export async function processAttendanceImportFile(
     warnings = matched.warnings;
   } else if (format === "per_day") {
     const parsed = await parseRawAttendanceWorkbook(buffer);
-    const peopleMap = new Map(
-      [...people.entries()].map(([k, p]) => [
-        k,
-        { id: p.id, full_name: p.full_name },
-      ]),
-    );
     const matched = matchBlocksToAttendancePeople(
       parsed.blocks,
-      peopleMap,
+      people,
       shifts,
       fullTimeConfig,
     );
@@ -94,7 +88,7 @@ export async function processAttendanceImportFile(
     warnings.unshift(monthMismatch.message);
   }
 
-  rows = dedupeMatchedImportRows(rows, shifts, fullTimeConfig);
+  rows = dedupeMatchedImportRows(rows, shifts, fullTimeConfig, people);
 
   return { rows, warnings, format, monthMismatch };
 }

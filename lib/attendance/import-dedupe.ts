@@ -6,8 +6,13 @@ import {
   DEFAULT_FULL_TIME_CONFIG,
   type FullTimeConfig,
 } from "@/lib/attendance/shift-matching";
+import {
+  customSchedulePayloadSnapshot,
+  isSyntheticCustomShiftId,
+  personToSyntheticShift,
+} from "@/lib/attendance/person-schedule";
 import type { MatchedImportRow } from "@/lib/attendance/raw-excel-parser";
-import type { AttendanceShift } from "@/types/db";
+import type { AttendancePerson, AttendanceShift } from "@/types/db";
 
 function punchTimestamp(date: string, time: string | null): number {
   if (!time) return 0;
@@ -35,6 +40,7 @@ export function dedupeMatchedImportRows(
   rows: MatchedImportRow[],
   shifts: AttendanceShift[] = [],
   fullTimeConfig: FullTimeConfig = DEFAULT_FULL_TIME_CONFIG,
+  peopleByExternal: Map<string, AttendancePerson> = new Map(),
 ): MatchedImportRow[] {
   const byKey = new Map<string, MatchedImportRow[]>();
 
@@ -55,9 +61,7 @@ export function dedupeMatchedImportRows(
 
     let earliest = group[0];
     let latest = group[0];
-    let earliestTs = rowStartTs(earliest);
-    let latestTs = rowEndTs(latest);
-    let punchCount = earliest.punchCount ?? 0;
+    let punchCount = 0;
     const allPunchTimes: Array<{ date: string; time: string }> = [];
 
     for (const row of group) {
@@ -77,16 +81,10 @@ export function dedupeMatchedImportRows(
           }
         }
       }
-
-      const startTs = rowStartTs(row);
-      if (startTs < earliestTs) {
-        earliestTs = startTs;
+      if (rowStartTs(row) < rowStartTs(earliest)) {
         earliest = row;
       }
-
-      const endTs = rowEndTs(row);
-      if (endTs > latestTs) {
-        latestTs = endTs;
+      if (rowEndTs(row) > rowEndTs(latest)) {
         latest = row;
       }
     }
@@ -120,7 +118,20 @@ export function dedupeMatchedImportRows(
       allPunchTimes: sortedPunchTimes,
     };
 
-    const { computed, shift } = computeSessionRecord(session, shifts, fullTimeConfig);
+    const person = peopleByExternal.get(group[0].externalEmployeeNumber) ?? null;
+    const preferredShift = person ? personToSyntheticShift(person) : null;
+    const { computed, shift } = computeSessionRecord(
+      session,
+      shifts,
+      fullTimeConfig,
+      preferredShift,
+    );
+    const persistedShiftId =
+      shift && !isSyntheticCustomShiftId(shift.id)
+        ? shift.id
+        : preferredShift
+          ? null
+          : (group[0].shiftId ?? null);
 
     deduped.push({
       ...group[0],
@@ -128,7 +139,7 @@ export function dedupeMatchedImportRows(
       lastCheckOut: latest.lastCheckOut,
       computed,
       totalMinutes: computed.totalMinutes,
-      shiftId: shift?.id ?? group[0].shiftId ?? null,
+      shiftId: persistedShiftId,
       punchCount: punchCount || null,
       rawPayload: {
         ...group[0].rawPayload,
@@ -140,6 +151,9 @@ export function dedupeMatchedImportRows(
             ? sortedPunchTimes
             : group[0].rawPayload?.all_punch_times,
         merged_duplicate_rows: group.length,
+        ...(preferredShift && person
+          ? { custom_schedule: customSchedulePayloadSnapshot(person) }
+          : {}),
       },
     });
   }

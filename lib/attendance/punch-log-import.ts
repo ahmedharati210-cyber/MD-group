@@ -14,6 +14,11 @@ import {
   computeSessionRecord,
   type FullTimeConfig,
 } from "@/lib/attendance/shift-matching";
+import {
+  customSchedulePayloadSnapshot,
+  isSyntheticCustomShiftId,
+  personToSyntheticShift,
+} from "@/lib/attendance/person-schedule";
 import { type MatchedImportRow } from "@/lib/attendance/raw-excel-parser";
 
 function sessionToDayRow(
@@ -24,7 +29,15 @@ function sessionToDayRow(
   fullTimeConfig: FullTimeConfig,
 ): MatchedImportRow {
   const isNewPerson = !person;
-  const { computed, shift } = computeSessionRecord(session, shifts, fullTimeConfig);
+  const preferredShift = person ? personToSyntheticShift(person) : null;
+  const { computed, shift } = computeSessionRecord(
+    session,
+    shifts,
+    fullTimeConfig,
+    preferredShift,
+  );
+  const persistedShiftId =
+    shift && !isSyntheticCustomShiftId(shift.id) ? shift.id : null;
 
   return {
     date: session.shiftDate,
@@ -39,7 +52,7 @@ function sessionToDayRow(
     isNewPerson,
     computed,
     totalMinutes: computed.totalMinutes,
-    shiftId: shift?.id ?? null,
+    shiftId: persistedShiftId,
     punchCount: session.punchCount,
     rawPayload: {
       punch_count: session.punchCount,
@@ -52,6 +65,9 @@ function sessionToDayRow(
       selected_check_out: session.lastCheckOut
         ? { date: session.lastPunchDate, time: session.lastCheckOut }
         : null,
+      ...(preferredShift && person
+        ? { custom_schedule: customSchedulePayloadSnapshot(person) }
+        : {}),
     },
   };
 }

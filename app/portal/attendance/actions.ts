@@ -13,7 +13,12 @@ import {
   computeDayRecordWithShift,
   computeSessionRecord,
 } from "@/lib/attendance/shift-matching";
-import { sessionTotalMinutes } from "@/lib/attendance/punch-sessions";
+import {
+  customSchedulePayloadSnapshot,
+  isSyntheticCustomShiftId,
+  personToSyntheticShift,
+} from "@/lib/attendance/person-schedule";
+import type { AttendancePerson } from "@/types/db";
 import {
   punchSessionFromManualEdit,
   punchSessionFromRecord,
@@ -229,6 +234,13 @@ async function upsertAttendancePeople(
       full_name: meta.full_name,
       raw_department_hint: meta.raw_department_hint,
       shift_id: existing?.shift_id ?? null,
+      custom_start_time: existing?.custom_start_time ?? null,
+      custom_end_time: existing?.custom_end_time ?? null,
+      custom_crosses_midnight: existing?.custom_crosses_midnight ?? false,
+      custom_late_grace_minutes: existing?.custom_late_grace_minutes ?? 15,
+      custom_early_leave_grace_minutes:
+        existing?.custom_early_leave_grace_minutes ?? 15,
+      custom_work_days: existing?.custom_work_days ?? null,
       active: true,
       last_seen_at: now,
     };
@@ -442,13 +454,14 @@ export async function updateMonthlyRecordAction(
   const { data: existing } = await supabase
     .from("attendance_monthly_records")
     .select(
-      "id, company_id, branch_id, first_check_in, last_check_out, is_holiday, date, raw_payload, punch_count",
+      "id, company_id, branch_id, attendance_person_id, first_check_in, last_check_out, is_holiday, date, raw_payload, punch_count",
     )
     .eq("id", parsed.data.id)
     .single<{
       id: string;
       company_id: string;
       branch_id: string;
+      attendance_person_id: string | null;
       first_check_in: string | null;
       last_check_out: string | null;
       is_holiday: boolean;
@@ -513,6 +526,7 @@ export async function updateMonthlyRecordAction(
     isHoliday,
   });
   let resolvedShiftId: string | null = shiftId;
+  let updatedPayloadBase: Record<string, unknown> = {};
 
   if (isAbsentStatus) {
     computed = {
@@ -541,31 +555,57 @@ export async function updateMonthlyRecordAction(
     };
     resolvedShiftId = null;
   } else if (session) {
-    const [shifts, branch] = await Promise.all([
+    const [shifts, branch, personRow] = await Promise.all([
       getAttendanceShifts(existing.branch_id),
       getAttendanceBranch(existing.branch_id),
+      existing.attendance_person_id
+        ? supabase
+            .from("attendance_people")
+            .select("*")
+            .eq("id", existing.attendance_person_id)
+            .maybeSingle<AttendancePerson>()
+            .then((r) => r.data)
+        : Promise.resolve(null),
     ]);
     const fullTimeConfig = fullTimeConfigFromBranch(branch);
+    const preferredShift = personRow ? personToSyntheticShift(personRow) : null;
 
-    const sessionMinutes = sessionTotalMinutes(session);
-    if (sessionMinutes >= fullTimeConfig.thresholdMinutes) {
-      const result = computeSessionRecord(session, shifts, fullTimeConfig);
-      computed = result.computed;
-      resolvedShiftId = result.shift?.id ?? null;
-    } else if (shiftId) {
+    if (shiftId) {
       const shift = shifts.find((s) => s.id === shiftId);
       if (shift) {
         computed = computeDayRecordWithShift(session, shift);
         resolvedShiftId = shift.id;
       } else {
-        const result = computeSessionRecord(session, shifts, fullTimeConfig);
+        const result = computeSessionRecord(
+          session,
+          shifts,
+          fullTimeConfig,
+          preferredShift,
+        );
         computed = result.computed;
-        resolvedShiftId = result.shift?.id ?? null;
+        resolvedShiftId =
+          result.shift && !isSyntheticCustomShiftId(result.shift.id)
+            ? result.shift.id
+            : null;
       }
     } else {
-      const result = computeSessionRecord(session, shifts, fullTimeConfig);
+      const result = computeSessionRecord(
+        session,
+        shifts,
+        fullTimeConfig,
+        preferredShift,
+      );
       computed = result.computed;
-      resolvedShiftId = result.shift?.id ?? null;
+      resolvedShiftId =
+        result.shift && !isSyntheticCustomShiftId(result.shift.id)
+          ? result.shift.id
+          : null;
+    }
+
+    if (preferredShift && personRow && !shiftId) {
+      updatedPayloadBase = {
+        custom_schedule: customSchedulePayloadSnapshot(personRow),
+      };
     }
   }
 
@@ -573,6 +613,7 @@ export async function updateMonthlyRecordAction(
     ...rawPayload,
     ...(manuallyEdited ? { manually_overridden: true } : {}),
     ...(isAbsentStatus ? { manual_absent: true } : {}),
+    ...updatedPayloadBase,
     ...(session && !leaveType && !isAbsentStatus
       ? {
           first_punch_date: session.firstPunchDate,
@@ -877,11 +918,22 @@ export async function createAttendancePersonAction(
   return { ok: true };
 }
 
+const timeHmSchema = z
+  .string()
+  .regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)
+  .nullable();
+
 const updatePersonSchema = z.object({
   id: z.string().uuid(),
   full_name: z.string().min(1).optional(),
   external_employee_number: z.string().min(1).optional(),
   notes: z.string().optional().nullable(),
+  custom_start_time: timeHmSchema.optional(),
+  custom_end_time: timeHmSchema.optional(),
+  custom_crosses_midnight: z.boolean().optional(),
+  custom_late_grace_minutes: z.coerce.number().int().min(0).max(180).optional(),
+  custom_early_leave_grace_minutes: z.coerce.number().int().min(0).max(180).optional(),
+  custom_work_days: z.array(z.number().int().min(0).max(6)).nullable().optional(),
 });
 
 export async function updateAttendancePersonAction(
@@ -891,13 +943,32 @@ export async function updateAttendancePersonAction(
   await requireAttendanceAccess();
   const current = await requireRole(["md_admin", "company_manager"]);
 
+  const startRaw = String(formData.get("custom_start_time") ?? "").trim();
+  const endRaw = String(formData.get("custom_end_time") ?? "").trim();
+  const workDaysRaw = formData.getAll("custom_work_days").map(String);
+  const hasCustomTimes = Boolean(startRaw && endRaw);
+
   const parsed = updatePersonSchema.safeParse({
     id: formData.get("id"),
     full_name: formData.get("full_name") || undefined,
     external_employee_number: formData.get("external_employee_number") || undefined,
     notes: formData.get("notes") || null,
+    custom_start_time: hasCustomTimes ? startRaw : null,
+    custom_end_time: hasCustomTimes ? endRaw : null,
+    custom_crosses_midnight: formData.get("custom_crosses_midnight") === "true",
+    custom_late_grace_minutes: formData.get("custom_late_grace_minutes") || 15,
+    custom_early_leave_grace_minutes:
+      formData.get("custom_early_leave_grace_minutes") || 15,
+    custom_work_days: hasCustomTimes
+      ? workDaysRaw
+          .map((v) => Number(v))
+          .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)
+      : null,
   });
   if (!parsed.success) return { error: "بيانات غير صالحة" };
+  if ((startRaw && !endRaw) || (!startRaw && endRaw)) {
+    return { error: "أدخل وقت البداية والنهاية معاً، أو اتركهما فارغين" };
+  }
 
   const supabase = await createSupabaseServerClient();
   const { data: person } = await supabase
@@ -930,6 +1001,8 @@ export async function updateAttendancePersonAction(
   if (error) return { error: error.message };
 
   revalidatePath("/portal/attendance/branches");
+  revalidatePath("/portal/attendance");
+  revalidatePath("/portal/attendance/person");
   return { ok: true };
 }
 

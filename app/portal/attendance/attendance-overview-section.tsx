@@ -67,7 +67,11 @@ export async function AttendanceOverviewSection({
     : [];
 
   const calendarDays = selectedPerson
-    ? buildPersonCalendarDays(month, personAllRecords)
+    ? buildPersonCalendarDays(
+        month,
+        personAllRecords,
+        selectedPerson.custom_work_days,
+      )
     : buildCalendarDays(
         month,
         filteredRecords,
@@ -80,7 +84,11 @@ export async function AttendanceOverviewSection({
     hasSearch ? filteredPeople : people,
   );
   const personStats = selectedPerson
-    ? buildPersonMonthStats(month, personAllRecords)
+    ? buildPersonMonthStats(
+        month,
+        personAllRecords,
+        selectedPerson.custom_work_days,
+      )
     : null;
 
   const navContext = { companyId, branchId, month };
@@ -137,6 +145,7 @@ export async function AttendanceOverviewSection({
             month={month}
             records={personAllRecords}
             employeeName={selectedPerson.full_name}
+            workDays={selectedPerson.custom_work_days}
           />
         </>
       ) : (

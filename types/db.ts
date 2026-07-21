@@ -169,6 +169,14 @@ export interface AttendancePerson {
   notes: string | null;
   raw_department_hint: string | null;
   shift_id: string | null;
+  /** Personal schedule start (HH:MM). Both start and end required for custom matching. */
+  custom_start_time: string | null;
+  custom_end_time: string | null;
+  custom_crosses_midnight: boolean;
+  custom_late_grace_minutes: number;
+  custom_early_leave_grace_minutes: number;
+  /** JS getDay() 0–6. null = all days. */
+  custom_work_days: number[] | null;
   created_at: string;
 }
 type AttendancePersonInsert = {
@@ -183,6 +191,12 @@ type AttendancePersonInsert = {
   notes?: string | null;
   raw_department_hint?: string | null;
   shift_id?: string | null;
+  custom_start_time?: string | null;
+  custom_end_time?: string | null;
+  custom_crosses_midnight?: boolean;
+  custom_late_grace_minutes?: number;
+  custom_early_leave_grace_minutes?: number;
+  custom_work_days?: number[] | null;
   created_at?: string;
 };
 

@@ -45,8 +45,16 @@ export async function AttendancePersonDetailSection({
   const personRecords = allRecords.filter(
     (record) => record.attendance_person_id === person.id,
   );
-  const calendarDays = buildPersonCalendarDays(month, personRecords);
-  const personStats = buildPersonMonthStats(month, personRecords);
+  const calendarDays = buildPersonCalendarDays(
+    month,
+    personRecords,
+    person.custom_work_days,
+  );
+  const personStats = buildPersonMonthStats(
+    month,
+    personRecords,
+    person.custom_work_days,
+  );
 
   if (!importRow) {
     return (
@@ -63,6 +71,7 @@ export async function AttendancePersonDetailSection({
         month={month}
         records={personRecords}
         employeeName={person.full_name}
+        workDays={person.custom_work_days}
         compact
       />
       <AttendancePersonMonthTable

@@ -38,6 +38,12 @@ const personWithRecords: AttendancePerson = {
   notes: null,
   raw_department_hint: null,
   shift_id: null,
+  custom_start_time: null,
+  custom_end_time: null,
+  custom_crosses_midnight: false,
+  custom_late_grace_minutes: 15,
+  custom_early_leave_grace_minutes: 15,
+  custom_work_days: null,
   created_at: "2026-01-01T00:00:00Z",
 };
 
@@ -53,6 +59,12 @@ const personNoRecords: AttendancePerson = {
   notes: null,
   raw_department_hint: null,
   shift_id: null,
+  custom_start_time: null,
+  custom_end_time: null,
+  custom_crosses_midnight: false,
+  custom_late_grace_minutes: 15,
+  custom_early_leave_grace_minutes: 15,
+  custom_work_days: null,
   created_at: "2026-01-01T00:00:00Z",
 };
 

@@ -7,6 +7,7 @@ import {
   hasLeave,
   recordLeaveLabel,
 } from "@/lib/attendance/leave-types";
+import { isPersonWorkDay } from "@/lib/attendance/person-schedule";
 import type { AttendanceMonthlyRecord } from "@/types/db";
 
 export type PersonMetricKey =
@@ -96,6 +97,8 @@ function statusLabelForRecord(record: AttendanceMonthlyRecord | null): string {
 function matchesMetric(
   record: AttendanceMonthlyRecord | null,
   metric: PersonMetricKey,
+  date: string,
+  workDays: number[] | null,
 ): boolean {
   if (record?.leave_type === HOLIDAY_LEAVE_TYPE) return false;
   if (record && hasLeave(record)) return false;
@@ -104,7 +107,9 @@ function matchesMetric(
     case "fullTimeDays":
       return record?.shift_type === "دوام كامل";
     case "absentDays":
-      return !record || record.is_absent;
+      if (record?.is_absent) return true;
+      if (!record) return isPersonWorkDay(date, workDays);
+      return false;
     case "onePunchDays":
       return Boolean(record && hasOnePunch(record));
     case "lateDays":
@@ -112,7 +117,7 @@ function matchesMetric(
     case "earlyLeaveDays":
       return Boolean(record && record.early_leave_minutes > 0);
     case "totalDeductionMinutes":
-      return Boolean(record && record.deduction_minutes > 0);
+      return Boolean(record && record.deduction_minutes > 0 && !hasOnePunch(record));
   }
 }
 
@@ -165,6 +170,7 @@ export function filterPersonMetricDays(
   month: string,
   records: AttendanceMonthlyRecord[],
   metric: PersonMetricKey,
+  workDays: number[] | null = null,
 ): PersonMetricDayRow[] {
   const parsed = parseMonthParam(month.slice(0, 7));
   if (!parsed) return [];
@@ -174,7 +180,7 @@ export function filterPersonMetricDays(
 
   for (const date of enumerateMonthDays(parsed.year, parsed.month)) {
     const record = byDate.get(date) ?? null;
-    if (!matchesMetric(record, metric)) continue;
+    if (!matchesMetric(record, metric, date, workDays)) continue;
 
     const { detailLabel, detailValue } = detailForMetric(record, metric);
     rows.push({

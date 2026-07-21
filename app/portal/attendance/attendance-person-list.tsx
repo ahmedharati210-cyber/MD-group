@@ -9,6 +9,7 @@ import {
   buildPersonMonthHref,
   type AttendanceNavContext,
 } from "./attendance-navigation";
+import { formatPersonCustomScheduleLabel } from "@/lib/attendance/person-schedule";
 
 type PersonWithCount = AttendancePerson & { recordCount: number };
 
@@ -50,6 +51,11 @@ export function AttendancePersonList({
                 >
                   <LinkPendingSpinner className="absolute top-2 left-2" />
                   <p className="font-semibold text-sm">{person.full_name}</p>
+                  {formatPersonCustomScheduleLabel(person) ? (
+                    <p className="text-[10px] text-teal-700 dark:text-teal-300 mt-0.5">
+                      {formatPersonCustomScheduleLabel(person)}
+                    </p>
+                  ) : null}
                   <p className="text-xs text-gray-500 flex justify-between mt-0.5">
                     <span dir="ltr">#{person.external_employee_number}</span>
                     <span>{person.recordCount} سجل</span>

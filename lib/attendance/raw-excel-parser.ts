@@ -10,7 +10,12 @@ import {
   type FullTimeConfig,
 } from "@/lib/attendance/shift-matching";
 import { inferLastPunchDate } from "@/lib/attendance/session-from-record";
-import type { AttendanceShift } from "@/types/db";
+import {
+  customSchedulePayloadSnapshot,
+  isSyntheticCustomShiftId,
+  personToSyntheticShift,
+} from "@/lib/attendance/person-schedule";
+import type { AttendancePerson, AttendanceShift } from "@/types/db";
 
 export type RawEmployeeBlock = {
   externalEmployeeNumber: string;
@@ -254,7 +259,7 @@ export type MatchedImportRow = RawDayRow & {
 
 export function matchBlocksToAttendancePeople(
   blocks: RawEmployeeBlock[],
-  peopleByExternal: Map<string, { id: string; full_name: string }>,
+  peopleByExternal: Map<string, AttendancePerson | { id: string; full_name: string }>,
   shifts: AttendanceShift[] = [],
   fullTimeConfig?: FullTimeConfig,
 ): { rows: MatchedImportRow[]; warnings: string[] } {
@@ -271,8 +276,12 @@ export function matchBlocksToAttendancePeople(
       warnings.push(`رقم ${ext}: الاسم فارغ`);
     }
 
-    const person = peopleByExternal.get(ext);
-    const isNewPerson = !person;
+    const personEntry = peopleByExternal.get(ext) ?? null;
+    const person =
+      personEntry && "company_id" in personEntry
+        ? (personEntry as AttendancePerson)
+        : null;
+    const isNewPerson = !personEntry;
 
     for (const day of block.rows) {
       const lastPunchDate = inferLastPunchDate(
@@ -303,11 +312,15 @@ export function matchBlocksToAttendancePeople(
         ],
       };
 
+      const preferredShift = person ? personToSyntheticShift(person) : null;
       const { computed, shift } = computeSessionRecord(
         session,
         shifts,
         fullTimeConfig,
+        preferredShift,
       );
+      const persistedShiftId =
+        shift && !isSyntheticCustomShiftId(shift.id) ? shift.id : null;
 
       const totalMinutes =
         computed.totalMinutes ??
@@ -319,13 +332,13 @@ export function matchBlocksToAttendancePeople(
       rows.push({
         ...day,
         externalEmployeeNumber: ext,
-        employeeName: person?.full_name ?? block.employeeName,
+        employeeName: personEntry?.full_name ?? block.employeeName,
         departmentHint: block.departmentHint,
-        attendancePersonId: person?.id ?? null,
+        attendancePersonId: personEntry?.id ?? null,
         isNewPerson,
         computed,
         totalMinutes,
-        shiftId: shift?.id ?? null,
+        shiftId: persistedShiftId,
         punchCount: session.punchCount,
         rawPayload: {
           department_hint: block.departmentHint,
@@ -333,6 +346,9 @@ export function matchBlocksToAttendancePeople(
           total_time: day.totalTime,
           first_punch_date: day.date,
           last_punch_date: lastPunchDate,
+          ...(preferredShift && person
+            ? { custom_schedule: customSchedulePayloadSnapshot(person) }
+            : {}),
         },
       });
     }

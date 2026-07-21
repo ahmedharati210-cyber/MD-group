@@ -107,10 +107,18 @@ export function resolveShiftForSession(
 export function computeOnePunchRecord(
   session: PunchSession,
   shifts: AttendanceShift[],
+  preferredShift: AttendanceShift | null = null,
 ): { computed: ComputedDay; shift: AttendanceShift | null } {
   const punchTime = session.firstCheckIn ?? session.lastCheckOut;
   if (!punchTime) {
     return { computed: incompletePunchDay(), shift: null };
+  }
+
+  if (preferredShift) {
+    return {
+      computed: onePunchComputedForShift(punchTime, preferredShift),
+      shift: preferredShift,
+    };
   }
 
   const sessionForShift: PunchSession = {
@@ -243,6 +251,7 @@ export function computeSessionRecord(
   session: PunchSession,
   shifts: AttendanceShift[],
   fullTimeConfig: FullTimeConfig = DEFAULT_FULL_TIME_CONFIG,
+  preferredShift: AttendanceShift | null = null,
 ): { computed: ComputedDay; shift: AttendanceShift | null } {
   const firstCheckIn = session.firstCheckIn;
   const lastCheckOut = session.lastCheckOut;
@@ -251,6 +260,17 @@ export function computeSessionRecord(
     return {
       computed: computeDayRecord({ firstCheckIn, lastCheckOut }),
       shift: null,
+    };
+  }
+
+  // Personal schedule: always match against that shift (skip nearest / full-time auto).
+  if (preferredShift) {
+    if (!firstCheckIn || !lastCheckOut || firstCheckIn === lastCheckOut) {
+      return computeOnePunchRecord(session, shifts, preferredShift);
+    }
+    return {
+      computed: computeDayRecordWithShift(session, preferredShift),
+      shift: preferredShift,
     };
   }
 

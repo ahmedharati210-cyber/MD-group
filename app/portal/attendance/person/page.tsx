@@ -16,6 +16,7 @@ import {
   getAttendancePeople,
 } from "@/lib/data/monthly-attendance";
 import { PageHeader } from "@/components/portal/PageHeader";
+import { formatPersonCustomScheduleLabel } from "@/lib/attendance/person-schedule";
 import { buildBranchAttendanceHref } from "../attendance-navigation";
 import { AttendanceExportActions } from "../attendance-export-actions";
 import { MonthlyFilters } from "../monthly-filters";
@@ -110,9 +111,14 @@ export default async function AttendancePersonPage({
       <PageHeader
         title={`حضور ${person.full_name}`}
         description={
-          selectedBranch
-            ? `${selectedBranch.name} — ${month} · #${person.external_employee_number}`
-            : `${month} · #${person.external_employee_number}`
+          [
+            selectedBranch?.name,
+            month,
+            `#${person.external_employee_number}`,
+            formatPersonCustomScheduleLabel(person),
+          ]
+            .filter(Boolean)
+            .join(" · ")
         }
       />
 
