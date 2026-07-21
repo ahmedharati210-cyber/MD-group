@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { isFeatureEnabled } from "@/lib/features";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   AttendanceBranch,
@@ -33,10 +34,8 @@ const getAttendanceCompaniesCached = cache(
     }
 
     return rows
-      .filter(
-        (company) =>
-          Array.isArray(company.enabled_features) &&
-          company.enabled_features.includes("attendance"),
+      .filter((company) =>
+        isFeatureEnabled("attendance", company.enabled_features),
       )
       .map(({ id, name_ar }) => ({ id, name_ar }));
   },
