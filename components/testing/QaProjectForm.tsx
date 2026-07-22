@@ -30,13 +30,13 @@ export function QaProjectForm({ project }: { project?: QaProject }) {
       ) : null}
 
       <div>
-        <label className={labelCls}>اسم مشروع الاختبار *</label>
+        <label className={labelCls}>اسم المنصة *</label>
         <input
           type="text"
           name="name"
           required
           defaultValue={project?.name ?? ""}
-          placeholder="مثال: تطبيق الحجوزات — الإصدار 2"
+          placeholder="مثال: منصة الحجوزات — الإصدار 2"
           className={inputCls}
         />
       </div>
@@ -70,7 +70,7 @@ export function QaProjectForm({ project }: { project?: QaProject }) {
           disabled={isPending}
           className="px-5 py-2.5 bg-teal-600 text-white rounded-xl font-semibold text-sm hover:bg-teal-700 disabled:opacity-60"
         >
-          {isPending ? "جارٍ الحفظ..." : project ? "حفظ التعديلات" : "إنشاء المشروع"}
+          {isPending ? "جارٍ الحفظ..." : project ? "حفظ التعديلات" : "إنشاء المنصة"}
         </button>
         <Link
           href={project ? `/portal/testing/${project.id}` : "/portal/testing"}

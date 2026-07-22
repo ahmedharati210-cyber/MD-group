@@ -73,7 +73,7 @@ export function QaProjectsGrid({
             <Link
               href={`/portal/testing/${p.id}`}
               className="absolute inset-0 z-0 rounded-2xl outline-hidden"
-              aria-label={`فتح مشروع اختبار ${p.name}`}
+              aria-label={`فتح منصة ${p.name}`}
             >
               <span className="sr-only">{p.name}</span>
             </Link>

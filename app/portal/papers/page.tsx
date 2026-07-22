@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FileText, Plus, Building2 } from "lucide-react";
 import { PortalLink } from "@/components/portal/PortalLink";
+import { PaperRenewalToggle } from "@/components/papers/PaperRenewalToggle";
 import { requireFeature } from "@/lib/auth";
 import { getPapersData, type PaperDoc } from "@/lib/data/papers";
 import {
@@ -41,6 +42,7 @@ const expiryStatusLabel: Record<PaperExpiryVisualState, string> = {
   ok: "سارية",
   expiring: "قرب الانتهاء",
   expired: "منتهية",
+  renewing: "قيد التجديد",
 };
 
 function expiryStatusClass(st: PaperExpiryVisualState): string {
@@ -50,10 +52,33 @@ function expiryStatusClass(st: PaperExpiryVisualState): string {
   if (st === "expiring") {
     return "text-amber-600 dark:text-amber-400 font-semibold";
   }
+  if (st === "renewing") {
+    return "text-sky-700 dark:text-sky-300 font-semibold";
+  }
   if (st === "ok") {
     return "text-emerald-600 dark:text-emerald-400";
   }
   return "text-gray-400 dark:text-gray-500";
+}
+
+function canTogglePaperRenewal(
+  profile: {
+    role: string;
+    company_id: string | null;
+    is_super_admin: boolean;
+  },
+  doc: PaperDoc,
+  userId: string,
+): boolean {
+  if (!doc.expires_on) return false;
+  if (profile.is_super_admin || profile.role === "md_admin") return true;
+  if (
+    profile.role === "company_manager" &&
+    doc.company_id === profile.company_id
+  ) {
+    return true;
+  }
+  return profile.role === "employee" && doc.owner_profile_id === userId;
 }
 
 type SearchParams = Promise<{
@@ -68,7 +93,7 @@ export default async function PapersPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { profile } = await requireFeature("papers");
+  const { userId, profile } = await requireFeature("papers");
   const { q, category, companyId, expiry } = await searchParams;
 
   const canUpload = profile.role !== "employee" && profile.role !== "owner";
@@ -191,7 +216,9 @@ export default async function PapersPage({
           <option value="ok">سارية</option>
           <option value="renew">تحتاج تجديد</option>
         </select>
-        {(profile.role === "md_admin" || profile.role === "owner" || profile.is_super_admin) ? (
+        {(profile.role === "md_admin" ||
+          profile.role === "owner" ||
+          profile.is_super_admin) ? (
           <select
             name="companyId"
             defaultValue={companyId ?? ""}
@@ -229,60 +256,79 @@ export default async function PapersPage({
           <div className="md:hidden space-y-3">
             {(docs as PaperDoc[]).map((d) => {
               const company = d.companies;
-              const expSt = paperExpiryVisualState(d.expires_on ?? null);
+              const renewing = Boolean(d.renewal_in_progress);
+              const expSt = paperExpiryVisualState(
+                d.expires_on ?? null,
+                undefined,
+                renewing,
+              );
+              const canToggle = canTogglePaperRenewal(profile, d, userId);
               return (
-                <PortalLink
+                <div
                   key={d.id}
-                  href={`/portal/papers/${d.id}`}
-                  className="block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs hover:shadow-md transition-shadow"
+                  className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs"
                 >
-                  <div className="flex items-start gap-3 mb-2">
-                    <FileText className="w-5 h-5 text-primary-600 dark:text-primary-400 shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-gray-900 dark:text-gray-50 line-clamp-2">
-                        {d.title}
+                  <PortalLink
+                    href={`/portal/papers/${d.id}`}
+                    className="block hover:opacity-90 transition-opacity"
+                  >
+                    <div className="flex items-start gap-3 mb-2">
+                      <FileText className="w-5 h-5 text-primary-600 dark:text-primary-400 shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-gray-900 dark:text-gray-50 line-clamp-2">
+                          {d.title}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400">
-                    <div>
-                      <span className="text-gray-400 dark:text-gray-500">
-                        النوع:{" "}
-                      </span>
-                      {paperCategoryLabelFor(d.category)}
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400">
+                      <div>
+                        <span className="text-gray-400 dark:text-gray-500">
+                          النوع:{" "}
+                        </span>
+                        {paperCategoryLabelFor(d.category)}
+                      </div>
+                      <div>
+                        <span className="text-gray-400 dark:text-gray-500">
+                          الحجم:{" "}
+                        </span>
+                        {bytesToReadable(d.size_bytes)}
+                      </div>
+                      <div className="col-span-2 truncate">
+                        <Building2 className="inline w-3 h-3 ml-1 text-gray-400 dark:text-gray-500" />
+                        {company?.name_ar ?? "—"}
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-gray-400 dark:text-gray-500">
+                          التاريخ:{" "}
+                        </span>
+                        {formatDate(d.created_at)}
+                      </div>
+                      <div>
+                        <span className="text-gray-400 dark:text-gray-500">
+                          انتهاء الصلاحية:{" "}
+                        </span>
+                        {formatDate(d.expires_on) || "—"}
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-gray-400 dark:text-gray-500">
+                          الحالة:{" "}
+                        </span>
+                        <span className={expiryStatusClass(expSt)}>
+                          {expiryStatusLabel[expSt]}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-gray-400 dark:text-gray-500">
-                        الحجم:{" "}
-                      </span>
-                      {bytesToReadable(d.size_bytes)}
+                  </PortalLink>
+                  {d.expires_on && (canToggle || renewing) ? (
+                    <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                      <PaperRenewalToggle
+                        documentId={d.id}
+                        initialValue={renewing}
+                        canEdit={canToggle}
+                      />
                     </div>
-                    <div className="col-span-2 truncate">
-                      <Building2 className="inline w-3 h-3 ml-1 text-gray-400 dark:text-gray-500" />
-                      {company?.name_ar ?? "—"}
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-gray-400 dark:text-gray-500">
-                        التاريخ:{" "}
-                      </span>
-                      {formatDate(d.created_at)}
-                    </div>
-                    <div>
-                      <span className="text-gray-400 dark:text-gray-500">
-                        انتهاء الصلاحية:{" "}
-                      </span>
-                      {formatDate(d.expires_on) || "—"}
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-gray-400 dark:text-gray-500">
-                        الحالة:{" "}
-                      </span>
-                      <span className={expiryStatusClass(expSt)}>
-                        {expiryStatusLabel[expSt]}
-                      </span>
-                    </div>
-                  </div>
-                </PortalLink>
+                  ) : null}
+                </div>
               );
             })}
           </div>
@@ -300,12 +346,19 @@ export default async function PapersPage({
                     <th className="px-5 py-3 font-semibold">تاريخ الرفع</th>
                     <th className="px-5 py-3 font-semibold">انتهاء الصلاحية</th>
                     <th className="px-5 py-3 font-semibold">الحالة</th>
+                    <th className="px-5 py-3 font-semibold">التجديد</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {(docs as PaperDoc[]).map((d) => {
                     const company = d.companies;
-                    const expSt = paperExpiryVisualState(d.expires_on ?? null);
+                    const renewing = Boolean(d.renewal_in_progress);
+                    const expSt = paperExpiryVisualState(
+                      d.expires_on ?? null,
+                      undefined,
+                      renewing,
+                    );
+                    const canToggle = canTogglePaperRenewal(profile, d, userId);
                     return (
                       <tr
                         key={d.id}
@@ -340,6 +393,20 @@ export default async function PapersPage({
                         </td>
                         <td className={`px-5 py-3 ${expiryStatusClass(expSt)}`}>
                           {expiryStatusLabel[expSt]}
+                        </td>
+                        <td className="px-5 py-3">
+                          {d.expires_on && (canToggle || renewing) ? (
+                            <PaperRenewalToggle
+                              documentId={d.id}
+                              initialValue={renewing}
+                              canEdit={canToggle}
+                              compact
+                            />
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-500">
+                              —
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );

@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   buildBranchPayrollSummary,
+  buildCalendarDays,
   buildPersonMonthStats,
 } from "@/lib/attendance/attendance-view";
-import type { AttendanceMonthlyRecord, AttendancePerson } from "@/types/db";
+import type {
+  AttendanceMonthlyRecord,
+  AttendancePerson,
+  AttendanceShift,
+} from "@/types/db";
 
 function makeRecord(
   overrides: Partial<AttendanceMonthlyRecord> & Pick<AttendanceMonthlyRecord, "date">,
@@ -104,6 +109,73 @@ describe("buildPersonMonthStats", () => {
     expect(stats.onePunchDays).toBe(1);
     expect(stats.lateDays).toBe(2);
     expect(stats.totalDeductionMinutes).toBe(10);
+  });
+});
+
+describe("buildCalendarDays work days", () => {
+  const person: AttendancePerson = {
+    id: "p1",
+    company_id: "c1",
+    branch_id: "b1",
+    external_employee_number: "100",
+    full_name: "موظف",
+    active: true,
+    first_seen_at: "2026-01-01T00:00:00Z",
+    last_seen_at: "2026-01-01T00:00:00Z",
+    notes: null,
+    raw_department_hint: null,
+    shift_id: null,
+    custom_start_time: null,
+    custom_end_time: null,
+    custom_crosses_midnight: false,
+    custom_late_grace_minutes: 15,
+    custom_early_leave_grace_minutes: 15,
+    custom_work_days: null,
+    created_at: "2026-01-01T00:00:00Z",
+  };
+
+  const fridayOffShift: AttendanceShift = {
+    id: "s1",
+    company_id: "c1",
+    branch_id: "b1",
+    name: "صباحية",
+    start_time: "08:00:00",
+    end_time: "16:00:00",
+    crosses_midnight: false,
+    checkout_cutoff_time: null,
+    expected_minutes: 480,
+    late_grace_minutes: 15,
+    early_leave_grace_minutes: 15,
+    check_in_window_start: null,
+    check_in_window_end: null,
+    check_out_window_start: null,
+    check_out_window_end: null,
+    work_days: [0, 1, 2, 3, 4],
+    display_order: 0,
+    active: true,
+    created_at: "2026-01-01T00:00:00Z",
+  };
+
+  it("does not count Friday as absent when branch shift excludes Friday", () => {
+    // 2026-06-05 is Friday
+    const withoutShifts = buildCalendarDays("2026-06", [], [person]);
+    const fridayWithout = withoutShifts.find((d) => d.date === "2026-06-05");
+    expect(fridayWithout?.absent).toBe(1);
+
+    const withShifts = buildCalendarDays(
+      "2026-06",
+      [],
+      [person],
+      [fridayOffShift],
+    );
+    const fridayWith = withShifts.find((d) => d.date === "2026-06-05");
+    expect(fridayWith?.absent).toBe(0);
+    expect(fridayWith?.present).toBe(0);
+    expect(fridayWith?.off).toBe(1);
+
+    const thursday = withShifts.find((d) => d.date === "2026-06-04");
+    expect(thursday?.absent).toBe(1);
+    expect(thursday?.off).toBe(0);
   });
 });
 

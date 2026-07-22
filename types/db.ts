@@ -400,6 +400,8 @@ export interface DocumentRow {
   expires_on: string | null;
   /** When automated expiry warnings were created for this document. */
   expiry_notified_at: string | null;
+  /** Paper renewal is in progress (قيد التجديد). */
+  renewal_in_progress: boolean;
 }
 type DocumentInsert = {
   id?: string;
@@ -416,6 +418,7 @@ type DocumentInsert = {
   issued_on?: string | null;
   expires_on?: string | null;
   expiry_notified_at?: string | null;
+  renewal_in_progress?: boolean;
 };
 
 export interface Mail {
@@ -631,6 +634,7 @@ export type TaskWorkStatus = "in_progress" | null;
 
 export type QaProjectStatus = "active" | "done";
 export type QaTestResult = "pass" | "bug" | "improve";
+export type QaItemKind = "test" | "task";
 
 export interface QaProject {
   id: string;
@@ -674,6 +678,7 @@ export interface QaTestItem {
   project_id: string;
   title: string;
   description: string | null;
+  item_kind: QaItemKind;
   assigned_to: string | null;
   result: QaTestResult | null;
   result_note: string | null;
@@ -688,6 +693,7 @@ type QaTestItemInsert = {
   project_id: string;
   title: string;
   description?: string | null;
+  item_kind?: QaItemKind;
   assigned_to?: string | null;
   result?: QaTestResult | null;
   result_note?: string | null;

@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle2, Bug, Sparkles, RotateCcw } from "lucide-react";
+import { CheckCircle2, Bug, Sparkles, RotateCcw, Rocket } from "lucide-react";
 import toast from "react-hot-toast";
 import {
+  markQaTaskReadyForTestAction,
   resetQaTestResultAction,
   submitQaTestResultAction,
 } from "@/app/portal/testing/actions";
-import type { QaTestResult } from "@/types/db";
+import type { QaItemKind, QaTestResult } from "@/types/db";
 import { formatDateTime } from "@/lib/utils";
 
 const resultMeta: Record<
@@ -34,6 +35,7 @@ const resultMeta: Record<
 export function QaTestResultPanel({
   itemId,
   projectId,
+  itemKind,
   result,
   resultNote,
   testedAt,
@@ -42,6 +44,7 @@ export function QaTestResultPanel({
 }: {
   itemId: string;
   projectId: string;
+  itemKind: QaItemKind;
   result: QaTestResult | null;
   resultNote: string | null;
   testedAt: string | null;
@@ -85,6 +88,33 @@ export function QaTestResultPanel({
     });
   }
 
+  function markReady() {
+    if (!confirm("تم إنجاز المهمة وتحويلها إلى اختبار للفريق؟")) return;
+    startTransition(async () => {
+      const res = await markQaTaskReadyForTestAction(itemId, projectId);
+      if (res.error) toast.error(res.error);
+      else toast.success("أصبحت جاهزة للاختبار");
+    });
+  }
+
+  // —— مهمة: developer action only ——
+  if (itemKind === "task") {
+    return (
+      <div className="mt-2">
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={markReady}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+        >
+          <Rocket className="w-3.5 h-3.5" />
+          {isPending ? "جارٍ..." : "تم وجاهز للاختبار"}
+        </button>
+      </div>
+    );
+  }
+
+  // —— اختبار: existing tester result flow ——
   if (result) {
     const meta = resultMeta[result];
     const Icon = meta.icon;

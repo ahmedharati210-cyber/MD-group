@@ -12,6 +12,8 @@ export type DaySummary = {
   late: number;
   missingPunch: number;
   leave: number;
+  /** People on a scheduled non-work day (rest / off). */
+  off: number;
   leaveLabel: string | null;
   records: AttendanceMonthlyRecord[];
 };

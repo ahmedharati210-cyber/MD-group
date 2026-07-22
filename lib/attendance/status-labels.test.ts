@@ -56,4 +56,29 @@ describe("status-labels", () => {
       ),
     ).toBe("onePunch");
   });
+
+  it("marks non-work days as off when work context is provided", () => {
+    // 2026-06-05 is a Friday (weekday 5)
+    expect(
+      classifyPersonDayStatus(null, {
+        date: "2026-06-05",
+        workDays: [0, 1, 2, 3, 4],
+      }),
+    ).toBe("off");
+    expect(
+      classifyPersonDayStatus(record({ is_absent: true }), {
+        date: "2026-06-05",
+        workDays: [0, 1, 2, 3, 4],
+      }),
+    ).toBe("off");
+    expect(
+      classifyPersonDayStatus(
+        record({
+          is_absent: true,
+          raw_payload: { manual_absent: true },
+        }),
+        { date: "2026-06-05", workDays: [0, 1, 2, 3, 4] },
+      ),
+    ).toBe("absent");
+  });
 });

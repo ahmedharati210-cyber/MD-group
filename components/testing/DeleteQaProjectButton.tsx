@@ -11,7 +11,7 @@ export function DeleteQaProjectButton({ projectId }: { projectId: string }) {
   function handleDelete() {
     if (
       !confirm(
-        "هل أنت متأكد من حذف مشروع الاختبار؟ سيتم حذف جميع الأقسام وعناصر الاختبار.",
+        "هل أنت متأكد من حذف هذه المنصة؟ سيتم حذف جميع الأقسام وعناصر الاختبار.",
       )
     ) {
       return;

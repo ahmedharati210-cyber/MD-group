@@ -27,6 +27,7 @@ type Props = {
   issuedOn: string | null;
   expiresOn: string | null;
   expiryNotifiedAt: string | null;
+  renewalInProgress: boolean;
   canEdit: boolean;
 };
 
@@ -48,6 +49,7 @@ export function PaperDatesForm({
   issuedOn,
   expiresOn,
   expiryNotifiedAt,
+  renewalInProgress,
   canEdit,
 }: Props) {
   const router = useRouter();
@@ -113,6 +115,16 @@ export function PaperDatesForm({
             {formatDate(expiresOn) || "—"}
           </div>
         </div>
+        {renewalInProgress ? (
+          <div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              حالة التجديد
+            </div>
+            <div className="font-semibold text-sky-700 dark:text-sky-300">
+              قيد التجديد
+            </div>
+          </div>
+        ) : null}
         {expiryNotifiedAt ? (
           <p className="text-xs text-amber-700 dark:text-amber-300">
             تم إرسال تنبيه انتهاء الصلاحية للإدارة:{" "}
@@ -182,7 +194,8 @@ export function PaperDatesForm({
       </div>
       <p className="text-xs text-gray-500 dark:text-gray-400">
         يُرسل تنبيه تلقائي لمديري المجموعة ومديري الشركة خلال الشهر الأخير قبل
-        انتهاء الصلاحية (عند تحديد التاريخ).
+        انتهاء الصلاحية (عند تحديد التاريخ). يمكن وضع الورقة «قيد التجديد» من
+        قائمة الأوراق.
       </p>
       {expiryNotifiedAt ? (
         <p className="text-xs text-amber-700 dark:text-amber-300">

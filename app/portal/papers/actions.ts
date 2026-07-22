@@ -70,7 +70,7 @@ export async function updatePaperDatesAction(
   const { data: doc, error: readErr } = await supabase
     .from("documents")
     .select(
-      "id, company_id, owner_profile_id, expires_on, issued_on, expiry_notified_at, title",
+      "id, company_id, owner_profile_id, expires_on, issued_on, expiry_notified_at, renewal_in_progress, title",
     )
     .eq("id", document_id)
     .maybeSingle<{
@@ -80,6 +80,7 @@ export async function updatePaperDatesAction(
       expires_on: string | null;
       issued_on: string | null;
       expiry_notified_at: string | null;
+      renewal_in_progress: boolean;
       title: string;
     }>();
 
@@ -107,12 +108,19 @@ export async function updatePaperDatesAction(
     expiry_notified_at = null;
   }
 
+  // Keep renewal flag unless expiry is cleared or changed (renewal finished / reset).
+  let renewal_in_progress = doc.renewal_in_progress;
+  if (!expires_on || expires_on !== doc.expires_on) {
+    renewal_in_progress = false;
+  }
+
   const payload = {
     title,
     category: category as DocumentCategory,
     issued_on,
     expires_on,
     expiry_notified_at,
+    renewal_in_progress,
   };
 
   if (isOwnerEmployee) {
@@ -138,6 +146,89 @@ export async function updatePaperDatesAction(
   }
   revalidateTag("papers", "default");
   revalidateTag("dashboard", "default");
+  return { ok: true };
+}
+
+export type PaperRenewalState = { error?: string; ok?: boolean };
+
+export async function setPaperRenewalInProgressAction(
+  documentId: string,
+  renewalInProgress: boolean,
+): Promise<PaperRenewalState> {
+  const { userId, profile } = await requireUser();
+  const parsed = z
+    .object({
+      document_id: z.string().uuid(),
+      renewal_in_progress: z.boolean(),
+    })
+    .safeParse({
+      document_id: documentId,
+      renewal_in_progress: renewalInProgress,
+    });
+  if (!parsed.success) {
+    return { error: "بيانات غير صالحة" };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: doc, error: readErr } = await supabase
+    .from("documents")
+    .select("id, company_id, owner_profile_id, expires_on")
+    .eq("id", parsed.data.document_id)
+    .maybeSingle<{
+      id: string;
+      company_id: string;
+      owner_profile_id: string | null;
+      expires_on: string | null;
+    }>();
+
+  if (readErr || !doc) {
+    return { error: "تعذر الوصول إلى الورقة" };
+  }
+
+  if (!doc.expires_on && parsed.data.renewal_in_progress) {
+    return { error: "يجب تحديد تاريخ انتهاء الصلاحية أولاً" };
+  }
+
+  const isOwnerEmployee =
+    profile.role === "employee" && doc.owner_profile_id === userId;
+  const isManager =
+    profile.is_super_admin ||
+    profile.role === "md_admin" ||
+    (profile.role === "company_manager" &&
+      doc.company_id === profile.company_id);
+
+  if (!isOwnerEmployee && !isManager) {
+    return { error: "غير مصرح لك بتعديل هذه الورقة" };
+  }
+
+  const payload = {
+    renewal_in_progress: parsed.data.renewal_in_progress,
+  };
+
+  if (isOwnerEmployee) {
+    const admin = createSupabaseAdminClient();
+    const { error } = await admin
+      .from("documents")
+      .update(payload)
+      .eq("id", parsed.data.document_id)
+      .eq("owner_profile_id", userId);
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase
+      .from("documents")
+      .update(payload)
+      .eq("id", parsed.data.document_id);
+    if (error) return { error: error.message };
+  }
+
+  revalidatePath(`/portal/papers/${parsed.data.document_id}`);
+  revalidatePath("/portal/papers");
+  if (doc.owner_profile_id) {
+    revalidatePath(`/portal/employees/${doc.owner_profile_id}`);
+  }
+  revalidateTag("papers", "default");
+  revalidateTag("dashboard", "default");
+  revalidateTag("badges", "default");
   return { ok: true };
 }
 

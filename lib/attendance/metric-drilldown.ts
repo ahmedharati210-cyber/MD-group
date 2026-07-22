@@ -107,7 +107,12 @@ function matchesMetric(
     case "fullTimeDays":
       return record?.shift_type === "دوام كامل";
     case "absentDays":
-      if (record?.is_absent) return true;
+      if (record?.is_absent) {
+        const manualAbsent =
+          (record.raw_payload as Record<string, unknown> | null)
+            ?.manual_absent === true;
+        return manualAbsent || isPersonWorkDay(date, workDays);
+      }
       if (!record) return isPersonWorkDay(date, workDays);
       return false;
     case "onePunchDays":

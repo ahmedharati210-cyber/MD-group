@@ -32,8 +32,9 @@ export function buildMonthSummary(
   month: string,
   records: AttendanceMonthlyRecord[],
   people: AttendancePerson[] = [],
+  shifts: AttendanceShift[] | null = null,
 ): MonthSummary {
-  const calendarDays = buildCalendarDays(month, records, people);
+  const calendarDays = buildCalendarDays(month, records, people, shifts);
   let presentDays = 0;
   let absentDays = 0;
   let lateDays = 0;
@@ -101,6 +102,7 @@ export function buildCalendarDays(
   month: string,
   records: AttendanceMonthlyRecord[],
   people: AttendancePerson[] = [],
+  shifts: AttendanceShift[] | null = null,
 ): DaySummary[] {
   const parsed = parseMonthParam(month.slice(0, 7));
   if (!parsed) return [];
@@ -109,6 +111,12 @@ export function buildCalendarDays(
   const byPersonDate = recordsByPersonAndDate(records);
   const activePeople = people.filter((p) => p.active);
   const rosterIds = activePeople.map((p) => p.id);
+  const workDaysByPersonId = new Map(
+    activePeople.map((person) => [
+      person.id,
+      resolvePersonWorkDays(person, shifts),
+    ]),
+  );
 
   return days.map((date) => {
     const dayRecords = byDate.get(date) ?? [];
@@ -117,29 +125,32 @@ export function buildCalendarDays(
     let late = 0;
     let missingPunch = 0;
     let leave = 0;
+    let off = 0;
 
     const personIds = new Set<string>(rosterIds);
     for (const r of dayRecords) {
       if (r.attendance_person_id) personIds.add(r.attendance_person_id);
     }
 
+    const bump = (status: PersonDayStatus) => {
+      if (status === "leave") leave += 1;
+      else if (status === "absent") absent += 1;
+      else if (status === "onePunch") missingPunch += 1;
+      else if (status === "present") present += 1;
+      else if (status === "off") off += 1;
+    };
+
     if (personIds.size === 0) {
       for (const r of dayRecords) {
-        const status = classifyPersonDayStatus(r);
-        if (status === "leave") leave += 1;
-        else if (status === "absent") absent += 1;
-        else if (status === "onePunch") missingPunch += 1;
-        else present += 1;
+        bump(classifyPersonDayStatus(r));
         if (r.late_minutes > 0) late += 1;
       }
     } else {
       for (const personId of personIds) {
         const record = byPersonDate.get(personId)?.get(date) ?? null;
-        const status = classifyPersonDayStatus(record);
-        if (status === "leave") leave += 1;
-        else if (status === "absent") absent += 1;
-        else if (status === "onePunch") missingPunch += 1;
-        else present += 1;
+        const workDays = workDaysByPersonId.get(personId) ?? null;
+        const status = classifyPersonDayStatus(record, { date, workDays });
+        bump(status);
         if (record && record.late_minutes > 0) late += 1;
       }
     }
@@ -153,6 +164,7 @@ export function buildCalendarDays(
       late,
       missingPunch,
       leave,
+      off,
       leaveLabel,
       records: dayRecords,
     };
@@ -184,12 +196,14 @@ export type DayRosterEntry = {
 };
 
 /**
- * Roster-aware day breakdown: includes active people without a DB row as absent.
+ * Roster-aware day breakdown: includes active people without a DB row as absent
+ * on work days; non-work days are marked `"off"`.
  */
 export function buildDayRosterEntries(
   date: string,
   records: AttendanceMonthlyRecord[],
   people: AttendancePerson[],
+  shifts: AttendanceShift[] | null = null,
 ): DayRosterEntry[] {
   const dayRecords = records.filter((record) => record.date === date);
   const byPersonDate = recordsByPersonAndDate(dayRecords);
@@ -200,10 +214,11 @@ export function buildDayRosterEntries(
   for (const person of rosterPeople) {
     seenPersonIds.add(person.id);
     const record = byPersonDate.get(person.id)?.get(date) ?? null;
+    const workDays = resolvePersonWorkDays(person, shifts);
     entries.push({
       person,
       record,
-      status: classifyPersonDayStatus(record),
+      status: classifyPersonDayStatus(record, { date, workDays }),
       leaveLabel: record ? recordLeaveLabel(record) : null,
     });
   }
@@ -217,10 +232,13 @@ export function buildDayRosterEntries(
       : null;
     if (personId) seenPersonIds.add(personId);
 
+    const workDays = rosterPerson
+      ? resolvePersonWorkDays(rosterPerson, shifts)
+      : null;
     entries.push({
       person: rosterPerson,
       record,
-      status: classifyPersonDayStatus(record),
+      status: classifyPersonDayStatus(record, { date, workDays }),
       leaveLabel: recordLeaveLabel(record),
     });
   }
@@ -285,6 +303,15 @@ export function buildPersonCalendarDays(
     }
     if (record && record.late_minutes > 0) late = 1;
 
+    const off =
+      present === 0 &&
+      absent === 0 &&
+      leave === 0 &&
+      missingPunch === 0 &&
+      !isPersonWorkDay(date, workDays)
+        ? 1
+        : 0;
+
     return {
       date,
       present,
@@ -292,6 +319,7 @@ export function buildPersonCalendarDays(
       late,
       missingPunch,
       leave,
+      off,
       leaveLabel,
       records: dayRecords,
     };

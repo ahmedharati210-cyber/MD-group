@@ -37,6 +37,9 @@ function statusBadgeClass(day: DaySummary): string {
   if (day.present > 0) {
     return personDayStatusBadgeClass("present");
   }
+  if (day.off > 0) {
+    return personDayStatusBadgeClass("off");
+  }
   return "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300";
 }
 
@@ -45,6 +48,7 @@ function statusLabel(day: DaySummary): string {
   if (day.missingPunch > 0) return personDayStatusLabel("onePunch");
   if (day.absent > 0) return ABSENT_STATUS;
   if (day.present > 0) return personDayStatusLabel("present");
+  if (day.off > 0) return personDayStatusLabel("off");
   return "—";
 }
 

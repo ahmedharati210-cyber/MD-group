@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { QaProjectForm } from "@/components/testing/QaProjectForm";
 
-export const metadata = { title: "مشروع اختبار جديد" };
+export const metadata = { title: "منصة جديدة" };
 
 export default async function NewQaProjectPage() {
   const { profile } = await requireTestingAccess();
@@ -13,8 +13,8 @@ export default async function NewQaProjectPage() {
   return (
     <div className="max-w-xl">
       <PageHeader
-        title="مشروع اختبار جديد"
-        description="أضف مشروعاً برمجياً أو منصة ليختبرها الفريق."
+        title="منصة جديدة"
+        description="أضف منصة أو موقعاً ليختبرها الفريق."
       />
       <QaProjectForm />
     </div>

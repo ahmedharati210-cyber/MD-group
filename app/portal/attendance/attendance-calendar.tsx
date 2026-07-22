@@ -7,6 +7,20 @@ import type { DaySummary } from "@/lib/attendance/calendar-shared";
 import { AR_WEEKDAY_LABELS } from "@/lib/attendance/calendar-shared";
 import { ABSENT_STATUS } from "@/lib/attendance/leave-types";
 
+function dayHasActivity(day: DaySummary): boolean {
+  return (
+    day.present > 0 ||
+    day.absent > 0 ||
+    day.late > 0 ||
+    day.missingPunch > 0 ||
+    day.leave > 0
+  );
+}
+
+function isOffOnlyDay(day: DaySummary): boolean {
+  return day.off > 0 && !dayHasActivity(day);
+}
+
 function dayAriaLabel(day: DaySummary, dayNum: number, personMode: boolean): string {
   const parts = [`يوم ${dayNum}`];
   if (personMode) {
@@ -14,11 +28,14 @@ function dayAriaLabel(day: DaySummary, dayNum: number, personMode: boolean): str
     else if (day.missingPunch > 0) parts.push("بصمة واحدة");
     else if (day.absent > 0) parts.push(ABSENT_STATUS);
     else if (day.present > 0) parts.push("حاضر");
+    else if (day.off > 0) parts.push("راحة");
   } else {
     if (day.leave > 0) parts.push(`${day.leave} إجازة`);
     if (day.present > 0) parts.push(`${day.present} حضور`);
     if (day.absent > 0) parts.push(`${day.absent} غياب`);
     if (day.missingPunch > 0) parts.push(`${day.missingPunch} بصمة ناقصة`);
+    if (isOffOnlyDay(day)) parts.push("راحة");
+    else if (day.off > 0) parts.push(`${day.off} راحة`);
   }
   if (day.late > 0) parts.push(personMode ? "تأخير" : `${day.late} تأخير`);
   return parts.join("، ");
@@ -28,12 +45,7 @@ function dayCellClass(day: DaySummary, isSelected: boolean): string {
   const hasLeave = day.leave > 0;
   const hasMissingPunch = day.missingPunch > 0;
   const hasAbsent = day.absent > 0;
-  const hasData =
-    day.present > 0 ||
-    day.absent > 0 ||
-    day.late > 0 ||
-    day.missingPunch > 0 ||
-    day.leave > 0;
+  const hasData = dayHasActivity(day);
 
   if (isSelected) {
     return "border-primary-500 bg-primary-50 dark:bg-primary-900/20";
@@ -46,6 +58,9 @@ function dayCellClass(day: DaySummary, isSelected: boolean): string {
   }
   if (hasAbsent) {
     return "border-red-200 bg-red-50 text-red-900 hover:border-red-300 dark:border-red-800 dark:bg-red-900/20 dark:text-red-100";
+  }
+  if (isOffOnlyDay(day)) {
+    return "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200";
   }
   if (hasData) {
     return "border-gray-200 dark:border-gray-700 hover:border-primary-300";
@@ -94,6 +109,7 @@ export function AttendanceCalendar({
           <span><span className="text-teal-600 font-semibold">إ</span> إجازة</span>
           <span><span className="text-amber-600 font-semibold">ت</span> تأخير</span>
           <span><span className="text-orange-600 font-semibold">بصمة</span> بصمة ناقصة</span>
+          <span><span className="text-slate-600 font-semibold">ر</span> راحة</span>
         </div>
       ) : null}
       <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-2">
@@ -110,12 +126,7 @@ export function AttendanceCalendar({
         {days.map((day) => {
           const dayNum = Number(day.date.slice(8, 10));
           const isSelected = selectedDay === day.date;
-          const hasData =
-            day.present > 0 ||
-            day.absent > 0 ||
-            day.late > 0 ||
-            day.missingPunch > 0 ||
-            day.leave > 0;
+          const hasData = dayHasActivity(day);
           return (
             <PortalLink
               key={day.date}
@@ -139,7 +150,9 @@ export function AttendanceCalendar({
                         ? "text-red-700 dark:text-red-300"
                         : day.present > 0
                           ? "text-emerald-700 dark:text-emerald-300"
-                          : "text-gray-400"
+                          : day.off > 0
+                            ? "text-slate-600 dark:text-slate-300"
+                            : "text-gray-400"
                   }`}
                 >
                   {day.leave > 0
@@ -150,7 +163,9 @@ export function AttendanceCalendar({
                       ? ABSENT_STATUS
                       : day.present > 0
                         ? "حاضر"
-                        : ""}
+                        : day.off > 0
+                          ? "راحة"
+                          : ""}
                   {day.late > 0 ? " · تأخير" : ""}
                 </span>
               ) : hasData ? (
@@ -179,7 +194,17 @@ export function AttendanceCalendar({
                   {day.missingPunch > 0 ? (
                     <span className="hidden sm:block text-orange-600">بصمة {day.missingPunch}</span>
                   ) : null}
+                  {day.off > 0 ? (
+                    <span className="block text-slate-500">
+                      <span className="sm:hidden">ر{day.off}</span>
+                      <span className="hidden sm:inline">ر {day.off}</span>
+                    </span>
+                  ) : null}
                 </div>
+              ) : day.off > 0 ? (
+                <span className="mt-1 block text-[9px] sm:text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+                  راحة
+                </span>
               ) : null}
             </PortalLink>
           );

@@ -46,7 +46,12 @@ export function subtractCalendarMonthsFromIso(iso: string, months: number): stri
   return `${ny}-${String(nm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
 }
 
-export type PaperExpiryVisualState = "none" | "ok" | "expiring" | "expired";
+export type PaperExpiryVisualState =
+  | "none"
+  | "ok"
+  | "expiring"
+  | "expired"
+  | "renewing";
 
 /** URL / filter values for papers list expiry filtering. */
 export type PaperExpiryFilter = "all" | "ok" | "renew";
@@ -54,9 +59,11 @@ export type PaperExpiryFilter = "all" | "ok" | "renew";
 export function paperExpiryVisualState(
   expiresOn: string | null | undefined,
   todayIso = utcTodayIso(),
+  renewalInProgress = false,
 ): PaperExpiryVisualState {
   const exp = toDateOnlyIso(expiresOn);
   if (!exp) return "none";
+  if (renewalInProgress) return "renewing";
   const today = toDateOnlyIso(todayIso) ?? todayIso.slice(0, 10);
   if (exp < today) return "expired";
   const threshold = subtractCalendarMonthsFromIso(exp, 1);

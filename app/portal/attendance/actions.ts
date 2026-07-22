@@ -120,6 +120,7 @@ function revalidateAttendanceData() {
   revalidatePath("/portal/attendance");
   revalidatePath("/portal/attendance/person");
   revalidatePath("/portal/attendance/summary");
+  revalidatePath("/portal/attendance/branches");
   revalidateTag("attendance", "default");
 }
 
@@ -1578,7 +1579,7 @@ export async function createAttendanceShiftAction(
   });
   if (error) return { error: error.message };
 
-  revalidatePath("/portal/attendance/branches");
+  revalidateAttendanceData();
   return { ok: true };
 }
 
@@ -1657,7 +1658,7 @@ export async function updateAttendanceShiftAction(
     .eq("id", id);
   if (error) return { error: error.message };
 
-  revalidatePath("/portal/attendance/branches");
+  revalidateAttendanceData();
   return { ok: true };
 }
 
@@ -1688,7 +1689,7 @@ export async function toggleAttendanceShiftAction(formData: FormData) {
   }
 
   await supabase.from("attendance_shifts").update({ active }).eq("id", id);
-  revalidatePath("/portal/attendance/branches");
+  revalidateAttendanceData();
 }
 
 export async function deleteAttendanceShiftAction(
@@ -1725,7 +1726,7 @@ export async function deleteAttendanceShiftAction(
   const { error } = await supabase.from("attendance_shifts").delete().eq("id", id);
   if (error) return { error: error.message };
 
-  revalidatePath("/portal/attendance/branches");
+  revalidateAttendanceData();
   return { ok: true };
 }
 

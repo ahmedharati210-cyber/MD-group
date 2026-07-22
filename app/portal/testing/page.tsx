@@ -64,7 +64,7 @@ export default async function TestingPage() {
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl font-semibold text-sm shadow-md hover:bg-teal-700"
             >
               <Plus className="w-4 h-4" />
-              مشروع اختبار جديد
+              منصة جديدة
             </Link>
           ) : null
         }
@@ -73,11 +73,11 @@ export default async function TestingPage() {
       {hasNoProjects ? (
         <EmptyState
           icon={AppWindow}
-          title="لا توجد مشاريع اختبار"
+          title="لا توجد منصات"
           description={
             canManage
-              ? "أنشئ مشروع اختبار وأضف أقساماً وعناصر للتحقق منها."
-              : "لم يُضف أي مشروع اختبار بعد."
+              ? "أنشئ منصة وأضف أقساماً وعناصر للتحقق منها."
+              : "لم تُضف أي منصة بعد."
           }
           action={
             canManage ? (
@@ -86,7 +86,7 @@ export default async function TestingPage() {
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl font-semibold text-sm"
               >
                 <Plus className="w-4 h-4" />
-                إنشاء مشروع
+                إنشاء منصة
               </Link>
             ) : undefined
           }
@@ -96,7 +96,7 @@ export default async function TestingPage() {
           {activeProjects.length > 0 ? (
             <section>
               <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">
-                مشاريع نشطة ({activeProjects.length})
+                منصات نشطة ({activeProjects.length})
               </h2>
               <QaProjectsGrid projects={activeProjects} canManage={canManage} />
             </section>

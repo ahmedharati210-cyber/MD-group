@@ -53,6 +53,9 @@ export default async function PaperPage({
   const expiresOn = (doc as { expires_on?: string | null }).expires_on ?? null;
   const expiryNotifiedAt =
     (doc as { expiry_notified_at?: string | null }).expiry_notified_at ?? null;
+  const renewalInProgress = Boolean(
+    (doc as { renewal_in_progress?: boolean | null }).renewal_in_progress,
+  );
 
   let signedUrl: string | null = null;
   let signedUrlError: string | null = null;
@@ -146,6 +149,7 @@ export default async function PaperPage({
               issuedOn={issuedOn}
               expiresOn={expiresOn}
               expiryNotifiedAt={expiryNotifiedAt}
+              renewalInProgress={renewalInProgress}
               canEdit={canEditPaperDates}
             />
           </div>

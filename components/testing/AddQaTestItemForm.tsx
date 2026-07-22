@@ -1,10 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Plus, Minus } from "lucide-react";
+import { Plus, Minus, FlaskConical, ListTodo } from "lucide-react";
 import { createQaTestItemAction } from "@/app/portal/testing/actions";
 
-type Tester = { id: string; full_name: string };
 type State = { error?: string; ok?: boolean };
 const init: State = {};
 
@@ -14,11 +13,9 @@ const inputCls =
 export function AddQaTestItemForm({
   sectionId,
   projectId,
-  testers = [],
 }: {
   sectionId: string;
   projectId: string;
-  testers?: Tester[];
 }) {
   const action = createQaTestItemAction.bind(null, sectionId, projectId);
   const [state, formAction, isPending] = useActionState(action, init);
@@ -51,21 +48,10 @@ export function AddQaTestItemForm({
         value={rows.filter((r) => r.trim()).join("\n")}
       />
 
-      {testers.length > 0 ? (
-        <select name="assigned_to" className={`w-full ${inputCls}`}>
-          <option value="">— تعيين لمختبر (اختياري) —</option>
-          {testers.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.full_name}
-            </option>
-          ))}
-        </select>
-      ) : null}
-
       <textarea
         name="description"
         rows={2}
-        placeholder="خطوات الاختبار أو الرابط (اختياري — يُحفظ مع العنصر الأول)"
+        placeholder="خطوات أو رابط (اختياري — يُحفظ مع العنصر الأول)"
         className={`w-full ${inputCls}`}
       />
 
@@ -80,9 +66,7 @@ export function AddQaTestItemForm({
                   r.map((v, idx) => (idx === i ? e.target.value : v)),
                 )
               }
-              placeholder={
-                i === 0 ? "ماذا يُختبر؟ مثال: تسجيل الدخول بالإيميل" : `عنصر ${i + 1}...`
-              }
+              placeholder={i === 0 ? "العنوان..." : `سطر ${i + 1}...`}
               className={`flex-1 ${inputCls}`}
             />
             {rows.length > 1 ? (
@@ -99,7 +83,7 @@ export function AddQaTestItemForm({
         ))}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => setRows((r) => [...r, ""])}
@@ -110,13 +94,27 @@ export function AddQaTestItemForm({
         </button>
         <button
           type="submit"
+          name="item_kind"
+          value="test"
           disabled={isPending || !hasContent}
-          className="inline-flex items-center gap-1 px-4 py-2 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg text-sm font-semibold hover:bg-gray-700 dark:hover:bg-gray-300 disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-semibold hover:bg-teal-700 disabled:opacity-50 transition-colors"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <FlaskConical className="w-3.5 h-3.5" />
           {isPending
             ? "جارٍ الحفظ..."
-            : `إضافة${filledCount > 1 ? ` (${filledCount})` : " عنصر"}`}
+            : `إضافة اختبار${filledCount > 1 ? ` (${filledCount})` : ""}`}
+        </button>
+        <button
+          type="submit"
+          name="item_kind"
+          value="task"
+          disabled={isPending || !hasContent}
+          className="inline-flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+        >
+          <ListTodo className="w-3.5 h-3.5" />
+          {isPending
+            ? "جارٍ الحفظ..."
+            : `إضافة مهمة${filledCount > 1 ? ` (${filledCount})` : ""}`}
         </button>
       </div>
     </form>

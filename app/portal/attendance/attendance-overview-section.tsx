@@ -77,12 +77,14 @@ export async function AttendanceOverviewSection({
         month,
         filteredRecords,
         hasSearch ? filteredPeople : people,
+        branchShifts,
       );
 
   const summary = buildMonthSummary(
     month,
     hasSearch ? filteredRecords : allRecords,
     hasSearch ? filteredPeople : people,
+    branchShifts,
   );
   const personStats = selectedPerson
     ? buildPersonMonthStats(month, personAllRecords, selectedPersonWorkDays)
@@ -101,6 +103,7 @@ export async function AttendanceOverviewSection({
         day,
         hasSearch ? filteredRecords : allRecords,
         rosterPeople,
+        branchShifts,
       )
     : [];
 

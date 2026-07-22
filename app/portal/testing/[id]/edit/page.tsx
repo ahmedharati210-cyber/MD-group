@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/portal/PageHeader";
 import { QaProjectForm } from "@/components/testing/QaProjectForm";
 import type { QaProject } from "@/types/db";
 
-export const metadata = { title: "تعديل مشروع اختبار" };
+export const metadata = { title: "تعديل منصة" };
 
 export default async function EditQaProjectPage({
   params,
@@ -28,7 +28,7 @@ export default async function EditQaProjectPage({
 
   return (
     <div className="max-w-xl">
-      <PageHeader title="تعديل مشروع الاختبار" />
+      <PageHeader title="تعديل المنصة" />
       <QaProjectForm project={data as QaProject} />
     </div>
   );

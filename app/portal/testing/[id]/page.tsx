@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Pencil, User } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { requireTestingAccess } from "@/lib/auth";
 import { canManageTesting, getItqanCompanyId } from "@/lib/itqan-testing";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -12,21 +12,21 @@ import { DeleteQaSectionButton } from "@/components/testing/DeleteQaSectionButto
 import { DeleteQaTestItemButton } from "@/components/testing/DeleteQaTestItemButton";
 import { EditQaSectionButton } from "@/components/testing/EditQaSectionButton";
 import { EditQaTestItemButton } from "@/components/testing/EditQaTestItemButton";
+import { QaItemKindBadge } from "@/components/testing/QaItemKindBadge";
 import { QaTestResultPanel } from "@/components/testing/QaTestResultPanel";
 import { QaProjectStatusSelect } from "@/components/testing/QaProjectStatusSelect";
-import type { QaProjectStatus, QaTestResult } from "@/types/db";
+import type { QaItemKind, QaProjectStatus, QaTestResult } from "@/types/db";
 
 type ItemRow = {
   id: string;
   title: string;
   description: string | null;
-  assigned_to: string | null;
+  item_kind: QaItemKind;
   result: QaTestResult | null;
   result_note: string | null;
   tested_by: string | null;
   tested_at: string | null;
   sort_order: number;
-  assignee: { full_name: string } | null;
   tester: { full_name: string } | null;
 };
 
@@ -57,37 +57,26 @@ export default async function QaProjectDetailPage({
 
   if (!companyId) notFound();
 
-  const [{ data: rawProject }, { data: rawSections }, { data: testers }] =
-    await Promise.all([
-      supabase
-        .from("qa_projects")
-        .select("id, name, description, status")
-        .eq("id", id)
-        .eq("company_id", companyId)
-        .maybeSingle(),
-      supabase
-        .from("qa_sections")
-        .select(
-          `id, name, sort_order,
+  const [{ data: rawProject }, { data: rawSections }] = await Promise.all([
+    supabase
+      .from("qa_projects")
+      .select("id, name, description, status")
+      .eq("id", id)
+      .eq("company_id", companyId)
+      .maybeSingle(),
+    supabase
+      .from("qa_sections")
+      .select(
+        `id, name, sort_order,
           items:qa_test_items(
-            id, title, description, assigned_to, result, result_note,
+            id, title, description, item_kind, result, result_note,
             tested_by, tested_at, sort_order,
-            assignee:assigned_to(full_name),
             tester:tested_by(full_name)
           )`,
-        )
-        .eq("project_id", id)
-        .order("sort_order"),
-      canManage
-        ? supabase
-            .from("profiles")
-            .select("id, full_name")
-            .eq("is_active", true)
-            .neq("role", "owner")
-            .or("testing_access_enabled.eq.true,is_super_admin.eq.true")
-            .order("full_name")
-        : Promise.resolve({ data: null }),
-    ]);
+      )
+      .eq("project_id", id)
+      .order("sort_order"),
+  ]);
 
   if (!rawProject) notFound();
 
@@ -106,9 +95,6 @@ export default async function QaProjectDetailPage({
   const improves = allItems.filter((i) => i.result === "improve").length;
   const passes = allItems.filter((i) => i.result === "pass").length;
   const pct = total > 0 ? Math.round((tested / total) * 100) : 0;
-
-  const assignList =
-    (testers as { id: string; full_name: string }[] | null) ?? [];
 
   return (
     <div className="max-w-3xl">
@@ -203,65 +189,66 @@ export default async function QaProjectDetailPage({
               </div>
 
               <ul className="space-y-4">
-                {section.items.map((item) => (
-                  <li
-                    key={item.id}
-                    className="border border-gray-100 dark:border-gray-800 rounded-xl p-4"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                          {item.title}
-                        </h3>
-                        {item.description ? (
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 whitespace-pre-wrap">
-                            {item.description}
-                          </p>
-                        ) : null}
-                        {item.assignee ? (
-                          <p className="flex items-center gap-1 text-xs text-teal-700 dark:text-teal-400 mt-1.5">
-                            <User className="w-3 h-3" />
-                            {item.assignee.full_name}
-                          </p>
+                {section.items.map((item) => {
+                  const kind = item.item_kind ?? "test";
+                  return (
+                    <li
+                      key={item.id}
+                      className="border border-gray-100 dark:border-gray-800 rounded-xl p-4"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <QaItemKindBadge
+                              itemId={item.id}
+                              projectId={id}
+                              itemKind={kind}
+                              canManage={canManage}
+                            />
+                          </div>
+                          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                            {item.title}
+                          </h3>
+                          {item.description ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 whitespace-pre-wrap">
+                              {item.description}
+                            </p>
+                          ) : null}
+                        </div>
+                        {canManage ? (
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <EditQaTestItemButton
+                              itemId={item.id}
+                              projectId={id}
+                              title={item.title}
+                              description={item.description}
+                              itemKind={kind}
+                            />
+                            <DeleteQaTestItemButton
+                              itemId={item.id}
+                              projectId={id}
+                            />
+                          </div>
                         ) : null}
                       </div>
-                      {canManage ? (
-                        <div className="flex items-center gap-0.5 shrink-0">
-                          <EditQaTestItemButton
-                            itemId={item.id}
-                            projectId={id}
-                            title={item.title}
-                            description={item.description}
-                            assignedTo={item.assigned_to}
-                            testers={assignList}
-                          />
-                          <DeleteQaTestItemButton
-                            itemId={item.id}
-                            projectId={id}
-                          />
-                        </div>
-                      ) : null}
-                    </div>
 
-                    <QaTestResultPanel
-                      itemId={item.id}
-                      projectId={id}
-                      result={item.result}
-                      resultNote={item.result_note}
-                      testedAt={item.tested_at}
-                      testerName={item.tester?.full_name ?? null}
-                      canManage={canManage}
-                    />
-                  </li>
-                ))}
+                      <QaTestResultPanel
+                        itemId={item.id}
+                        projectId={id}
+                        itemKind={kind}
+                        result={item.result}
+                        resultNote={item.result_note}
+                        testedAt={item.tested_at}
+                        testerName={item.tester?.full_name ?? null}
+                        canManage={canManage}
+                      />
+                    </li>
+                  );
+                })}
               </ul>
 
               {canManage ? (
-                <AddQaTestItemForm
-                  sectionId={section.id}
-                  projectId={id}
-                  testers={assignList}
-                />
+                <AddQaTestItemForm sectionId={section.id} projectId={id} />
               ) : null}
             </section>
           );

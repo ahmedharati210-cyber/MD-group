@@ -248,15 +248,19 @@ export async function createQaTestItemAction(
   if (manageError || !current) return { error: manageError ?? "غير مصرح" };
 
   const rawTitle = (formData.get("title") as string | null) ?? "";
-  const assigned_to = (formData.get("assigned_to") as string | null) || null;
   const description = (formData.get("description") as string | null) || null;
+  const kindParsed = z.enum(["test", "task"]).safeParse(
+    formData.get("item_kind") || "test",
+  );
+  if (!kindParsed.success) return { error: "نوع العنصر غير صالح" };
+  const item_kind = kindParsed.data;
 
   const titles = rawTitle
     .split("\n")
     .map((t) => t.trim())
     .filter(Boolean);
 
-  if (titles.length === 0) return { error: "عنوان عنصر الاختبار مطلوب" };
+  if (titles.length === 0) return { error: "العنوان مطلوب" };
 
   const supabase = await createSupabaseServerClient();
   const { data: maxRow } = await supabase
@@ -273,7 +277,7 @@ export async function createQaTestItemAction(
     project_id: projectId,
     title,
     description: idx === 0 ? description : null,
-    assigned_to: assigned_to || null,
+    item_kind,
     sort_order: baseOrder + idx,
   }));
 
@@ -282,6 +286,7 @@ export async function createQaTestItemAction(
 
   void logAudit(current.userId, "create", "qa_test_item", null, {
     titles: titles.join(", "),
+    item_kind,
     project_id: projectId,
   });
 
@@ -301,7 +306,10 @@ export async function updateQaTestItemAction(
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { error: "العنوان مطلوب" };
   const description = (formData.get("description") as string | null) || null;
-  const assigned_to = (formData.get("assigned_to") as string | null) || null;
+  const kindParsed = z.enum(["test", "task"]).safeParse(
+    formData.get("item_kind") || "test",
+  );
+  if (!kindParsed.success) return { error: "نوع العنصر غير صالح" };
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
@@ -309,12 +317,15 @@ export async function updateQaTestItemAction(
     .update({
       title,
       description,
-      assigned_to: assigned_to || null,
+      item_kind: kindParsed.data,
     })
     .eq("id", itemId);
   if (error) return { error: error.message };
 
-  void logAudit(current.userId, "update", "qa_test_item", itemId, { title });
+  void logAudit(current.userId, "update", "qa_test_item", itemId, {
+    title,
+    item_kind: kindParsed.data,
+  });
   revalidateTesting(projectId);
   return { ok: true };
 }
@@ -415,6 +426,73 @@ export async function resetQaTestResultAction(
     project_id: projectId,
   });
 
+  revalidateTesting(projectId);
+  return { ok: true };
+}
+
+/** Quick flip between اختبار and مهمة. */
+export async function convertQaItemKindAction(
+  itemId: string,
+  projectId: string,
+  nextKind: "test" | "task",
+): Promise<ActionState> {
+  const { error: manageError, current } = await assertCanManage();
+  if (manageError || !current) return { error: manageError ?? "غير مصرح" };
+
+  const parsed = z.enum(["test", "task"]).safeParse(nextKind);
+  if (!parsed.success) return { error: "نوع العنصر غير صالح" };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("qa_test_items")
+    .update({ item_kind: parsed.data })
+    .eq("id", itemId);
+  if (error) return { error: error.message };
+
+  void logAudit(current.userId, "update", "qa_test_item", itemId, {
+    item_kind: parsed.data,
+    convert: true,
+  });
+  revalidateTesting(projectId);
+  return { ok: true };
+}
+
+/** Developer: task done → convert to test for QA. */
+export async function markQaTaskReadyForTestAction(
+  itemId: string,
+  projectId: string,
+): Promise<ActionState> {
+  const { userId } = await requireTestingAccess();
+
+  const supabase = await createSupabaseServerClient();
+  const { data: existing } = await supabase
+    .from("qa_test_items")
+    .select("item_kind")
+    .eq("id", itemId)
+    .maybeSingle<{ item_kind: string }>();
+
+  if (!existing) return { error: "العنصر غير موجود" };
+  if (existing.item_kind !== "task") {
+    return { error: "هذا الإجراء للمهام فقط" };
+  }
+
+  const { error } = await supabase
+    .from("qa_test_items")
+    .update({
+      item_kind: "test",
+      result: null,
+      result_note: null,
+      tested_by: null,
+      tested_at: null,
+    })
+    .eq("id", itemId);
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "qa_test_item", itemId, {
+    ready_for_test: true,
+    item_kind: "test",
+    project_id: projectId,
+  });
   revalidateTesting(projectId);
   return { ok: true };
 }
