@@ -10,6 +10,7 @@ import {
 } from "@/app/portal/testing/actions";
 import type { QaItemKind, QaTestResult } from "@/types/db";
 import { formatDateTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const resultMeta: Record<
   QaTestResult,
@@ -32,6 +33,9 @@ const resultMeta: Record<
   },
 };
 
+const actionBtn =
+  "inline-flex items-center justify-center gap-1 rounded-md transition-colors disabled:opacity-50 text-[11px] font-semibold";
+
 export function QaTestResultPanel({
   itemId,
   projectId,
@@ -41,6 +45,7 @@ export function QaTestResultPanel({
   testedAt,
   testerName,
   canManage,
+  compact = false,
 }: {
   itemId: string;
   projectId: string;
@@ -50,6 +55,7 @@ export function QaTestResultPanel({
   testedAt: string | null;
   testerName: string | null;
   canManage: boolean;
+  compact?: boolean;
 }) {
   const [pendingResult, setPendingResult] = useState<QaTestResult | null>(null);
   const [note, setNote] = useState("");
@@ -97,56 +103,72 @@ export function QaTestResultPanel({
     });
   }
 
-  // —— مهمة: developer action only ——
   if (itemKind === "task") {
     return (
-      <div className="mt-2">
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={markReady}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
-          <Rocket className="w-3.5 h-3.5" />
-          {isPending ? "جارٍ..." : "تم وجاهز للاختبار"}
-        </button>
-      </div>
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={markReady}
+        title="تم وجاهز للاختبار"
+        className={cn(
+          "inline-flex items-center gap-1 rounded-md text-[11px] font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50",
+          compact ? "px-2 py-1" : "px-3 py-1.5",
+        )}
+      >
+        <Rocket className="w-3.5 h-3.5" />
+        {isPending ? "جارٍ..." : compact ? "جاهز للاختبار" : "تم وجاهز للاختبار"}
+      </button>
     );
   }
 
-  // —— اختبار: existing tester result flow ——
   if (result) {
     const meta = resultMeta[result];
     const Icon = meta.icon;
     return (
-      <div className="mt-2 space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
+      <div
+        className={cn(
+          "flex flex-col gap-0.5 items-stretch",
+          !compact && "mt-2",
+        )}
+      >
+        <div className="flex items-center gap-1 flex-wrap">
           <span
-            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${meta.cls}`}
+            className={cn(
+              "inline-flex items-center gap-1 text-[11px] font-semibold rounded-full",
+              compact ? "px-1.5 py-0.5" : "px-2.5 py-1 gap-1.5 text-xs",
+              meta.cls,
+            )}
+            title={
+              testerName
+                ? `${meta.label} · ${testerName}${testedAt ? ` · ${formatDateTime(testedAt)}` : ""}`
+                : meta.label
+            }
           >
-            <Icon className="w-3.5 h-3.5" />
+            <Icon className="w-3 h-3" />
             {meta.label}
           </span>
-          {testerName ? (
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              بواسطة {testerName}
-              {testedAt ? ` · ${formatDateTime(testedAt)}` : ""}
-            </span>
-          ) : null}
           {canManage ? (
             <button
               type="button"
               disabled={isPending}
               onClick={reset}
-              className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-teal-600 disabled:opacity-50"
+              title="إعادة الاختبار"
+              className="p-1 text-gray-400 hover:text-teal-600 disabled:opacity-50"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              إعادة الاختبار
             </button>
           ) : null}
         </div>
         {resultNote ? (
-          <p className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 rounded-lg px-3 py-2">
+          <p
+            className={cn(
+              "text-gray-600 dark:text-gray-300",
+              compact
+                ? "text-[11px] leading-snug line-clamp-2"
+                : "text-sm bg-gray-50 dark:bg-gray-800/50 rounded-lg px-3 py-2",
+            )}
+            title={resultNote}
+          >
             {resultNote}
           </p>
         ) : null}
@@ -160,16 +182,21 @@ export function QaTestResultPanel({
     note.length > 0;
 
   return (
-    <div className="mt-2 space-y-2">
-      <div className="flex flex-wrap gap-2">
+    <div className={cn(!compact && "mt-2 space-y-2")}>
+      <div className="flex items-center gap-1 flex-wrap">
         <button
           type="button"
           disabled={isPending}
           onClick={() => submit("pass")}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 disabled:opacity-50"
+          title="تم بنجاح"
+          className={cn(
+            actionBtn,
+            compact ? "px-2 py-1" : "px-2.5 py-1.5",
+            "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 hover:bg-emerald-100",
+          )}
         >
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          تم بنجاح
+          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+          تم
         </button>
         <button
           type="button"
@@ -178,9 +205,14 @@ export function QaTestResultPanel({
             setPendingResult("bug");
             if (note.trim()) submit("bug");
           }}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-50"
+          title="خلل"
+          className={cn(
+            actionBtn,
+            compact ? "px-2 py-1" : "px-2.5 py-1.5",
+            "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 hover:bg-red-100",
+          )}
         >
-          <Bug className="w-3.5 h-3.5" />
+          <Bug className="w-3.5 h-3.5 shrink-0" />
           خلل
         </button>
         <button
@@ -190,15 +222,20 @@ export function QaTestResultPanel({
             setPendingResult("improve");
             if (note.trim()) submit("improve");
           }}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50"
+          title="يحتاج تحسين"
+          className={cn(
+            actionBtn,
+            compact ? "px-2 py-1" : "px-2.5 py-1.5",
+            "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300 hover:bg-amber-100",
+          )}
         >
-          <Sparkles className="w-3.5 h-3.5" />
-          يحتاج تحسين
+          <Sparkles className="w-3.5 h-3.5 shrink-0" />
+          تحسين
         </button>
       </div>
 
       {(needsNote || pendingResult) && (
-        <div className="space-y-2">
+        <div className="mt-1.5 space-y-1.5 min-w-[12rem]">
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -206,18 +243,18 @@ export function QaTestResultPanel({
             placeholder={
               pendingResult === "pass" || !pendingResult
                 ? "ملاحظة اختيارية..."
-                : "صف الخلل أو التحسين المطلوب..."
+                : "صف الخلل أو التحسين..."
             }
-            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 outline-hidden"
+            className="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 outline-hidden focus:border-teal-500"
           />
           {pendingResult && pendingResult !== "pass" ? (
             <button
               type="button"
               disabled={isPending || !note.trim()}
               onClick={() => submit(pendingResult)}
-              className="px-3 py-1.5 bg-teal-600 text-white text-xs font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50"
+              className="px-2 py-1 bg-teal-600 text-white text-[11px] font-semibold rounded-md hover:bg-teal-700 disabled:opacity-50"
             >
-              حفظ النتيجة
+              حفظ
             </button>
           ) : null}
         </div>

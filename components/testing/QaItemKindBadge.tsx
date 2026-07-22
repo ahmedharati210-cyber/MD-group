@@ -36,7 +36,7 @@ export function QaItemKindBadge({
 
   if (!canManage) {
     return (
-      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${cls}`}>
+      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${cls}`}>
         {isTask ? "مهمة" : "اختبار"}
       </span>
     );
@@ -50,10 +50,9 @@ export function QaItemKindBadge({
       title={
         isTask ? "اضغط للتحويل إلى اختبار" : "اضغط للتحويل إلى مهمة"
       }
-      className={`text-[11px] font-semibold px-2 py-0.5 rounded-full transition-opacity hover:opacity-80 disabled:opacity-50 ${cls}`}
+      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded transition-opacity hover:opacity-80 disabled:opacity-50 shrink-0 ${cls}`}
     >
       {isTask ? "مهمة" : "اختبار"}
-      <span className="opacity-60 mr-1">· تبديل</span>
     </button>
   );
 }
