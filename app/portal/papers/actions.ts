@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { DocumentCategory } from "@/types/db";
 import { requireUser, requireRole } from "@/lib/auth";
+import { isPaperExpiryNeedsRenewal } from "@/lib/paper-expiry";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
@@ -187,6 +188,14 @@ export async function setPaperRenewalInProgressAction(
 
   if (!doc.expires_on && parsed.data.renewal_in_progress) {
     return { error: "يجب تحديد تاريخ انتهاء الصلاحية أولاً" };
+  }
+
+  if (parsed.data.renewal_in_progress) {
+    if (!isPaperExpiryNeedsRenewal(doc.expires_on)) {
+      return {
+        error: "يمكن وضع قيد التجديد فقط للأوراق المنتهية أو قرب الانتهاء",
+      };
+    }
   }
 
   const isOwnerEmployee =

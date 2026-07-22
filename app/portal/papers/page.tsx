@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { bytesToReadable, formatDate } from "@/lib/utils";
 import {
+  isPaperExpiryNeedsRenewal,
   paperExpiryVisualState,
   type PaperExpiryVisualState,
 } from "@/lib/paper-expiry";
@@ -71,6 +72,13 @@ function canTogglePaperRenewal(
   userId: string,
 ): boolean {
   if (!doc.expires_on) return false;
+  // Only expired / nearly-expired papers (or already marked قيد التجديد).
+  if (
+    !isPaperExpiryNeedsRenewal(doc.expires_on) &&
+    !doc.renewal_in_progress
+  ) {
+    return false;
+  }
   if (profile.is_super_admin || profile.role === "md_admin") return true;
   if (
     profile.role === "company_manager" &&
@@ -79,6 +87,14 @@ function canTogglePaperRenewal(
     return true;
   }
   return profile.role === "employee" && doc.owner_profile_id === userId;
+}
+
+function shouldShowRenewalToggle(doc: PaperDoc): boolean {
+  if (!doc.expires_on) return false;
+  return (
+    Boolean(doc.renewal_in_progress) ||
+    isPaperExpiryNeedsRenewal(doc.expires_on)
+  );
 }
 
 type SearchParams = Promise<{
@@ -319,7 +335,7 @@ export default async function PapersPage({
                       </div>
                     </div>
                   </PortalLink>
-                  {d.expires_on && (canToggle || renewing) ? (
+                  {shouldShowRenewalToggle(d) ? (
                     <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
                       <PaperRenewalToggle
                         documentId={d.id}
@@ -395,7 +411,7 @@ export default async function PapersPage({
                           {expiryStatusLabel[expSt]}
                         </td>
                         <td className="px-5 py-3">
-                          {d.expires_on && (canToggle || renewing) ? (
+                          {shouldShowRenewalToggle(d) ? (
                             <PaperRenewalToggle
                               documentId={d.id}
                               initialValue={renewing}
