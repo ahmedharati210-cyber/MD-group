@@ -272,7 +272,12 @@ export function buildPersonCalendarDays(
         absent = 1;
       }
     } else if (record.is_absent) {
-      absent = 1;
+      const manualAbsent =
+        (record.raw_payload as Record<string, unknown> | null)?.manual_absent ===
+        true;
+      if (manualAbsent || isPersonWorkDay(date, workDays)) {
+        absent = 1;
+      }
     } else if (hasOnePunch(record)) {
       missingPunch = 1;
     } else {
@@ -354,7 +359,12 @@ export function buildPersonMonthStats(
       continue;
     }
     if (record.is_absent) {
-      absentDays += 1;
+      const manualAbsent =
+        (record.raw_payload as Record<string, unknown> | null)?.manual_absent ===
+        true;
+      if (manualAbsent || isPersonWorkDay(date, workDays)) {
+        absentDays += 1;
+      }
       continue;
     }
     if (hasOnePunch(record)) onePunchDays += 1;
@@ -484,7 +494,12 @@ export function buildBranchPayrollSummary(
         continue;
       }
       if (record.is_absent) {
-        row.absentDays += 1;
+        const manualAbsent =
+          (record.raw_payload as Record<string, unknown> | null)?.manual_absent ===
+          true;
+        if (manualAbsent || isPersonWorkDay(date, workDays)) {
+          row.absentDays += 1;
+        }
         continue;
       }
       if (hasOnePunch(record)) {

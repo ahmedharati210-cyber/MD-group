@@ -21,10 +21,13 @@ import {
   type ActionState,
 } from "./actions";
 import { DeleteConfirmButton } from "./delete-confirm-button";
+import { restoreScrollY, withPreservedScroll } from "./preserve-scroll";
 
 function useSaveSuccessToast(state: ActionState | undefined) {
   useEffect(() => {
-    if (state?.ok) toast.success("تم الحفظ");
+    if (!state?.ok) return;
+    toast.success("تم الحفظ");
+    restoreScrollY();
   }, [state?.ok]);
 }
 
@@ -298,7 +301,7 @@ export function AttendanceCreateLeaveForm({
   );
 
   return (
-    <form action={action} className={compact ? "md:contents" : undefined}>
+    <form action={withPreservedScroll(action)} className={compact ? "md:contents" : undefined}>
       <input type="hidden" name="attendance_person_id" value={person.id} />
       <input type="hidden" name="date" value={date} />
       <input type="hidden" name="company_id" value={companyId} />
@@ -403,7 +406,7 @@ export function AttendanceCreateLeaveTableRow({
   const stickySave = `${cb} sticky left-[2.25rem] z-[5] bg-inherit`;
 
   return (
-    <form action={action} className={PERSON_MONTH_SUBGRID_ROW_CLASS}>
+    <form action={withPreservedScroll(action)} className={PERSON_MONTH_SUBGRID_ROW_CLASS}>
       <input type="hidden" name="attendance_person_id" value={person.id} />
       <input type="hidden" name="date" value={date} />
       <input type="hidden" name="company_id" value={companyId} />
@@ -487,7 +490,7 @@ export function AttendanceRecordTableRow({
   const stickyDelete = `${cellBase} sticky left-0 z-[5] bg-inherit`;
 
   return (
-    <form action={action} className={PERSON_MONTH_SUBGRID_ROW_CLASS}>
+    <form action={withPreservedScroll(action)} className={PERSON_MONTH_SUBGRID_ROW_CLASS}>
       <div className={`${cellBase} text-xs text-gray-500 justify-center`}>
         <input type="hidden" name="id" value={record.id} />
         {dayMeta.index}
@@ -641,7 +644,7 @@ export function AttendanceCreateLeaveMobileCard({
 
   return (
     <form
-      action={action}
+      action={withPreservedScroll(action)}
       className={`${mobileCardClass} ${dayMeta.rowClassName}`}
     >
       <input type="hidden" name="attendance_person_id" value={person.id} />
@@ -719,7 +722,7 @@ export function AttendanceRecordMobileCard({
 
   return (
     <form
-      action={action}
+      action={withPreservedScroll(action)}
       className={`${mobileCardClass} ${dayMeta.rowClassName}`}
     >
       <input type="hidden" name="id" value={record.id} />
@@ -881,7 +884,7 @@ export function AttendanceRecordEditRow({
           ) : null}
         </div>
       ) : null}
-      <form action={action} className="md:contents">
+      <form action={withPreservedScroll(action)} className="md:contents">
         <input type="hidden" name="id" value={record.id} />
         <div
           className={`hidden md:grid ${DAY_PANEL_SUBGRID_ROW_CLASS} md:px-4 md:pb-3 md:border-b md:border-gray-100 dark:md:border-gray-800`}

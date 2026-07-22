@@ -243,7 +243,32 @@ describe("resolvePersonWorkDays", () => {
     expect(resolvePersonWorkDays(person, [shift])).toEqual([0, 1, 2, 3, 4]);
   });
 
-  it("returns null (all days) when neither custom nor assigned shift applies", () => {
+  it("uses a single active branch shift when person has no assignment", () => {
+    const shift: AttendanceShift = {
+      ...MORNING_SHIFT,
+      work_days: [0, 1, 2, 3, 4],
+    };
+    expect(resolvePersonWorkDays(makePerson(), [shift])).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it("intersects active branch shift work days when multiple exist", () => {
+    const morning: AttendanceShift = {
+      ...MORNING_SHIFT,
+      id: "a",
+      work_days: [0, 1, 2, 3, 4, 6],
+    };
+    const evening: AttendanceShift = {
+      ...MORNING_SHIFT,
+      id: "b",
+      name: "مسائية",
+      work_days: [0, 1, 2, 3, 4],
+    };
+    expect(resolvePersonWorkDays(makePerson(), [morning, evening])).toEqual([
+      0, 1, 2, 3, 4,
+    ]);
+  });
+
+  it("returns null (all days) when the only active shift has null work_days", () => {
     expect(resolvePersonWorkDays(makePerson(), [MORNING_SHIFT])).toBeNull();
   });
 

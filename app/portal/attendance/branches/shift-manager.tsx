@@ -15,6 +15,7 @@ import {
   type ActionState,
 } from "../actions";
 import { DeleteConfirmButton } from "../delete-confirm-button";
+import { preserveScrollAround, withPreservedScroll } from "../preserve-scroll";
 
 type Props = {
   companyId: string;
@@ -60,7 +61,7 @@ function submitAssociatedForm(
       fd.set(key, value);
     }
   }
-  action(fd);
+  withPreservedScroll(action)(fd);
 }
 
 function Field({
@@ -123,12 +124,14 @@ function CreateShiftForm({
       setIsExpectedOverridden(false);
       setLateGrace(15);
       setEarlyGrace(15);
-      router.refresh();
+      preserveScrollAround(() => {
+        router.refresh();
+      });
     }
   }, [state?.ok, router]);
 
   return (
-    <form action={action} className="space-y-4">
+    <form action={withPreservedScroll(action)} className="space-y-4">
       <input type="hidden" name="company_id" value={companyId} />
       <input type="hidden" name="branch_id" value={branchId} />
 
@@ -360,7 +363,11 @@ function ShiftRow({
   }, [shift.crosses_midnight]);
 
   useEffect(() => {
-    if (state?.ok) router.refresh();
+    if (state?.ok) {
+      preserveScrollAround(() => {
+        router.refresh();
+      });
+    }
   }, [state?.ok, router]);
 
   const suggestedMinutes = minutesBetween(

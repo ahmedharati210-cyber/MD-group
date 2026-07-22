@@ -144,7 +144,7 @@ export default async function AttendancePersonPage({
           showHint={!canExport}
           className="mb-0"
         />
-        {personHasCustomSchedule(person) ? (
+        {personHasCustomSchedule(person) || importRow ? (
           <RecalculatePersonMonthButton
             personId={person.id}
             companyId={companyId}

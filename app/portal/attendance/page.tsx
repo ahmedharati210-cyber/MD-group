@@ -173,6 +173,9 @@ export default async function AttendancePage({
           <AttendanceToolbar
             importRow={importRow}
             isSuperAdmin={profile.is_super_admin}
+            companyId={companyId}
+            branchId={branchId}
+            month={month}
           />
 
           <div className="mb-4">

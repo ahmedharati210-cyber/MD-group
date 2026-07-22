@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { Trash2 } from "lucide-react";
+import { preserveScrollAround } from "./preserve-scroll";
 
 type Props = {
   label: string;
@@ -32,7 +33,11 @@ export function DeleteConfirmButton({
     }
     startTransition(async () => {
       const result = await action(fd);
-      if (result?.ok) router.refresh();
+      if (result?.ok) {
+        preserveScrollAround(() => {
+          router.refresh();
+        });
+      }
     });
   }
 

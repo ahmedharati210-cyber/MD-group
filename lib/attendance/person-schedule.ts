@@ -145,7 +145,8 @@ function shiftsLookup(
 
 /**
  * Resolve effective work days for absent counting.
- * Custom schedule days win; else assigned shift work_days; else all days (null).
+ * Custom schedule days win; else assigned shift; else active branch shifts
+ * (one shift → its days; multiple → intersection; null = all days).
  */
 export function resolvePersonWorkDays(
   person: Pick<
@@ -164,11 +165,38 @@ export function resolvePersonWorkDays(
   if (personHasCustomSchedule(person)) {
     return person.custom_work_days ?? null;
   }
+  const byId = shiftsLookup(shifts);
   if (person.shift_id) {
-    const shift = shiftsLookup(shifts).get(person.shift_id);
+    const shift = byId.get(person.shift_id);
     if (shift) return shift.work_days ?? null;
   }
-  return null;
+  return workDaysFromActiveBranchShifts([...byId.values()]);
+}
+
+const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
+
+function workDaysAsSet(workDays: number[] | null | undefined): Set<number> {
+  if (workDays == null) return new Set(ALL_WEEKDAYS);
+  return new Set(workDays);
+}
+
+/**
+ * Derive work days from active branch shifts when the person has no assignment.
+ */
+export function workDaysFromActiveBranchShifts(
+  shifts: AttendanceShift[],
+): number[] | null {
+  const active = shifts.filter((s) => s.active);
+  if (active.length === 0) return null;
+  if (active.length === 1) return active[0].work_days ?? null;
+
+  let intersection = workDaysAsSet(active[0].work_days);
+  for (let i = 1; i < active.length; i += 1) {
+    const next = workDaysAsSet(active[i].work_days);
+    intersection = new Set([...intersection].filter((d) => next.has(d)));
+  }
+  if (intersection.size === 7) return null;
+  return [...intersection].sort((a, b) => a - b);
 }
 
 export function formatWorkDaysLabel(

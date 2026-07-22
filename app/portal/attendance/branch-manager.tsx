@@ -13,6 +13,7 @@ import {
   type ActionState,
 } from "./actions";
 import { DeleteConfirmButton } from "./delete-confirm-button";
+import { withPreservedScroll } from "./preserve-scroll";
 import type { AttendanceBranch, AttendancePerson } from "@/types/db";
 import { normalizeSearchQuery, matchesAttendanceSearch } from "@/lib/attendance/search";
 import {
@@ -36,7 +37,7 @@ function submitAssociatedForm(
 ) {
   const form = document.getElementById(formId);
   if (!(form instanceof HTMLFormElement)) return;
-  action(new FormData(form));
+  withPreservedScroll(action)(new FormData(form));
 }
 
 type Props = {
@@ -88,7 +89,7 @@ export function BranchManager({
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-4">
           <h3 className="font-bold">إضافة فرع</h3>
-          <form action={branchAction} className="grid sm:grid-cols-2 gap-3">
+          <form action={withPreservedScroll(branchAction)} className="grid sm:grid-cols-2 gap-3">
             <input type="hidden" name="company_id" value={companyId} />
             <input
               name="name"
@@ -119,7 +120,7 @@ export function BranchManager({
           <p className="text-sm text-gray-500">
             قائمة منفصلة عن موظفي البوابة — للحضور والبصمة فقط.
           </p>
-          <form action={personAction} className="grid sm:grid-cols-2 gap-3">
+          <form action={withPreservedScroll(personAction)} className="grid sm:grid-cols-2 gap-3">
             <input type="hidden" name="company_id" value={companyId} />
             <select
               name="branch_id"
