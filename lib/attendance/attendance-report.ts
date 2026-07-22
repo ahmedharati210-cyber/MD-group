@@ -16,6 +16,7 @@ import type {
   AttendanceBranch,
   AttendanceMonthlyRecord,
   AttendancePerson,
+  AttendanceShift,
 } from "@/types/db";
 
 export const EMPTY_CELL = "—";
@@ -246,6 +247,7 @@ export function buildAttendanceReport(options: {
   month: string;
   records: AttendanceMonthlyRecord[];
   people: AttendancePerson[];
+  shifts?: AttendanceShift[];
 }): AttendanceReportPayload {
   const parsed = parseMonthParam(options.month.slice(0, 7));
   if (!parsed) throw new Error("شهر غير صالح");
@@ -256,6 +258,7 @@ export function buildAttendanceReport(options: {
     monthStr,
     options.records,
     options.people,
+    options.shifts ?? [],
   );
 
   const payrollByEmployee = new Map(

@@ -16,9 +16,15 @@ import {
 import {
   customSchedulePayloadSnapshot,
   isSyntheticCustomShiftId,
+  normalizeWorkDaysSelection,
   personHasCustomSchedule,
   personToSyntheticShift,
 } from "@/lib/attendance/person-schedule";
+import {
+  applyManagementPasses,
+  mergeManagementPassesIntoPayload,
+  parseManagementPassesFromForm,
+} from "@/lib/attendance/management-passes";
 import { buildRecalculatedRecordPatch } from "@/lib/attendance/recalculate-person-month";
 import type { AttendancePerson } from "@/types/db";
 import {
@@ -457,6 +463,8 @@ export async function updateMonthlyRecordAction(
     return { error: "نوع الإجازة غير صالح" };
   }
 
+  const formPasses = parseManagementPassesFromForm(formData);
+
   const supabase = await createSupabaseServerClient();
   const { data: existing } = await supabase
     .from("attendance_monthly_records")
@@ -613,24 +621,33 @@ export async function updateMonthlyRecordAction(
     }
   }
 
-  const updatedPayload: Record<string, unknown> = {
-    ...rawPayload,
-    ...(manuallyEdited ? { manually_overridden: true } : {}),
-    ...(isAbsentStatus ? { manual_absent: true } : {}),
-    ...updatedPayloadBase,
-    ...(session && !leaveType && !isAbsentStatus
-      ? {
-          first_punch_date: session.firstPunchDate,
-          last_punch_date: session.lastPunchDate,
-          selected_check_in: session.firstCheckIn
-            ? { date: session.firstPunchDate, time: session.firstCheckIn }
-            : null,
-          selected_check_out: session.lastCheckOut
-            ? { date: session.lastPunchDate, time: session.lastCheckOut }
-            : null,
-        }
-      : {}),
-  };
+  const passes =
+    isAbsentStatus || leaveType
+      ? { waiveLate: false, waiveEarlyLeave: false }
+      : formPasses;
+  computed = applyManagementPasses(computed, passes);
+
+  const updatedPayload: Record<string, unknown> = mergeManagementPassesIntoPayload(
+    {
+      ...rawPayload,
+      ...(manuallyEdited ? { manually_overridden: true } : {}),
+      ...(isAbsentStatus ? { manual_absent: true } : {}),
+      ...updatedPayloadBase,
+      ...(session && !leaveType && !isAbsentStatus
+        ? {
+            first_punch_date: session.firstPunchDate,
+            last_punch_date: session.lastPunchDate,
+            selected_check_in: session.firstCheckIn
+              ? { date: session.firstPunchDate, time: session.firstCheckIn }
+              : null,
+            selected_check_out: session.lastCheckOut
+              ? { date: session.lastPunchDate, time: session.lastCheckOut }
+              : null,
+          }
+        : {}),
+    },
+    passes,
+  );
 
   const { error } = await supabase
     .from("attendance_monthly_records")
@@ -1365,6 +1382,7 @@ const shiftSchema = z.object({
   check_in_window_end: z.string().optional().nullable(),
   check_out_window_start: z.string().optional().nullable(),
   check_out_window_end: z.string().optional().nullable(),
+  work_days: z.array(z.number().int().min(0).max(6)).nullable().optional(),
   display_order: z.coerce.number().int().optional(),
 });
 
@@ -1372,6 +1390,10 @@ function parseOptionalTime(formData: FormData, key: string): string | null {
   const value = formData.get(key);
   if (typeof value !== "string" || value.trim() === "") return null;
   return value;
+}
+
+function parseShiftWorkDays(formData: FormData): number[] | null {
+  return normalizeWorkDaysSelection(formData.getAll("work_days").map(String));
 }
 
 function parseShiftForm(formData: FormData) {
@@ -1392,6 +1414,7 @@ function parseShiftForm(formData: FormData) {
     check_in_window_end: parseOptionalTime(formData, "check_in_window_end"),
     check_out_window_start: parseOptionalTime(formData, "check_out_window_start"),
     check_out_window_end: parseOptionalTime(formData, "check_out_window_end"),
+    work_days: parseShiftWorkDays(formData),
     display_order: formData.get("display_order") ?? 0,
   });
 }
@@ -1441,6 +1464,7 @@ export async function createAttendanceShiftAction(
     check_in_window_end: parsed.data.check_in_window_end,
     check_out_window_start: parsed.data.check_out_window_start,
     check_out_window_end: parsed.data.check_out_window_end,
+    work_days: parsed.data.work_days ?? null,
     display_order: parsed.data.display_order ?? 0,
   });
   if (error) return { error: error.message };
@@ -1478,6 +1502,7 @@ export async function updateAttendanceShiftAction(
     check_in_window_end: parseOptionalTime(formData, "check_in_window_end"),
     check_out_window_start: parseOptionalTime(formData, "check_out_window_start"),
     check_out_window_end: parseOptionalTime(formData, "check_out_window_end"),
+    work_days: parseShiftWorkDays(formData),
     display_order: formData.get("display_order") ?? 0,
   });
   if (!parsed.success) return { error: "بيانات الوردية غير صالحة" };
@@ -1517,6 +1542,7 @@ export async function updateAttendanceShiftAction(
       check_in_window_end: updates.check_in_window_end,
       check_out_window_start: updates.check_out_window_start,
       check_out_window_end: updates.check_out_window_end,
+      work_days: updates.work_days ?? null,
       display_order: updates.display_order ?? 0,
     })
     .eq("id", id);

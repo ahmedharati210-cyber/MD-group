@@ -5,8 +5,10 @@ import {
 } from "@/lib/attendance/shift-matching";
 import {
   isPersonWorkDay,
+  normalizeWorkDaysSelection,
   personHasCustomSchedule,
   personToSyntheticShift,
+  resolvePersonWorkDays,
 } from "@/lib/attendance/person-schedule";
 import {
   buildPersonCalendarDays,
@@ -32,6 +34,7 @@ const MORNING_SHIFT: AttendanceShift = {
   check_out_window_start: null,
   check_out_window_end: null,
   active: true,
+  work_days: null,
   display_order: 0,
   created_at: "2026-01-01T00:00:00Z",
 };
@@ -210,5 +213,42 @@ describe("non-work weekday absent skip", () => {
 
     const monday = days.find((d) => d.date === "2026-06-01");
     expect(monday?.absent).toBe(1);
+  });
+});
+
+describe("resolvePersonWorkDays", () => {
+  it("prefers custom schedule work days over assigned shift", () => {
+    const person = makePerson({
+      custom_start_time: "10:00",
+      custom_end_time: "18:00",
+      custom_work_days: [1, 2, 3],
+      shift_id: "shift-morning",
+    });
+    const shift: AttendanceShift = {
+      ...MORNING_SHIFT,
+      work_days: [0, 6],
+    };
+    expect(resolvePersonWorkDays(person, [shift])).toEqual([1, 2, 3]);
+  });
+
+  it("uses assigned shift work days when no custom schedule", () => {
+    const person = makePerson({
+      shift_id: "shift-morning",
+      custom_work_days: [1, 2],
+    });
+    const shift: AttendanceShift = {
+      ...MORNING_SHIFT,
+      work_days: [0, 1, 2, 3, 4],
+    };
+    expect(resolvePersonWorkDays(person, [shift])).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it("returns null (all days) when neither custom nor assigned shift applies", () => {
+    expect(resolvePersonWorkDays(makePerson(), [MORNING_SHIFT])).toBeNull();
+  });
+
+  it("normalizeWorkDaysSelection stores null when all seven days selected", () => {
+    expect(normalizeWorkDaysSelection([0, 1, 2, 3, 4, 5, 6])).toBeNull();
+    expect(normalizeWorkDaysSelection([1, 2, 3])).toEqual([1, 2, 3]);
   });
 });

@@ -23,6 +23,7 @@ const MORNING_SHIFT: AttendanceShift = {
   check_out_window_start: null,
   check_out_window_end: null,
   active: true,
+  work_days: null,
   display_order: 0,
   created_at: "2026-01-01T00:00:00Z",
 };

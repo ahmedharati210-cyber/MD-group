@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/portal/PageHeader";
 import { FeatureToggleForm } from "./feature-toggle-form";
 import { SuperAdminToggle } from "./super-admin-toggle";
 import { ProjectNotificationsToggle } from "./project-notifications-toggle";
+import { TestingAccessToggle } from "./testing-access-toggle";
 import { UserEditForm } from "./user-edit-form";
 import type { AppFeature, RoleFeatures, UserRole } from "@/types/db";
 
@@ -19,6 +20,7 @@ type ProfileRow = {
   is_active: boolean;
   is_super_admin: boolean;
   project_notifications_enabled: boolean;
+  testing_access_enabled: boolean;
   companies: { name_ar: string } | null;
 };
 
@@ -37,7 +39,7 @@ export default async function AdminPage() {
       supabase
         .from("profiles")
         .select(
-          "id, full_name, role, company_id, job_title, is_active, is_super_admin, project_notifications_enabled, companies:company_id(name_ar)",
+          "id, full_name, role, company_id, job_title, is_active, is_super_admin, project_notifications_enabled, testing_access_enabled, companies:company_id(name_ar)",
         )
         .order("role")
         .order("full_name"),
@@ -141,6 +143,17 @@ export default async function AdminPage() {
                         profileId={user.id}
                         fullName={user.full_name}
                         enabled={user.project_notifications_enabled}
+                      />
+                    </div>
+                  ) : null}
+
+                  {/* Al Itqan testing access — any role except owner */}
+                  {user.role !== "owner" ? (
+                    <div className="shrink-0">
+                      <TestingAccessToggle
+                        profileId={user.id}
+                        fullName={user.full_name}
+                        enabled={user.testing_access_enabled}
                       />
                     </div>
                   ) : null}

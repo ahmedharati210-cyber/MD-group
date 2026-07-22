@@ -8,6 +8,16 @@ export const CUSTOM_SCHEDULE_SHIFT_NAME = "جدول مخصص";
 /** Sentinel id — never persist as attendance_shifts FK. */
 export const CUSTOM_SCHEDULE_SHIFT_ID_PREFIX = "custom:";
 
+export const WEEKDAY_OPTIONS = [
+  { value: 0, label: "أحد" },
+  { value: 1, label: "إثن" },
+  { value: 2, label: "ثلا" },
+  { value: 3, label: "أرب" },
+  { value: 4, label: "خمي" },
+  { value: 5, label: "جمع" },
+  { value: 6, label: "سبت" },
+] as const;
+
 export function personHasCustomSchedule(
   person: Pick<AttendancePerson, "custom_start_time" | "custom_end_time"> | null | undefined,
 ): boolean {
@@ -62,6 +72,7 @@ export function personToSyntheticShift(
     check_in_window_end: null,
     check_out_window_start: null,
     check_out_window_end: null,
+    work_days: person.custom_work_days,
     active: true,
     display_order: 0,
     created_at: person.created_at,
@@ -96,6 +107,79 @@ export function isPersonWorkDay(
   if (workDays == null) return true;
   const weekday = new Date(`${date}T12:00:00`).getDay();
   return workDays.includes(weekday);
+}
+
+/**
+ * Form checkbox values → stored work_days.
+ * All seven days selected → null (every day).
+ */
+export function normalizeWorkDaysSelection(
+  days: Array<string | number>,
+): number[] | null {
+  const unique = [
+    ...new Set(
+      days
+        .map((v) => Number(v))
+        .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6),
+    ),
+  ].sort((a, b) => a - b);
+  if (unique.length === 7) return null;
+  return unique;
+}
+
+function shiftsLookup(
+  shifts:
+    | Map<string, AttendanceShift>
+    | AttendanceShift[]
+    | Record<string, AttendanceShift>
+    | null
+    | undefined,
+): Map<string, AttendanceShift> {
+  if (!shifts) return new Map();
+  if (shifts instanceof Map) return shifts;
+  if (Array.isArray(shifts)) {
+    return new Map(shifts.map((s) => [s.id, s]));
+  }
+  return new Map(Object.entries(shifts));
+}
+
+/**
+ * Resolve effective work days for absent counting.
+ * Custom schedule days win; else assigned shift work_days; else all days (null).
+ */
+export function resolvePersonWorkDays(
+  person: Pick<
+    AttendancePerson,
+    | "custom_start_time"
+    | "custom_end_time"
+    | "custom_work_days"
+    | "shift_id"
+  >,
+  shifts?:
+    | Map<string, AttendanceShift>
+    | AttendanceShift[]
+    | Record<string, AttendanceShift>
+    | null,
+): number[] | null {
+  if (personHasCustomSchedule(person)) {
+    return person.custom_work_days ?? null;
+  }
+  if (person.shift_id) {
+    const shift = shiftsLookup(shifts).get(person.shift_id);
+    if (shift) return shift.work_days ?? null;
+  }
+  return null;
+}
+
+export function formatWorkDaysLabel(
+  workDays: number[] | null | undefined,
+): string {
+  if (workDays == null) return "كل الأيام";
+  if (workDays.length === 0) return "لا أيام";
+  const labels = WEEKDAY_OPTIONS.filter((d) => workDays.includes(d.value)).map(
+    (d) => d.label,
+  );
+  return labels.join("، ");
 }
 
 export function formatPersonCustomScheduleLabel(

@@ -13,6 +13,7 @@ import {
   LEAVE_TYPES,
   recordLeaveLabel,
 } from "@/lib/attendance/leave-types";
+import { readManagementPasses } from "@/lib/attendance/management-passes";
 import {
   createLeaveRecordAction,
   deleteMonthlyRecordAction,
@@ -25,6 +26,75 @@ function useSaveSuccessToast(state: ActionState | undefined) {
   useEffect(() => {
     if (state?.ok) toast.success("تم الحفظ");
   }, [state?.ok]);
+}
+
+function ManagementPassToggles({
+  record,
+  hidden,
+  compact = false,
+}: {
+  record: AttendanceMonthlyRecord;
+  hidden: boolean;
+  compact?: boolean;
+}) {
+  if (hidden) return null;
+  const passes = readManagementPasses(record.raw_payload);
+
+  return (
+    <div
+      className={
+        compact
+          ? "flex flex-col gap-1 text-[10px] leading-tight"
+          : "flex flex-wrap gap-x-3 gap-y-1 text-xs"
+      }
+    >
+      <label className="inline-flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+        <input
+          type="checkbox"
+          name="waive_late"
+          value="true"
+          defaultChecked={passes.waiveLate}
+          className="rounded"
+        />
+        سماح تأخير
+      </label>
+      <label className="inline-flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+        <input
+          type="checkbox"
+          name="waive_early_leave"
+          value="true"
+          defaultChecked={passes.waiveEarlyLeave}
+          className="rounded"
+        />
+        سماح خروج مبكر
+      </label>
+    </div>
+  );
+}
+
+function ManagementPassBadges({
+  record,
+}: {
+  record: AttendanceMonthlyRecord;
+}) {
+  if (record.is_absent || hasLeave(record)) return null;
+  const passes = readManagementPasses(record.raw_payload);
+  if (!passes.waiveLate && !passes.waiveEarlyLeave) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {passes.waiveLate ? (
+        <span className="inline-flex px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 text-[10px] font-semibold">
+          سماح تأخير
+        </span>
+      ) : null}
+      {passes.waiveEarlyLeave ? (
+        <span className="inline-flex px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 text-[10px] font-semibold">
+          سماح خروج
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 type RawPunchTime = { date: string; time: string };
@@ -160,6 +230,12 @@ function RecordDayMeta({ record }: { record: AttendanceMonthlyRecord }) {
       {!record.is_absent && !hasLeave(record) && record.late_minutes > 0 ? (
         <p className="text-amber-600">تأخير {record.late_minutes} د</p>
       ) : null}
+      {!record.is_absent &&
+      !hasLeave(record) &&
+      record.early_leave_minutes > 0 ? (
+        <p className="text-amber-600">خروج مبكر {record.early_leave_minutes} د</p>
+      ) : null}
+      <ManagementPassBadges record={record} />
     </div>
   );
 }
@@ -477,21 +553,24 @@ export function AttendanceRecordTableRow({
         )}
       </div>
       <div className={cellBase}>
-        <select
-          name="leave_type"
-          title="حالة اليوم"
-          value={dayStatus}
-          onChange={(e) => setDayStatus(e.target.value)}
-          className={compactSelectClass}
-        >
-          <option value="">عادي</option>
-          <option value={ABSENT_STATUS}>{ABSENT_STATUS}</option>
-          {LEAVE_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
+        <div className="w-full space-y-1.5">
+          <select
+            name="leave_type"
+            title="حالة اليوم"
+            value={dayStatus}
+            onChange={(e) => setDayStatus(e.target.value)}
+            className={compactSelectClass}
+          >
+            <option value="">عادي</option>
+            <option value={ABSENT_STATUS}>{ABSENT_STATUS}</option>
+            {LEAVE_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+          <ManagementPassToggles record={record} hidden={hideTimes} compact />
+        </div>
       </div>
       <div className={cellBase}>
         <input
@@ -503,7 +582,10 @@ export function AttendanceRecordTableRow({
         />
       </div>
       <div className={`${cellBase} text-xs text-gray-500 whitespace-nowrap`} dir="ltr">
-        {lateDeduction}
+        <div className="space-y-0.5">
+          <div>{lateDeduction}</div>
+          <ManagementPassBadges record={record} />
+        </div>
       </div>
       <div className={stickySave}>
         <button
@@ -710,6 +792,7 @@ export function AttendanceRecordMobileCard({
           ))}
         </select>
       </div>
+      <ManagementPassToggles record={record} hidden={hideTimes} />
       <div className="space-y-1">
         <label className="text-xs text-gray-500">ملاحظة</label>
         <input
@@ -850,20 +933,23 @@ export function AttendanceRecordEditRow({
             )}
           </DayPanelCell>
           <DayPanelCell>
-            <select
-              name="leave_type"
-              value={dayStatus}
-              onChange={(e) => setDayStatus(e.target.value)}
-              className={dayPanelControlClass}
-            >
-              <option value="">عادي</option>
-              <option value={ABSENT_STATUS}>{ABSENT_STATUS}</option>
-              {LEAVE_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-1">
+              <select
+                name="leave_type"
+                value={dayStatus}
+                onChange={(e) => setDayStatus(e.target.value)}
+                className={dayPanelControlClass}
+              >
+                <option value="">عادي</option>
+                <option value={ABSENT_STATUS}>{ABSENT_STATUS}</option>
+                {LEAVE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <ManagementPassToggles record={record} hidden={hideTimes} compact />
+            </div>
           </DayPanelCell>
           <DayPanelCell>
             <input
@@ -938,6 +1024,7 @@ export function AttendanceRecordEditRow({
               ))}
             </select>
           </div>
+          <ManagementPassToggles record={record} hidden={hideTimes} />
           <div className="space-y-1">
             <label className="text-xs text-gray-500">ملاحظة</label>
             <input

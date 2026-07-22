@@ -13,6 +13,7 @@ import {
 import {
   getAttendanceImport,
   getAttendancePeople,
+  getAttendanceShifts,
   getMonthlyAttendanceRecords,
 } from "@/lib/data/monthly-attendance";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -58,9 +59,10 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const [records, people, companyRes] = await Promise.all([
+  const [records, people, shifts, companyRes] = await Promise.all([
     getMonthlyAttendanceRecords(importRow.id),
     getAttendancePeople(companyId, branchId),
+    getAttendanceShifts(branchId),
     createSupabaseServerClient()
       .then((sb) =>
         sb.from("companies").select("name_ar").eq("id", companyId).single(),
@@ -78,6 +80,7 @@ export async function GET(req: NextRequest) {
     month: monthDate,
     records,
     people,
+    shifts,
   });
 
   const buffer = await buildMonthlyAttendanceWorkbook(report);

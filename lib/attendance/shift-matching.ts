@@ -5,6 +5,7 @@ import {
   SHIFT_FULL,
   type ComputedDay,
 } from "@/lib/attendance/monthly-calculations";
+import { isPersonWorkDay } from "@/lib/attendance/person-schedule";
 import type { PunchSession } from "@/lib/attendance/punch-sessions";
 import { sessionTotalMinutes as calcSessionMinutes } from "@/lib/attendance/punch-sessions";
 import type { AttendanceShift } from "@/types/db";
@@ -77,12 +78,15 @@ function computeFullTimeRecord(
 
 /**
  * Resolve which shift applies to a punch session by nearest active start time.
+ * Only shifts scheduled for the session weekday are considered.
  */
 export function resolveShiftForSession(
   session: PunchSession,
   shifts: AttendanceShift[],
 ): AttendanceShift | null {
-  const active = shifts.filter((s) => s.active);
+  const active = shifts.filter(
+    (s) => s.active && isPersonWorkDay(session.shiftDate, s.work_days),
+  );
   if (active.length === 0 || !session.firstCheckIn) return null;
 
   const checkInMinutes = timeToMinutes(session.firstCheckIn);

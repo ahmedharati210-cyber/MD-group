@@ -270,6 +270,57 @@ export async function setProjectNotificationsAction(
 }
 
 // ---------------------------------------------------------------------------
+// Al Itqan testing access (super admin only)
+// ---------------------------------------------------------------------------
+const testingAccessSchema = z.object({
+  profile_id: z.string().uuid(),
+  grant: z.boolean(),
+});
+
+/**
+ * Grant or revoke Al Itqan testing module access for any active user role.
+ */
+export async function setTestingAccessAction(
+  profileId: string,
+  grant: boolean,
+): Promise<ActionState> {
+  const { userId } = await requireSuperAdmin();
+
+  const parsed = testingAccessSchema.safeParse({
+    profile_id: profileId,
+    grant,
+  });
+  if (!parsed.success) return { error: "بيانات غير صالحة" };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: target } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", profileId)
+    .single<{ role: string }>();
+
+  if (!target) return { error: "المستخدم غير موجود" };
+  if (target.role === "owner") {
+    return { error: "لا يمكن منح المنظومات والمواقع لدور المالك" };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ testing_access_enabled: grant })
+    .eq("id", profileId);
+
+  if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "profile", profileId, {
+    testing_access_enabled: grant,
+  });
+
+  revalidateTag(profileCacheTag(profileId), "default");
+  revalidatePath("/portal/admin");
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
 // User role management (super admin only)
 // ---------------------------------------------------------------------------
 const roleSchema = z.object({

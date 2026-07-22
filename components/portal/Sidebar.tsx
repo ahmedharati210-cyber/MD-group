@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   ScrollText,
   NotebookPen,
+  AppWindow,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -65,6 +66,12 @@ const items: Item[] = [
     icon: FolderKanban,
     roles: ["md_admin", "company_manager", "employee", "owner"],
     feature: "timeline",
+  },
+  {
+    href: "/portal/testing",
+    label: "المنظومات والمواقع",
+    icon: AppWindow,
+    roles: ["md_admin", "company_manager", "employee"],
   },
   {
     href: "/portal/employees",
@@ -174,6 +181,7 @@ type Props = {
   /** Papers in the final month before expiry — sidebar orange badge */
   expiringSoonPapersCount: number;
   showDolceSignupNav: boolean;
+  showTestingNav: boolean;
   isOpen: boolean;
   onClose: () => void;
 };
@@ -194,6 +202,7 @@ export function Sidebar({
   expiredPapersCount,
   expiringSoonPapersCount,
   showDolceSignupNav,
+  showTestingNav,
   isOpen,
   onClose,
 }: Props) {
@@ -245,6 +254,9 @@ export function Sidebar({
       !showDolceSignupNav
     ) {
       return false;
+    }
+    if (item.href === "/portal/testing") {
+      return showTestingNav && item.roles.includes(role);
     }
     if (!item.feature) return true;
     if (!isPlatformFeatureEnabled(item.feature)) return false;

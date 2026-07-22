@@ -2,6 +2,10 @@
  * Rebuild monthly day metrics from stored punches against a preferred (custom) shift.
  */
 import {
+  applyManagementPasses,
+  readManagementPasses,
+} from "@/lib/attendance/management-passes";
+import {
   customSchedulePayloadSnapshot,
   isSyntheticCustomShiftId,
   personHasCustomSchedule,
@@ -91,6 +95,9 @@ export function buildRecalculatedRecordPatch(
     preferredShift,
   );
 
+  const passes = readManagementPasses(record.raw_payload);
+  const adjusted = applyManagementPasses(computed, passes);
+
   const rawPayload: Record<string, unknown> = {
     ...(record.raw_payload ?? {}),
     first_punch_date: session.firstPunchDate,
@@ -112,14 +119,14 @@ export function buildRecalculatedRecordPatch(
 
   return {
     shift_id: resolvedShiftId,
-    total_minutes: computed.totalMinutes,
-    shift_type: computed.shiftType,
-    expected_minutes: computed.expectedMinutes,
-    late_minutes: computed.lateMinutes,
-    early_leave_minutes: computed.earlyLeaveMinutes,
-    overtime_minutes: computed.overtimeMinutes,
-    deduction_minutes: computed.deductionMinutes,
-    is_absent: computed.isAbsent,
+    total_minutes: adjusted.totalMinutes,
+    shift_type: adjusted.shiftType,
+    expected_minutes: adjusted.expectedMinutes,
+    late_minutes: adjusted.lateMinutes,
+    early_leave_minutes: adjusted.earlyLeaveMinutes,
+    overtime_minutes: adjusted.overtimeMinutes,
+    deduction_minutes: adjusted.deductionMinutes,
+    is_absent: adjusted.isAbsent,
     raw_payload: rawPayload,
   };
 }

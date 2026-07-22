@@ -5,6 +5,7 @@ import { getCompanyData } from "@/lib/company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
 import { getBadgeCounts } from "@/lib/data/badges";
 import { resolveDolceEmployeeSignupAccess } from "@/lib/dolce-signup-company";
+import { hasTestingAccess } from "@/lib/itqan-testing";
 import { PortalShellSkeleton } from "@/components/portal/PortalShellSkeleton";
 import { PortalShell } from "@/components/portal/PortalShell";
 import type { AppFeature, RoleFeatures } from "@/types/db";
@@ -99,6 +100,7 @@ async function AuthenticatedPortal({
     shellCompanyId,
     companyRow?.enabled_features ?? null,
   );
+  const showTestingNav = hasTestingAccess(profile);
 
   const pendingRequestsCount = badgeCounts.pendingRequests;
   const unreadWarningAlerts = badgeCounts.unreadWarningAlerts;
@@ -128,6 +130,7 @@ async function AuthenticatedPortal({
       expiredPapersCount={expiredPapersCount}
       expiringSoonPapersCount={expiringSoonPapersCount}
       showDolceSignupNav={showDolceSignupNav}
+      showTestingNav={showTestingNav}
     >
       {children}
     </PortalShell>

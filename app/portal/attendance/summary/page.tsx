@@ -13,6 +13,7 @@ import {
   getAttendanceCompanies,
   getAttendanceImport,
   getAttendancePeople,
+  getAttendanceShifts,
   getMonthlyAttendanceRecords,
 } from "@/lib/data/monthly-attendance";
 import { PageHeader } from "@/components/portal/PageHeader";
@@ -53,17 +54,23 @@ export default async function AttendanceSummaryPage({
   const branchId = resolveAttendanceBranchId(params.branchId, branches);
   const monthDate = `${month}-01`;
 
-  const [importRow, people] = await Promise.all([
+  const [importRow, people, branchShifts] = await Promise.all([
     companyId && branchId
       ? getAttendanceImport(companyId, branchId, monthDate)
       : Promise.resolve(null),
     companyId && branchId
       ? getAttendancePeople(companyId, branchId)
       : Promise.resolve([]),
+    branchId ? getAttendanceShifts(branchId) : Promise.resolve([]),
   ]);
 
   const records = importRow ? await getMonthlyAttendanceRecords(importRow.id) : [];
-  const { rows, totals } = buildBranchPayrollSummary(month, records, people);
+  const { rows, totals } = buildBranchPayrollSummary(
+    month,
+    records,
+    people,
+    branchShifts,
+  );
   const selectedBranch = branches.find((b) => b.id === branchId) ?? null;
   const canExport = Boolean(companyId && branchId && importRow);
   const showExportHint = Boolean(companyId && branchId && !importRow);

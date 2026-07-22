@@ -16,13 +16,14 @@ import {
 } from "@/lib/features";
 import { getCompanyData } from "@/lib/company";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
+import { hasTestingAccess } from "@/lib/itqan-testing";
 import type { AppFeature, Profile } from "@/types/db";
 
 // Fields needed by auth guards + portal shell + settings page.
 // HR-specific fields (date_of_birth, emergency_contact_*, etc.) are fetched
 // on-demand by the employee detail / edit pages via their own queries.
 const PROFILE_SELECT =
-  "id, full_name, phone, role, company_id, job_title, national_id, hired_at, is_active, avatar_url, is_super_admin, created_at";
+  "id, full_name, phone, role, company_id, job_title, national_id, hired_at, is_active, avatar_url, is_super_admin, testing_access_enabled, created_at";
 
 /** Cache tag for profile lookups — call revalidateTag after profile mutations. */
 export function profileCacheTag(userId: string): string {
@@ -205,5 +206,17 @@ export async function requireAttendanceAccess() {
     }
   }
 
+  return current;
+}
+
+/**
+ * Guards Al Itqan testing routes. Access is per-user (superadmin or
+ * profiles.testing_access_enabled) — not company feature flags.
+ */
+export async function requireTestingAccess() {
+  const current = await requireUser();
+  if (!hasTestingAccess(current.profile)) {
+    redirect("/portal");
+  }
   return current;
 }

@@ -3,6 +3,7 @@ import {
   computeOnePunchRecord,
   computeSessionRecord,
   DEFAULT_FULL_TIME_CONFIG,
+  resolveShiftForSession,
 } from "@/lib/attendance/shift-matching";
 import type { PunchSession } from "@/lib/attendance/punch-sessions";
 import type { AttendanceShift } from "@/types/db";
@@ -24,6 +25,7 @@ const MORNING_SHIFT: AttendanceShift = {
   check_out_window_start: null,
   check_out_window_end: null,
   active: true,
+  work_days: null,
   display_order: 0,
   created_at: "2026-01-01T00:00:00Z",
 };
@@ -142,5 +144,29 @@ describe("computeSessionRecord one-punch late", () => {
     expect(computed.lateMinutes).toBe(45);
     expect(computed.deductionMinutes).toBe(0);
     expect(computed.earlyLeaveMinutes).toBe(0);
+  });
+});
+
+describe("resolveShiftForSession work_days", () => {
+  // 2026-06-05 is Friday (5)
+  it("skips shifts that do not run on the session weekday", () => {
+    const weekdayShift: AttendanceShift = {
+      ...MORNING_SHIFT,
+      id: "weekday-only",
+      work_days: [0, 1, 2, 3, 4, 6],
+    };
+    const fridayShift: AttendanceShift = {
+      ...MORNING_SHIFT,
+      id: "friday-only",
+      name: "جمعة",
+      start_time: "10:00",
+      work_days: [5],
+    };
+
+    const session = makeSession("10:05", "16:00", "2026-06-05");
+    expect(resolveShiftForSession(session, [weekdayShift])).toBeNull();
+    expect(resolveShiftForSession(session, [weekdayShift, fridayShift])?.id).toBe(
+      "friday-only",
+    );
   });
 });

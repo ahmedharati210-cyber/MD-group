@@ -4,6 +4,10 @@ import { useActionState, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { AttendanceShift } from "@/types/db";
 import {
+  formatWorkDaysLabel,
+  WEEKDAY_OPTIONS,
+} from "@/lib/attendance/person-schedule";
+import {
   createAttendanceShiftAction,
   deleteAttendanceShiftAction,
   toggleAttendanceShiftAction,
@@ -235,6 +239,26 @@ function CreateShiftForm({
         </Field>
       </div>
 
+      <Field label="أيام العمل" hint="اترك الكل محدداً إن كانت الوردية كل أيام الأسبوع">
+        <div className="flex flex-wrap gap-2">
+          {WEEKDAY_OPTIONS.map((day) => (
+            <label
+              key={day.value}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-xs"
+            >
+              <input
+                type="checkbox"
+                name="work_days"
+                value={day.value}
+                defaultChecked
+                className="rounded"
+              />
+              {day.label}
+            </label>
+          ))}
+        </div>
+      </Field>
+
       <button
         type="submit"
         disabled={pending}
@@ -286,13 +310,14 @@ export function ShiftManager({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[900px]">
+            <table className="w-full text-sm min-w-[1000px]">
               <thead className="bg-gray-50 dark:bg-gray-800/60">
                 <tr className="text-right">
                   <th className="px-4 py-3">الاسم</th>
                   <th className="px-4 py-3">البداية</th>
                   <th className="px-4 py-3">النهاية</th>
                   <th className="px-4 py-3">المدة</th>
+                  <th className="px-4 py-3">الأيام</th>
                   <th className="px-4 py-3">ليلية</th>
                   <th className="px-4 py-3">آخر خروج</th>
                   <th className="px-4 py-3">فترة التأخير</th>
@@ -344,6 +369,10 @@ function ShiftRow({
     crossesMidnight,
   );
 
+  const selectedWorkDays = shift.work_days;
+  const workDayChecked = (value: number) =>
+    selectedWorkDays == null ? true : selectedWorkDays.includes(value);
+
   return (
     <tr className="border-t border-gray-100 dark:border-gray-800">
       <td className="px-4 py-3">
@@ -392,6 +421,26 @@ function ShiftRow({
           title={`محسوب: ${suggestedMinutes} دقيقة`}
           className="w-20 px-2 py-1 border rounded-lg text-xs"
         />
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex flex-wrap gap-1 min-w-[140px]" title={formatWorkDaysLabel(shift.work_days)}>
+          {WEEKDAY_OPTIONS.map((day) => (
+            <label
+              key={day.value}
+              className="inline-flex items-center gap-0.5 text-[10px] text-gray-600 dark:text-gray-300"
+            >
+              <input
+                form={formId}
+                type="checkbox"
+                name="work_days"
+                value={day.value}
+                defaultChecked={workDayChecked(day.value)}
+                className="rounded"
+              />
+              {day.label}
+            </label>
+          ))}
+        </div>
       </td>
       <td className="px-4 py-3 text-center">
         <input

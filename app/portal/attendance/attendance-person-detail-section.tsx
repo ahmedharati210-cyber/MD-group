@@ -2,6 +2,7 @@ import {
   buildPersonCalendarDays,
   buildPersonMonthStats,
 } from "@/lib/attendance/attendance-view";
+import { resolvePersonWorkDays } from "@/lib/attendance/person-schedule";
 import {
   getAttendanceImport,
   getAttendancePeople,
@@ -45,16 +46,9 @@ export async function AttendancePersonDetailSection({
   const personRecords = allRecords.filter(
     (record) => record.attendance_person_id === person.id,
   );
-  const calendarDays = buildPersonCalendarDays(
-    month,
-    personRecords,
-    person.custom_work_days,
-  );
-  const personStats = buildPersonMonthStats(
-    month,
-    personRecords,
-    person.custom_work_days,
-  );
+  const workDays = resolvePersonWorkDays(person, branchShifts);
+  const calendarDays = buildPersonCalendarDays(month, personRecords, workDays);
+  const personStats = buildPersonMonthStats(month, personRecords, workDays);
 
   if (!importRow) {
     return (
@@ -71,7 +65,7 @@ export async function AttendancePersonDetailSection({
         month={month}
         records={personRecords}
         employeeName={person.full_name}
-        workDays={person.custom_work_days}
+        workDays={workDays}
         compact
       />
       <AttendancePersonMonthTable

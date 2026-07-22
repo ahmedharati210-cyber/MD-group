@@ -108,6 +108,8 @@ export interface Profile {
   is_super_admin: boolean;
   /** Super-admin grant: receive automated project/task notifications. */
   project_notifications_enabled: boolean;
+  /** Super-admin grant: access Al Itqan testing module. */
+  testing_access_enabled: boolean;
   created_at: string;
   // Extended HR fields
   date_of_birth: string | null;
@@ -139,6 +141,8 @@ type ProfileInsert = {
   is_active?: boolean;
   avatar_url?: string | null;
   is_super_admin?: boolean;
+  project_notifications_enabled?: boolean;
+  testing_access_enabled?: boolean;
   created_at?: string;
   date_of_birth?: string | null;
   gender?: Gender | null;
@@ -243,6 +247,8 @@ export interface AttendanceShift {
   check_in_window_end: string | null;
   check_out_window_start: string | null;
   check_out_window_end: string | null;
+  /** JS getDay() 0-6. null = all days; empty = none. */
+  work_days: number[] | null;
   active: boolean;
   display_order: number;
   created_at: string;
@@ -263,6 +269,7 @@ type AttendanceShiftInsert = {
   check_in_window_end?: string | null;
   check_out_window_start?: string | null;
   check_out_window_end?: string | null;
+  work_days?: number[] | null;
   active?: boolean;
   display_order?: number;
   created_at?: string;
@@ -622,6 +629,74 @@ type ProjectPersonalDraftInsert = {
 
 export type TaskWorkStatus = "in_progress" | null;
 
+export type QaProjectStatus = "active" | "done";
+export type QaTestResult = "pass" | "bug" | "improve";
+
+export interface QaProject {
+  id: string;
+  company_id: string;
+  name: string;
+  description: string | null;
+  status: QaProjectStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+type QaProjectInsert = {
+  id?: string;
+  company_id: string;
+  name: string;
+  description?: string | null;
+  status?: QaProjectStatus;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export interface QaSection {
+  id: string;
+  project_id: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
+}
+type QaSectionInsert = {
+  id?: string;
+  project_id: string;
+  name: string;
+  sort_order?: number;
+  created_at?: string;
+};
+
+export interface QaTestItem {
+  id: string;
+  section_id: string;
+  project_id: string;
+  title: string;
+  description: string | null;
+  assigned_to: string | null;
+  result: QaTestResult | null;
+  result_note: string | null;
+  tested_by: string | null;
+  tested_at: string | null;
+  sort_order: number;
+  created_at: string;
+}
+type QaTestItemInsert = {
+  id?: string;
+  section_id: string;
+  project_id: string;
+  title: string;
+  description?: string | null;
+  assigned_to?: string | null;
+  result?: QaTestResult | null;
+  result_note?: string | null;
+  tested_by?: string | null;
+  tested_at?: string | null;
+  sort_order?: number;
+  created_at?: string;
+};
+
 export interface ProjectTask {
   id: string;
   category_id: string;
@@ -955,6 +1030,9 @@ export interface Database {
         ProjectPersonalDraftInsert
       >;
       project_tasks: TableDef<ProjectTask, ProjectTaskInsert>;
+      qa_projects: TableDef<QaProject, QaProjectInsert>;
+      qa_sections: TableDef<QaSection, QaSectionInsert>;
+      qa_test_items: TableDef<QaTestItem, QaTestItemInsert>;
       engineer_reports: TableDef<EngineerReport, EngineerReportInsert>;
       engineer_requests: TableDef<EngineerRequest, EngineerRequestInsert>;
       manager_claims: TableDef<ManagerClaim, ManagerClaimInsert>;

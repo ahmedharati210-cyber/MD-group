@@ -6,6 +6,7 @@ import {
   buildPersonCalendarDays,
   buildPersonMonthStats,
 } from "@/lib/attendance/attendance-view";
+import { resolvePersonWorkDays } from "@/lib/attendance/person-schedule";
 import {
   filterPeopleBySearch,
   filterRecordsBySearch,
@@ -66,12 +67,12 @@ export async function AttendanceOverviewSection({
     ? allRecords.filter((r) => r.attendance_person_id === selectedPerson.id)
     : [];
 
+  const selectedPersonWorkDays = selectedPerson
+    ? resolvePersonWorkDays(selectedPerson, branchShifts)
+    : null;
+
   const calendarDays = selectedPerson
-    ? buildPersonCalendarDays(
-        month,
-        personAllRecords,
-        selectedPerson.custom_work_days,
-      )
+    ? buildPersonCalendarDays(month, personAllRecords, selectedPersonWorkDays)
     : buildCalendarDays(
         month,
         filteredRecords,
@@ -84,11 +85,7 @@ export async function AttendanceOverviewSection({
     hasSearch ? filteredPeople : people,
   );
   const personStats = selectedPerson
-    ? buildPersonMonthStats(
-        month,
-        personAllRecords,
-        selectedPerson.custom_work_days,
-      )
+    ? buildPersonMonthStats(month, personAllRecords, selectedPersonWorkDays)
     : null;
 
   const navContext = { companyId, branchId, month };
@@ -145,7 +142,7 @@ export async function AttendanceOverviewSection({
             month={month}
             records={personAllRecords}
             employeeName={selectedPerson.full_name}
-            workDays={selectedPerson.custom_work_days}
+            workDays={selectedPersonWorkDays}
           />
         </>
       ) : (

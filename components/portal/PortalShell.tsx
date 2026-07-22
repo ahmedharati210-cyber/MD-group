@@ -45,6 +45,7 @@ type Props = {
   expiredPapersCount: number;
   expiringSoonPapersCount: number;
   showDolceSignupNav: boolean;
+  showTestingNav: boolean;
   children: React.ReactNode;
 };
 
@@ -64,6 +65,7 @@ export function PortalShell({
   expiredPapersCount,
   expiringSoonPapersCount,
   showDolceSignupNav,
+  showTestingNav,
   children,
 }: Props) {
   const router = useRouter();
@@ -102,6 +104,7 @@ export function PortalShell({
             expiredPapersCount={expiredPapersCount}
             expiringSoonPapersCount={expiringSoonPapersCount}
             showDolceSignupNav={showDolceSignupNav}
+            showTestingNav={showTestingNav}
             isOpen={isOpen}
             onClose={handleClose}
           />

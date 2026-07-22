@@ -18,17 +18,8 @@ import { normalizeSearchQuery, matchesAttendanceSearch } from "@/lib/attendance/
 import {
   formatPersonCustomScheduleLabel,
   personHasCustomSchedule,
+  WEEKDAY_OPTIONS,
 } from "@/lib/attendance/person-schedule";
-
-const WEEKDAY_OPTIONS = [
-  { value: 0, label: "أحد" },
-  { value: 1, label: "إثن" },
-  { value: 2, label: "ثلا" },
-  { value: 3, label: "أرب" },
-  { value: 4, label: "خمي" },
-  { value: 5, label: "جمع" },
-  { value: 6, label: "سبت" },
-] as const;
 
 const timeInputProps = {
   type: "text" as const,

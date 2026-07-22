@@ -11,8 +11,12 @@ import {
   classifyPersonDayStatus,
   type PersonDayStatus,
 } from "@/lib/attendance/status-labels";
-import { isPersonWorkDay } from "@/lib/attendance/person-schedule";
-import type { AttendanceMonthlyRecord, AttendancePerson } from "@/types/db";
+import { isPersonWorkDay, resolvePersonWorkDays } from "@/lib/attendance/person-schedule";
+import type {
+  AttendanceMonthlyRecord,
+  AttendancePerson,
+  AttendanceShift,
+} from "@/types/db";
 
 export type { DaySummary } from "@/lib/attendance/calendar-shared";
 
@@ -425,6 +429,7 @@ export function buildBranchPayrollSummary(
   month: string,
   records: AttendanceMonthlyRecord[],
   people: AttendancePerson[],
+  shifts: AttendanceShift[] = [],
 ): { rows: PersonPayrollSummary[]; totals: BranchPayrollTotals } {
   const parsed = parseMonthParam(month.slice(0, 7));
   if (!parsed) {
@@ -450,6 +455,7 @@ export function buildBranchPayrollSummary(
     const personRecords = byPerson.get(key) ?? [];
     const person = peopleByKey.get(key) ?? null;
     const byDate = groupRecordsByDate(personRecords);
+    const workDays = person ? resolvePersonWorkDays(person, shifts) : null;
 
     const row: PersonPayrollSummary = {
       personId: person?.id ?? personRecords[0]?.attendance_person_id ?? null,
@@ -472,7 +478,7 @@ export function buildBranchPayrollSummary(
         continue;
       }
       if (!record) {
-        if (isPersonWorkDay(date, person?.custom_work_days ?? null)) {
+        if (isPersonWorkDay(date, workDays)) {
           row.absentDays += 1;
         }
         continue;
