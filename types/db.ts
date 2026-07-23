@@ -75,8 +75,9 @@ export interface Company {
   /** null = each role sees all enabled_features; object = per-role overrides */
   role_features: RoleFeatures | null;
   /**
-   * Attendance period start day (1–28).
+   * Attendance period start day (1–31).
    * 1 = calendar month; e.g. 28 = previous-month-28 through labeled-month-27.
+   * Days that do not exist in a short month are clamped (e.g. 31 in February).
    */
   attendance_month_start_day: number;
   created_at: string;

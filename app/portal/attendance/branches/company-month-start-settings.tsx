@@ -3,6 +3,11 @@
 import { useActionState, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import {
+  ATTENDANCE_MONTH_START_DAY_MAX,
+  ATTENDANCE_MONTH_START_DAY_MIN,
+  normalizeAttendanceMonthStartDay,
+} from "@/lib/attendance/attendance-period";
+import {
   updateCompanyAttendanceMonthStartAction,
   type ActionState,
 } from "../actions";
@@ -13,24 +18,21 @@ type Props = {
   startDay: number;
 };
 
-function clampStartDay(value: number): number {
-  if (!Number.isFinite(value)) return 1;
-  return Math.min(28, Math.max(1, Math.trunc(value)));
-}
-
 function endDayLabel(start: number): string {
   return start <= 1 ? "آخر الشهر" : String(start - 1);
 }
 
 export function CompanyMonthStartSettings({ companyId, startDay }: Props) {
-  const [fromDay, setFromDay] = useState(() => clampStartDay(startDay));
+  const [fromDay, setFromDay] = useState(() =>
+    normalizeAttendanceMonthStartDay(startDay),
+  );
   const [state, action, pending] = useActionState<
     ActionState | undefined,
     FormData
   >(updateCompanyAttendanceMonthStartAction, undefined);
 
   useEffect(() => {
-    setFromDay(clampStartDay(startDay));
+    setFromDay(normalizeAttendanceMonthStartDay(startDay));
   }, [startDay]);
 
   useEffect(() => {
@@ -56,11 +58,13 @@ export function CompanyMonthStartSettings({ companyId, startDay }: Props) {
           </label>
           <input
             type="number"
-            min={1}
-            max={28}
+            min={ATTENDANCE_MONTH_START_DAY_MIN}
+            max={ATTENDANCE_MONTH_START_DAY_MAX}
             required
             value={fromDay}
-            onChange={(e) => setFromDay(clampStartDay(Number(e.target.value)))}
+            onChange={(e) =>
+              setFromDay(normalizeAttendanceMonthStartDay(Number(e.target.value)))
+            }
             className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm"
           />
         </div>

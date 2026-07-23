@@ -29,10 +29,21 @@ describe("resolveAttendancePeriod", () => {
     expect(march?.startDate).toBe("2026-02-28");
     expect(march?.endDate).toBe("2026-03-27");
 
-    // Labeled February → Jan 28 – Jan 27? No: Jan 28 – Feb 27
+    // Labeled February → Jan 28 – Feb 27
     const feb = resolveAttendancePeriod("2026-02", 28);
     expect(feb?.startDate).toBe("2026-01-28");
     expect(feb?.endDate).toBe("2026-02-27");
+  });
+
+  it("allows start day 31 and clamps February", () => {
+    const june = resolveAttendancePeriod("2026-06", 31);
+    expect(june?.startDate).toBe("2026-05-31");
+    expect(june?.endDate).toBe("2026-06-30");
+
+    // Labeled March 2026: previous Feb has 28 days → clamp start to Feb 28
+    const march = resolveAttendancePeriod("2026-03", 31);
+    expect(march?.startDate).toBe("2026-02-28");
+    expect(march?.endDate).toBe("2026-03-30");
   });
 
   it("formats an Arabic period label", () => {

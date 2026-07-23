@@ -1306,7 +1306,7 @@ export async function resetPersonLeaveBalanceAction(
 
 const updateCompanyMonthStartSchema = z.object({
   company_id: z.string().uuid(),
-  attendance_month_start_day: z.coerce.number().int().min(1).max(28),
+  attendance_month_start_day: z.coerce.number().int().min(1).max(31),
 });
 
 export async function updateCompanyAttendanceMonthStartAction(
