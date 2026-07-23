@@ -15,6 +15,7 @@ import {
   getAttendanceCompanies,
   getAttendanceImport,
 } from "@/lib/data/monthly-attendance";
+import { resolveAttendancePeriod } from "@/lib/attendance/attendance-period";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { AttendanceImportForm } from "./attendance-import-form";
 import { AttendanceSearch } from "./attendance-search";
@@ -104,6 +105,13 @@ export default async function AttendancePage({
   const canExport = Boolean(companyId && branchId && importRow);
   const showExportHint = Boolean(companyId && branchId && !importRow);
 
+  const selectedCompany = companies.find((c) => c.id === companyId) ?? null;
+  const monthStartDay = selectedCompany?.attendance_month_start_day ?? 1;
+  const periodLabel =
+    monthStartDay !== 1
+      ? (resolveAttendancePeriod(month, monthStartDay)?.label ?? null)
+      : null;
+
   const overviewKey = `${month}-${selectedDay ?? ""}-${selectedPersonId ?? ""}-${searchQuery}`;
   const listKey = `${month}-${searchQuery}`;
 
@@ -141,6 +149,7 @@ export default async function AttendancePage({
         branchId={branchId}
         month={month}
         showCompanyPicker={attendanceShowCompanyPicker(profile)}
+        periodLabel={periodLabel}
       />
 
       {companyId && branchId ? (
@@ -198,6 +207,9 @@ export default async function AttendancePage({
                   personId={selectedPersonId}
                   searchQuery={searchQuery}
                   isSuperAdmin={profile.is_super_admin}
+                  canResetLeaveBalance={
+                    profile.is_super_admin || profile.role === "md_admin"
+                  }
                 />
               </Suspense>
             </div>

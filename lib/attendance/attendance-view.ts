@@ -1,10 +1,12 @@
 import "server-only";
 
 import {
-  enumerateMonthDays,
   formatMinutesAsHours,
-  parseMonthParam,
 } from "@/lib/attendance/monthly-calculations";
+import {
+  DEFAULT_ATTENDANCE_MONTH_START_DAY,
+  resolveAttendancePeriod,
+} from "@/lib/attendance/attendance-period";
 import { hasOnePunch, type DaySummary } from "@/lib/attendance/calendar-shared";
 import { hasLeave, HOLIDAY_LEAVE_TYPE, recordLeaveLabel } from "@/lib/attendance/leave-types";
 import {
@@ -20,6 +22,13 @@ import type {
 
 export type { DaySummary } from "@/lib/attendance/calendar-shared";
 
+function periodDaysForMonth(
+  month: string,
+  monthStartDay: number = DEFAULT_ATTENDANCE_MONTH_START_DAY,
+): string[] {
+  return resolveAttendancePeriod(month, monthStartDay)?.days ?? [];
+}
+
 export type MonthSummary = {
   totalPeople: number;
   presentDays: number;
@@ -33,8 +42,15 @@ export function buildMonthSummary(
   records: AttendanceMonthlyRecord[],
   people: AttendancePerson[] = [],
   shifts: AttendanceShift[] | null = null,
+  monthStartDay: number = DEFAULT_ATTENDANCE_MONTH_START_DAY,
 ): MonthSummary {
-  const calendarDays = buildCalendarDays(month, records, people, shifts);
+  const calendarDays = buildCalendarDays(
+    month,
+    records,
+    people,
+    shifts,
+    monthStartDay,
+  );
   let presentDays = 0;
   let absentDays = 0;
   let lateDays = 0;
@@ -103,10 +119,10 @@ export function buildCalendarDays(
   records: AttendanceMonthlyRecord[],
   people: AttendancePerson[] = [],
   shifts: AttendanceShift[] | null = null,
+  monthStartDay: number = DEFAULT_ATTENDANCE_MONTH_START_DAY,
 ): DaySummary[] {
-  const parsed = parseMonthParam(month.slice(0, 7));
-  if (!parsed) return [];
-  const days = enumerateMonthDays(parsed.year, parsed.month);
+  const days = periodDaysForMonth(month, monthStartDay);
+  if (days.length === 0) return [];
   const byDate = groupRecordsByDate(records);
   const byPersonDate = recordsByPersonAndDate(records);
   const activePeople = people.filter((p) => p.active);
@@ -265,10 +281,10 @@ export function buildPersonCalendarDays(
   month: string,
   records: AttendanceMonthlyRecord[],
   workDays: number[] | null = null,
+  monthStartDay: number = DEFAULT_ATTENDANCE_MONTH_START_DAY,
 ): DaySummary[] {
-  const parsed = parseMonthParam(month.slice(0, 7));
-  if (!parsed) return [];
-  const days = enumerateMonthDays(parsed.year, parsed.month);
+  const days = periodDaysForMonth(month, monthStartDay);
+  if (days.length === 0) return [];
   const byDate = groupRecordsByDate(records);
 
   return days.map((date) => {
@@ -342,9 +358,10 @@ export function buildPersonMonthStats(
   month: string,
   records: AttendanceMonthlyRecord[],
   workDays: number[] | null = null,
+  monthStartDay: number = DEFAULT_ATTENDANCE_MONTH_START_DAY,
 ): PersonMonthStats {
-  const parsed = parseMonthParam(month.slice(0, 7));
-  if (!parsed) {
+  const days = periodDaysForMonth(month, monthStartDay);
+  if (days.length === 0) {
     return {
       presentDays: 0,
       absentDays: 0,
@@ -357,7 +374,6 @@ export function buildPersonMonthStats(
       totalDeductionMinutes: 0,
     };
   }
-  const days = enumerateMonthDays(parsed.year, parsed.month);
   const byDate = groupRecordsByDate(records);
 
   let presentDays = 0;
@@ -468,13 +484,13 @@ export function buildBranchPayrollSummary(
   records: AttendanceMonthlyRecord[],
   people: AttendancePerson[],
   shifts: AttendanceShift[] = [],
+  monthStartDay: number = DEFAULT_ATTENDANCE_MONTH_START_DAY,
 ): { rows: PersonPayrollSummary[]; totals: BranchPayrollTotals } {
-  const parsed = parseMonthParam(month.slice(0, 7));
-  if (!parsed) {
+  const days = periodDaysForMonth(month, monthStartDay);
+  if (days.length === 0) {
     return { rows: [], totals: emptyPayrollCounters() };
   }
 
-  const days = enumerateMonthDays(parsed.year, parsed.month);
   const byPerson = groupRecordsByPerson(records);
   const peopleByKey = new Map<string, AttendancePerson>();
   for (const person of people) {

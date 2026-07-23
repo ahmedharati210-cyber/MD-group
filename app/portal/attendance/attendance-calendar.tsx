@@ -85,9 +85,14 @@ export function AttendanceCalendar({
   title = "تقويم الشهر",
 }: Props) {
   const searchParams = useSearchParams();
-  const [year, monthNum] = month.split("-").map(Number);
-  const firstWeekday = new Date(year, monthNum - 1, 1).getDay();
+  const firstDate = days[0]?.date;
+  const firstWeekday = firstDate
+    ? new Date(`${firstDate}T12:00:00`).getDay()
+    : 0;
   const blanks = Array.from({ length: firstWeekday });
+  const spansMonths =
+    days.length > 0 &&
+    days[0].date.slice(0, 7) !== days[days.length - 1].date.slice(0, 7);
 
   function dayHref(date: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -125,6 +130,7 @@ export function AttendanceCalendar({
         ))}
         {days.map((day) => {
           const dayNum = Number(day.date.slice(8, 10));
+          const monthNum = Number(day.date.slice(5, 7));
           const isSelected = selectedDay === day.date;
           const hasData = dayHasActivity(day);
           return (
@@ -137,6 +143,11 @@ export function AttendanceCalendar({
             >
               <LinkPendingSpinner className="absolute top-1 left-1 z-10" />
               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {spansMonths ? (
+                  <span className="text-[10px] text-gray-500 ml-1">
+                    {monthNum}/
+                  </span>
+                ) : null}
                 {dayNum}
               </span>
               {personMode ? (

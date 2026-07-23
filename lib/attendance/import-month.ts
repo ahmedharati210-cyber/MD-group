@@ -1,5 +1,11 @@
 /** Client-safe helpers for attendance import month detection and defaults. */
 
+import {
+  DEFAULT_ATTENDANCE_MONTH_START_DAY,
+  isDateInAttendancePeriod,
+  resolveAttendancePeriod,
+} from "@/lib/attendance/attendance-period";
+
 const ARABIC_MONTHS = [
   "يناير",
   "فبراير",
@@ -59,16 +65,28 @@ export function detectDominantMonthFromDates(dates: string[]): string | null {
   return dominant;
 }
 
+/**
+ * Warn when most punch dates fall outside the company's resolved attendance period.
+ */
 export function detectImportMonthMismatch(
   selectedMonth: string,
   dates: string[],
+  monthStartDay: number = DEFAULT_ATTENDANCE_MONTH_START_DAY,
 ): MonthMismatchInfo | null {
-  const detectedMonth = detectDominantMonthFromDates(dates);
-  if (!detectedMonth || detectedMonth === selectedMonth) return null;
+  if (dates.length === 0) return null;
 
+  const period = resolveAttendancePeriod(selectedMonth, monthStartDay);
+  if (!period) return null;
+
+  const outside = dates.filter(
+    (date) => !isDateInAttendancePeriod(date, period),
+  );
+  if (outside.length <= dates.length / 2) return null;
+
+  const detectedMonth = detectDominantMonthFromDates(dates);
   return {
-    detectedMonth,
+    detectedMonth: detectedMonth ?? selectedMonth,
     selectedMonth,
-    message: `هذا الملف يحتوي على بيانات لشهر ${formatMonthLabel(detectedMonth)}، لكن الشهر المحدد هو ${formatMonthLabel(selectedMonth)}.`,
+    message: `معظم تواريخ الملف خارج فترة الحضور (${period.label}). تحقق من الشهر المحدد أو بداية شهر الحضور للشركة.`,
   };
 }

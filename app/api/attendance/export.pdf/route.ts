@@ -63,13 +63,21 @@ export async function GET(req: NextRequest) {
     getAttendanceShifts(branchId),
     createSupabaseServerClient()
       .then((sb) =>
-        sb.from("companies").select("name_ar").eq("id", companyId).single(),
+        sb
+          .from("companies")
+          .select("name_ar, attendance_month_start_day")
+          .eq("id", companyId)
+          .single(),
       ),
   ]);
 
   const branch = branchCheck;
-  const companyName =
-    (companyRes.data as { name_ar: string } | null)?.name_ar ?? "الشركة";
+  const companyData = companyRes.data as {
+    name_ar: string;
+    attendance_month_start_day: number | null;
+  } | null;
+  const companyName = companyData?.name_ar ?? "الشركة";
+  const monthStartDay = companyData?.attendance_month_start_day ?? 1;
 
   const report = buildAttendanceReport({
     companyName,
@@ -78,6 +86,7 @@ export async function GET(req: NextRequest) {
     records,
     people,
     shifts,
+    monthStartDay,
   });
 
   const html = buildAttendanceReportHtml(report);

@@ -131,6 +131,9 @@ describe("buildCalendarDays work days", () => {
     custom_late_grace_minutes: 15,
     custom_early_leave_grace_minutes: 15,
     custom_work_days: null,
+    annual_leave_remaining: 14,
+    sick_leave_remaining: 4,
+    leave_balance_reset_at: null,
     created_at: "2026-01-01T00:00:00Z",
   };
 
@@ -177,6 +180,28 @@ describe("buildCalendarDays work days", () => {
     expect(thursday?.absent).toBe(1);
     expect(thursday?.off).toBe(0);
   });
+
+  it("uses period days when month start day is not 1 (Friday still off)", () => {
+    // Labeled 2026-06 with start day 28 → 2026-05-28 … 2026-06-27
+    // 2026-05-29 is Friday; 2026-05-28 is Thursday
+    const days = buildCalendarDays(
+      "2026-06",
+      [],
+      [person],
+      [fridayOffShift],
+      28,
+    );
+    expect(days[0]?.date).toBe("2026-05-28");
+    expect(days[days.length - 1]?.date).toBe("2026-06-27");
+
+    const fridayInMay = days.find((d) => d.date === "2026-05-29");
+    expect(fridayInMay?.absent).toBe(0);
+    expect(fridayInMay?.off).toBe(1);
+
+    const thursdayInMay = days.find((d) => d.date === "2026-05-28");
+    expect(thursdayInMay?.absent).toBe(1);
+    expect(thursdayInMay?.off).toBe(0);
+  });
 });
 
 describe("buildBranchPayrollSummary one-punch late", () => {
@@ -198,6 +223,9 @@ describe("buildBranchPayrollSummary one-punch late", () => {
     custom_late_grace_minutes: 15,
     custom_early_leave_grace_minutes: 15,
     custom_work_days: null,
+    annual_leave_remaining: 14,
+    sick_leave_remaining: 4,
+    leave_balance_reset_at: null,
     created_at: "2026-01-01T00:00:00Z",
   };
 

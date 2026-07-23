@@ -1,6 +1,10 @@
 /**
  * Client-safe person metric drill-down helpers for attendance summary cards.
  */
+import {
+  DEFAULT_ATTENDANCE_MONTH_START_DAY,
+  resolveAttendancePeriod,
+} from "@/lib/attendance/attendance-period";
 import { hasOnePunch, weekdayLabelAr } from "@/lib/attendance/calendar-shared";
 import {
   HOLIDAY_LEAVE_TYPE,
@@ -51,24 +55,6 @@ function formatMinutesAsHours(minutes: number): string {
 
 export function formatDeductionHours(minutes: number): string {
   return formatMinutesAsHours(minutes);
-}
-
-function parseMonthParam(value: string): { year: number; month: number } | null {
-  const m = value.match(/^(\d{4})-(\d{2})$/);
-  if (!m) return null;
-  const year = Number(m[1]);
-  const month = Number(m[2]);
-  if (month < 1 || month > 12) return null;
-  return { year, month };
-}
-
-function enumerateMonthDays(year: number, month: number): string[] {
-  const count = new Date(year, month, 0).getDate();
-  const prefix = `${year}-${String(month).padStart(2, "0")}`;
-  return Array.from({ length: count }, (_, i) => {
-    const day = String(i + 1).padStart(2, "0");
-    return `${prefix}-${day}`;
-  });
 }
 
 function timeOrEmpty(value: string | null): string {
@@ -176,14 +162,15 @@ export function filterPersonMetricDays(
   records: AttendanceMonthlyRecord[],
   metric: PersonMetricKey,
   workDays: number[] | null = null,
+  monthStartDay: number = DEFAULT_ATTENDANCE_MONTH_START_DAY,
 ): PersonMetricDayRow[] {
-  const parsed = parseMonthParam(month.slice(0, 7));
-  if (!parsed) return [];
+  const period = resolveAttendancePeriod(month, monthStartDay);
+  if (!period) return [];
 
   const byDate = groupRecordsByDate(records);
   const rows: PersonMetricDayRow[] = [];
 
-  for (const date of enumerateMonthDays(parsed.year, parsed.month)) {
+  for (const date of period.days) {
     const record = byDate.get(date) ?? null;
     if (!matchesMetric(record, metric, date, workDays)) continue;
 

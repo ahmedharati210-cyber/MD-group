@@ -14,6 +14,7 @@ import {
   getAttendanceImport,
   getAttendancePeople,
   getAttendanceShifts,
+  getCompanyAttendanceMonthStartDay,
   getMonthlyAttendanceRecords,
 } from "@/lib/data/monthly-attendance";
 import { PageHeader } from "@/components/portal/PageHeader";
@@ -21,6 +22,7 @@ import { MonthlyFilters } from "../monthly-filters";
 import { AttendanceExportActions } from "../attendance-export-actions";
 import { AttendancePayrollSummary } from "../attendance-payroll-summary";
 import { buildBranchAttendanceHref } from "../attendance-navigation";
+import { resolveAttendancePeriod } from "@/lib/attendance/attendance-period";
 
 export const metadata = { title: "ملخص الحضور والخصومات" };
 
@@ -54,7 +56,7 @@ export default async function AttendanceSummaryPage({
   const branchId = resolveAttendanceBranchId(params.branchId, branches);
   const monthDate = `${month}-01`;
 
-  const [importRow, people, branchShifts] = await Promise.all([
+  const [importRow, people, branchShifts, monthStartDay] = await Promise.all([
     companyId && branchId
       ? getAttendanceImport(companyId, branchId, monthDate)
       : Promise.resolve(null),
@@ -62,6 +64,9 @@ export default async function AttendanceSummaryPage({
       ? getAttendancePeople(companyId, branchId)
       : Promise.resolve([]),
     branchId ? getAttendanceShifts(branchId) : Promise.resolve([]),
+    companyId
+      ? getCompanyAttendanceMonthStartDay(companyId)
+      : Promise.resolve(1),
   ]);
 
   const records = importRow ? await getMonthlyAttendanceRecords(importRow.id) : [];
@@ -70,7 +75,9 @@ export default async function AttendanceSummaryPage({
     records,
     people,
     branchShifts,
+    monthStartDay,
   );
+  const period = resolveAttendancePeriod(month, monthStartDay);
   const selectedBranch = branches.find((b) => b.id === branchId) ?? null;
   const canExport = Boolean(companyId && branchId && importRow);
   const showExportHint = Boolean(companyId && branchId && !importRow);
@@ -137,6 +144,7 @@ export default async function AttendanceSummaryPage({
         month={month}
         showCompanyPicker={attendanceShowCompanyPicker(profile)}
         basePath="/portal/attendance/summary"
+        periodLabel={monthStartDay !== 1 ? (period?.label ?? null) : null}
       />
 
       {companyId && branchId ? (

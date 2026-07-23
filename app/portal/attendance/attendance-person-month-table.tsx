@@ -123,6 +123,7 @@ export function AttendancePersonMonthTable({
                 <AttendanceRecordTableRow
                   key={`${record.id}:${record.is_absent}:${record.leave_type}:${record.first_check_in}:${record.last_check_out}:${record.late_minutes}:${record.early_leave_minutes}:${record.deduction_minutes}:${record.notes}:${(record.raw_payload as Record<string, unknown> | null)?.waive_late}:${(record.raw_payload as Record<string, unknown> | null)?.waive_early_leave}`}
                   record={record}
+                  person={person}
                   shifts={shifts}
                   isSuperAdmin={isSuperAdmin}
                   dayMeta={dayMeta}
@@ -154,6 +155,7 @@ export function AttendancePersonMonthTable({
               <AttendanceRecordMobileCard
                 key={`mobile-${record.id}:${record.is_absent}:${record.leave_type}`}
                 record={record}
+                person={person}
                 shifts={shifts}
                 isSuperAdmin={isSuperAdmin}
                 dayMeta={dayMeta}

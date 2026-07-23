@@ -41,6 +41,9 @@ const person: AttendancePerson = {
   custom_late_grace_minutes: 15,
   custom_early_leave_grace_minutes: 15,
   custom_work_days: null,
+    annual_leave_remaining: 14,
+    sick_leave_remaining: 4,
+    leave_balance_reset_at: null,
   created_at: "2026-01-01T00:00:00Z",
 };
 

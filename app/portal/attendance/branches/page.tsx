@@ -20,6 +20,7 @@ import { AttendanceSearch } from "../attendance-search";
 import { ShiftManager } from "./shift-manager";
 import { BranchFilters } from "./branch-filters";
 import { BranchFullTimeSettings } from "./branch-full-time-settings";
+import { CompanyMonthStartSettings } from "./company-month-start-settings";
 import { buildBranchAttendanceHref } from "../attendance-navigation";
 
 export const metadata = { title: "فروع الحضور" };
@@ -53,6 +54,9 @@ export default async function AttendanceBranchesPage({
     ? allShifts.filter((s) => s.branch_id === selectedBranchId)
     : [];
   const selectedBranch = branches.find((b) => b.id === selectedBranchId) ?? null;
+  const selectedCompany = companies.find((c) => c.id === companyId) ?? null;
+  const canEditMonthStart =
+    profile.is_super_admin || profile.role === "md_admin";
   const month = getDefaultAttendanceMonth();
   const backHref =
     companyId && selectedBranchId
@@ -110,6 +114,12 @@ export default async function AttendanceBranchesPage({
           {selectedBranch ? (
             <>
               <div id="shifts" className="mb-8 scroll-mt-4">
+                {canEditMonthStart && selectedCompany ? (
+                  <CompanyMonthStartSettings
+                    companyId={companyId}
+                    startDay={selectedCompany.attendance_month_start_day ?? 1}
+                  />
+                ) : null}
                 <BranchFullTimeSettings branch={selectedBranch} />
                 <ShiftManager
                   companyId={companyId}

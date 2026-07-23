@@ -6,11 +6,9 @@ import type { AttendanceMonthlyRecord, AttendancePerson, AttendanceShift } from 
 import { hasOnePunch } from "@/lib/attendance/calendar-shared";
 import {
   ABSENT_STATUS,
-  CREATE_DAY_STATUS_OPTIONS,
   hasLeave,
   HOLIDAY_LEAVE_TYPE,
   isLeaveType,
-  LEAVE_TYPES,
   recordLeaveLabel,
 } from "@/lib/attendance/leave-types";
 import { readManagementPasses } from "@/lib/attendance/management-passes";
@@ -21,14 +19,20 @@ import {
   type ActionState,
 } from "./actions";
 import { DeleteConfirmButton } from "./delete-confirm-button";
+import {
+  DayStatusSelectWithWarning,
+  LeaveTypeSelectWithWarning,
+} from "./leave-type-select-with-warning";
 import { restoreScrollY, withPreservedScroll } from "./preserve-scroll";
 
 function useSaveSuccessToast(state: ActionState | undefined) {
   useEffect(() => {
+    if (state?.error) toast.error(state.error);
     if (!state?.ok) return;
     toast.success("تم الحفظ");
+    if (state.warning) toast(state.warning, { icon: "⚠️" });
     restoreScrollY();
-  }, [state?.ok]);
+  }, [state]);
 }
 
 function ManagementPassToggles({
@@ -284,20 +288,15 @@ export function AttendanceCreateLeaveForm({
     createLeaveRecordAction,
     undefined,
   );
+  useSaveSuccessToast(state);
 
   const statusSelect = (
-    <select
-      name="leave_type"
-      required
+    <LeaveTypeSelectWithWarning
       defaultValue={defaultStatus}
       className={dayPanelControlClass}
-    >
-      {CREATE_DAY_STATUS_OPTIONS.map((type) => (
-        <option key={type} value={type}>
-          {type}
-        </option>
-      ))}
-    </select>
+      annualRemaining={person.annual_leave_remaining}
+      sickRemaining={person.sick_leave_remaining}
+    />
   );
 
   return (
@@ -401,6 +400,7 @@ export function AttendanceCreateLeaveTableRow({
     createLeaveRecordAction,
     undefined,
   );
+  useSaveSuccessToast(state);
 
   const cb = `${compactCellClass} ${dayMeta.rowClassName}`;
   const stickySave = `${cb} sticky left-[2.25rem] z-[5] bg-inherit`;
@@ -424,18 +424,12 @@ export function AttendanceCreateLeaveTableRow({
       <div className={cb} />
       <div className={cb} />
       <div className={cb}>
-        <select
-          name="leave_type"
-          required
+        <LeaveTypeSelectWithWarning
           defaultValue={defaultStatus}
           className={compactSelectClass}
-        >
-          {CREATE_DAY_STATUS_OPTIONS.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
+          annualRemaining={person.annual_leave_remaining}
+          sickRemaining={person.sick_leave_remaining}
+        />
       </div>
       <div className={cb} />
       <div className={cb} />
@@ -458,11 +452,13 @@ export function AttendanceCreateLeaveTableRow({
 
 export function AttendanceRecordTableRow({
   record,
+  person,
   shifts,
   isSuperAdmin,
   dayMeta,
 }: {
   record: AttendanceMonthlyRecord;
+  person: AttendancePerson | null;
   shifts: AttendanceShift[];
   isSuperAdmin: boolean;
   dayMeta: DayTableMeta;
@@ -557,21 +553,14 @@ export function AttendanceRecordTableRow({
       </div>
       <div className={cellBase}>
         <div className="w-full space-y-1.5">
-          <select
-            name="leave_type"
+          <DayStatusSelectWithWarning
             title="حالة اليوم"
             value={dayStatus}
-            onChange={(e) => setDayStatus(e.target.value)}
+            onChange={setDayStatus}
             className={compactSelectClass}
-          >
-            <option value="">عادي</option>
-            <option value={ABSENT_STATUS}>{ABSENT_STATUS}</option>
-            {LEAVE_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
+            annualRemaining={person?.annual_leave_remaining}
+            sickRemaining={person?.sick_leave_remaining}
+          />
           <ManagementPassToggles record={record} hidden={hideTimes} compact />
         </div>
       </div>
@@ -641,6 +630,7 @@ export function AttendanceCreateLeaveMobileCard({
     createLeaveRecordAction,
     undefined,
   );
+  useSaveSuccessToast(state);
 
   return (
     <form
@@ -664,18 +654,12 @@ export function AttendanceCreateLeaveMobileCard({
       </div>
       <div className="space-y-1">
         <label className="text-xs text-gray-500">حالة اليوم</label>
-        <select
-          name="leave_type"
-          required
+        <LeaveTypeSelectWithWarning
           defaultValue={defaultStatus}
           className={compactSelectClass}
-        >
-          {CREATE_DAY_STATUS_OPTIONS.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
+          annualRemaining={person.annual_leave_remaining}
+          sickRemaining={person.sick_leave_remaining}
+        />
       </div>
       <button
         type="submit"
@@ -693,11 +677,13 @@ export function AttendanceCreateLeaveMobileCard({
 
 export function AttendanceRecordMobileCard({
   record,
+  person,
   shifts,
   isSuperAdmin,
   dayMeta,
 }: {
   record: AttendanceMonthlyRecord;
+  person: AttendancePerson | null;
   shifts: AttendanceShift[];
   isSuperAdmin: boolean;
   dayMeta: DayTableMeta;
@@ -780,20 +766,13 @@ export function AttendanceRecordMobileCard({
       ) : null}
       <div className="space-y-1">
         <label className="text-xs text-gray-500">حالة اليوم</label>
-        <select
-          name="leave_type"
+        <DayStatusSelectWithWarning
           value={dayStatus}
-          onChange={(e) => setDayStatus(e.target.value)}
+          onChange={setDayStatus}
           className={compactSelectClass}
-        >
-          <option value="">عادي</option>
-          <option value={ABSENT_STATUS}>{ABSENT_STATUS}</option>
-          {LEAVE_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
+          annualRemaining={person?.annual_leave_remaining}
+          sickRemaining={person?.sick_leave_remaining}
+        />
       </div>
       <ManagementPassToggles record={record} hidden={hideTimes} />
       <div className="space-y-1">
@@ -835,6 +814,7 @@ export function AttendanceRecordMobileCard({
 
 type RecordEditRowProps = {
   record: AttendanceMonthlyRecord;
+  person?: AttendancePerson | null;
   shifts: AttendanceShift[];
   isSuperAdmin: boolean;
   showEmployeeHeader?: boolean;
@@ -845,6 +825,7 @@ type RecordEditRowProps = {
 
 export function AttendanceRecordEditRow({
   record,
+  person = null,
   shifts,
   isSuperAdmin,
   showEmployeeHeader = true,
@@ -937,20 +918,13 @@ export function AttendanceRecordEditRow({
           </DayPanelCell>
           <DayPanelCell>
             <div className="space-y-1">
-              <select
-                name="leave_type"
+              <DayStatusSelectWithWarning
                 value={dayStatus}
-                onChange={(e) => setDayStatus(e.target.value)}
+                onChange={setDayStatus}
                 className={dayPanelControlClass}
-              >
-                <option value="">عادي</option>
-                <option value={ABSENT_STATUS}>{ABSENT_STATUS}</option>
-                {LEAVE_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
+                annualRemaining={person?.annual_leave_remaining}
+                sickRemaining={person?.sick_leave_remaining}
+              />
               <ManagementPassToggles record={record} hidden={hideTimes} compact />
             </div>
           </DayPanelCell>
@@ -1012,20 +986,13 @@ export function AttendanceRecordEditRow({
           ) : null}
           <div className="space-y-1">
             <label className="text-xs text-gray-500">حالة اليوم</label>
-            <select
-              name="leave_type"
+            <DayStatusSelectWithWarning
               value={dayStatus}
-              onChange={(e) => setDayStatus(e.target.value)}
+              onChange={setDayStatus}
               className={dayPanelControlClass}
-            >
-              <option value="">عادي</option>
-              <option value={ABSENT_STATUS}>{ABSENT_STATUS}</option>
-              {LEAVE_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
+              annualRemaining={person?.annual_leave_remaining}
+              sickRemaining={person?.sick_leave_remaining}
+            />
           </div>
           <ManagementPassToggles record={record} hidden={hideTimes} />
           <div className="space-y-1">

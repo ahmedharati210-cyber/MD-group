@@ -21,6 +21,7 @@ import {
   personHasCustomSchedule,
   WEEKDAY_OPTIONS,
 } from "@/lib/attendance/person-schedule";
+import { CompactLeaveBalanceText } from "./person-leave-balance";
 
 const timeInputProps = {
   type: "text" as const,
@@ -331,6 +332,7 @@ function PersonRow({
         ) : (
           <span className="text-[10px] text-gray-400">بدون جدول مخصص (أقرب وردية فرع)</span>
         )}
+        <CompactLeaveBalanceText person={person} />
         <div className="flex flex-wrap items-center gap-2">
           <input
             form={formId}

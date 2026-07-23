@@ -170,6 +170,7 @@ type PersonCardsProps = {
   records: AttendanceMonthlyRecord[];
   employeeName?: string;
   workDays?: number[] | null;
+  monthStartDay?: number;
   compact?: boolean;
 };
 
@@ -179,6 +180,7 @@ export function AttendancePersonSummaryCards({
   records,
   employeeName,
   workDays = null,
+  monthStartDay = 1,
   compact = false,
 }: PersonCardsProps) {
   const values = personCardValues(stats);
@@ -186,7 +188,13 @@ export function AttendancePersonSummaryCards({
 
   const selectedRows =
     selectedMetric != null
-      ? filterPersonMetricDays(month, records, selectedMetric, workDays)
+      ? filterPersonMetricDays(
+          month,
+          records,
+          selectedMetric,
+          workDays,
+          monthStartDay,
+        )
       : [];
 
   const selectedCount =

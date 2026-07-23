@@ -6,7 +6,11 @@ import { useEffect, useState, useTransition } from "react";
 import toast from "react-hot-toast";
 import { setPortalActiveCompanyAction } from "@/app/portal/companies/active-company-actions";
 
-type Company = { id: string; name_ar: string };
+type Company = {
+  id: string;
+  name_ar: string;
+  attendance_month_start_day?: number;
+};
 type Branch = { id: string; name: string };
 
 type Props = {
@@ -18,6 +22,8 @@ type Props = {
   showCompanyPicker: boolean;
   basePath?: string;
   preservePersonId?: string | null;
+  /** Arabic subtitle for the resolved attendance period (e.g. 28 مايو – 27 يونيو 2026). */
+  periodLabel?: string | null;
 };
 
 export function MonthlyFilters({
@@ -29,6 +35,7 @@ export function MonthlyFilters({
   showCompanyPicker,
   basePath = "/portal/attendance",
   preservePersonId = null,
+  periodLabel = null,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -166,6 +173,11 @@ export function MonthlyFilters({
           className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-xl"
         />
       </div>
+      {periodLabel ? (
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          فترة الحضور: {periodLabel}
+        </p>
+      ) : null}
 
       <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
         <button

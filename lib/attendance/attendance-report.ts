@@ -5,9 +5,12 @@ import {
   type BranchPayrollTotals,
   type PersonPayrollSummary,
 } from "@/lib/attendance/attendance-view";
+import {
+  DEFAULT_ATTENDANCE_MONTH_START_DAY,
+  resolveAttendancePeriod,
+} from "@/lib/attendance/attendance-period";
 import { formatAttendanceRecordNotes } from "@/lib/attendance/leave-types";
 import {
-  enumerateMonthDays,
   formatMinutesAsHours,
   formatOvertimeDisplay,
   parseMonthParam,
@@ -248,17 +251,23 @@ export function buildAttendanceReport(options: {
   records: AttendanceMonthlyRecord[];
   people: AttendancePerson[];
   shifts?: AttendanceShift[];
+  monthStartDay?: number;
 }): AttendanceReportPayload {
   const parsed = parseMonthParam(options.month.slice(0, 7));
   if (!parsed) throw new Error("شهر غير صالح");
 
   const monthStr = options.month.slice(0, 7);
-  const monthDays = enumerateMonthDays(parsed.year, parsed.month);
+  const monthStartDay =
+    options.monthStartDay ?? DEFAULT_ATTENDANCE_MONTH_START_DAY;
+  const period = resolveAttendancePeriod(monthStr, monthStartDay);
+  if (!period) throw new Error("شهر غير صالح");
+  const monthDays = period.days;
   const summary = buildBranchPayrollSummary(
     monthStr,
     options.records,
     options.people,
     options.shifts ?? [],
+    monthStartDay,
   );
 
   const payrollByEmployee = new Map(

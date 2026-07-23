@@ -49,6 +49,18 @@ export default async function PaperPage({
     canDelete ||
     (profile.role === "employee" && doc.owner_profile_id === userId);
 
+  const canChangeCompany =
+    profile.is_super_admin || profile.role === "md_admin";
+
+  const companies = canChangeCompany
+    ? (
+        await supabase
+          .from("companies")
+          .select("id, name_ar")
+          .order("name_ar")
+      ).data ?? []
+    : [];
+
   const issuedOn = (doc as { issued_on?: string | null }).issued_on ?? null;
   const expiresOn = (doc as { expires_on?: string | null }).expires_on ?? null;
   const expiryNotifiedAt =
@@ -114,11 +126,13 @@ export default async function PaperPage({
 
         <aside className="space-y-4 order-1 md:order-2">
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-xs space-y-3">
-            <Meta
-              icon={Building2}
-              label="الشركة"
-              value={company?.name_ar ?? "—"}
-            />
+            {!(canChangeCompany && canEditPaperDates) ? (
+              <Meta
+                icon={Building2}
+                label="الشركة"
+                value={company?.name_ar ?? "—"}
+              />
+            ) : null}
             {owner ? (
               <Meta icon={User} label="الموظف" value={owner.full_name} />
             ) : null}
@@ -146,6 +160,9 @@ export default async function PaperPage({
               documentId={doc.id}
               title={doc.title}
               category={doc.category}
+              companyId={doc.company_id}
+              companies={companies}
+              canChangeCompany={canChangeCompany}
               issuedOn={issuedOn}
               expiresOn={expiresOn}
               expiryNotifiedAt={expiryNotifiedAt}

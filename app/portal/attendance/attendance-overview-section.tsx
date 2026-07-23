@@ -16,6 +16,7 @@ import {
   getAttendanceImport,
   getAttendancePeople,
   getAttendanceShifts,
+  getCompanyAttendanceMonthStartDay,
   getMonthlyAttendanceRecords,
 } from "@/lib/data/monthly-attendance";
 import { AttendanceCalendar } from "./attendance-calendar";
@@ -36,6 +37,7 @@ type Props = {
   personId: string | null;
   searchQuery: string;
   isSuperAdmin: boolean;
+  canResetLeaveBalance?: boolean;
 };
 
 export async function AttendanceOverviewSection({
@@ -47,11 +49,13 @@ export async function AttendanceOverviewSection({
   personId,
   searchQuery,
   isSuperAdmin,
+  canResetLeaveBalance = false,
 }: Props) {
-  const [importRow, people, branchShifts] = await Promise.all([
+  const [importRow, people, branchShifts, monthStartDay] = await Promise.all([
     getAttendanceImport(companyId, branchId, monthDate),
     getAttendancePeople(companyId, branchId),
     getAttendanceShifts(branchId),
+    getCompanyAttendanceMonthStartDay(companyId),
   ]);
 
   const allRecords = importRow ? await getMonthlyAttendanceRecords(importRow.id) : [];
@@ -72,12 +76,18 @@ export async function AttendanceOverviewSection({
     : null;
 
   const calendarDays = selectedPerson
-    ? buildPersonCalendarDays(month, personAllRecords, selectedPersonWorkDays)
+    ? buildPersonCalendarDays(
+        month,
+        personAllRecords,
+        selectedPersonWorkDays,
+        monthStartDay,
+      )
     : buildCalendarDays(
         month,
         filteredRecords,
         hasSearch ? filteredPeople : people,
         branchShifts,
+        monthStartDay,
       );
 
   const summary = buildMonthSummary(
@@ -85,9 +95,15 @@ export async function AttendanceOverviewSection({
     hasSearch ? filteredRecords : allRecords,
     hasSearch ? filteredPeople : people,
     branchShifts,
+    monthStartDay,
   );
   const personStats = selectedPerson
-    ? buildPersonMonthStats(month, personAllRecords, selectedPersonWorkDays)
+    ? buildPersonMonthStats(
+        month,
+        personAllRecords,
+        selectedPersonWorkDays,
+        monthStartDay,
+      )
     : null;
 
   const navContext = { companyId, branchId, month };
@@ -139,6 +155,8 @@ export async function AttendanceOverviewSection({
             recordCount={personAllRecords.length}
             leaveDays={personStats.leaveDays}
             closeHref={buildBranchAttendanceHref(navContext)}
+            person={selectedPerson}
+            canResetLeaveBalance={canResetLeaveBalance}
           />
           <AttendancePersonSummaryCards
             stats={personStats}
@@ -146,6 +164,7 @@ export async function AttendanceOverviewSection({
             records={personAllRecords}
             employeeName={selectedPerson.full_name}
             workDays={selectedPersonWorkDays}
+            monthStartDay={monthStartDay}
           />
         </>
       ) : (

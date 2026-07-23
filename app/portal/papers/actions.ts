@@ -42,6 +42,7 @@ const updatePaperSchema = z.object({
   category: documentCategorySchema,
   issued_on: dateOrEmpty,
   expires_on: dateOrEmpty,
+  company_id: z.string().uuid().optional(),
 });
 
 export async function updatePaperDatesAction(
@@ -49,17 +50,23 @@ export async function updatePaperDatesAction(
   formData: FormData,
 ): Promise<PaperDatesState> {
   const { userId, profile } = await requireUser();
+  const companyRaw = formData.get("company_id");
   const parsed = updatePaperSchema.safeParse({
     document_id: formData.get("document_id"),
     title: formData.get("title"),
     category: formData.get("category"),
     issued_on: formData.get("issued_on") ?? undefined,
     expires_on: formData.get("expires_on") ?? undefined,
+    company_id:
+      typeof companyRaw === "string" && companyRaw.trim()
+        ? companyRaw.trim()
+        : undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صالحة" };
   }
-  const { document_id, title, category, issued_on, expires_on } = parsed.data;
+  const { document_id, title, category, issued_on, expires_on, company_id } =
+    parsed.data;
 
   if (issued_on && expires_on && issued_on > expires_on) {
     return {
@@ -91,14 +98,29 @@ export async function updatePaperDatesAction(
 
   const isOwnerEmployee =
     profile.role === "employee" && doc.owner_profile_id === userId;
+  const canChangeCompany =
+    profile.is_super_admin || profile.role === "md_admin";
   const isManager =
-    profile.is_super_admin ||
-    profile.role === "md_admin" ||
+    canChangeCompany ||
     (profile.role === "company_manager" &&
       doc.company_id === profile.company_id);
 
   if (!isOwnerEmployee && !isManager) {
     return { error: "غير مصرح لك بتعديل هذه الورقة" };
+  }
+
+  const nextCompanyId =
+    canChangeCompany && company_id ? company_id : doc.company_id;
+
+  if (canChangeCompany && company_id && company_id !== doc.company_id) {
+    const { data: company, error: companyErr } = await supabase
+      .from("companies")
+      .select("id")
+      .eq("id", company_id)
+      .maybeSingle<{ id: string }>();
+    if (companyErr || !company) {
+      return { error: "الشركة المحددة غير موجودة" };
+    }
   }
 
   let expiry_notified_at: string | null = doc.expiry_notified_at;
@@ -115,6 +137,18 @@ export async function updatePaperDatesAction(
     renewal_in_progress = false;
   }
 
+  let owner_profile_id = doc.owner_profile_id;
+  if (nextCompanyId !== doc.company_id && owner_profile_id) {
+    const { data: owner } = await supabase
+      .from("profiles")
+      .select("id, company_id")
+      .eq("id", owner_profile_id)
+      .maybeSingle<{ id: string; company_id: string | null }>();
+    if (!owner || owner.company_id !== nextCompanyId) {
+      owner_profile_id = null;
+    }
+  }
+
   const payload = {
     title,
     category: category as DocumentCategory,
@@ -122,15 +156,20 @@ export async function updatePaperDatesAction(
     expires_on,
     expiry_notified_at,
     renewal_in_progress,
+    ...(nextCompanyId !== doc.company_id
+      ? { company_id: nextCompanyId, owner_profile_id }
+      : {}),
   };
 
-  if (isOwnerEmployee) {
+  if (isOwnerEmployee || canChangeCompany) {
+    // Employees need admin (no UPDATE RLS). Admins/super-admins use admin
+    // so company reassignment is not blocked by manager-scoped policies.
     const admin = createSupabaseAdminClient();
-    const { error } = await admin
-      .from("documents")
-      .update(payload)
-      .eq("id", document_id)
-      .eq("owner_profile_id", userId);
+    let query = admin.from("documents").update(payload).eq("id", document_id);
+    if (isOwnerEmployee && !canChangeCompany) {
+      query = query.eq("owner_profile_id", userId);
+    }
+    const { error } = await query;
     if (error) return { error: error.message };
   } else {
     const { error } = await supabase
@@ -144,6 +183,9 @@ export async function updatePaperDatesAction(
   revalidatePath("/portal/papers");
   if (doc.owner_profile_id) {
     revalidatePath(`/portal/employees/${doc.owner_profile_id}`);
+  }
+  if (owner_profile_id && owner_profile_id !== doc.owner_profile_id) {
+    revalidatePath(`/portal/employees/${owner_profile_id}`);
   }
   revalidateTag("papers", "default");
   revalidateTag("dashboard", "default");

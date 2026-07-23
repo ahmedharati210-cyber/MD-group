@@ -15,36 +15,61 @@ import type {
 const getAttendanceCompaniesCached = cache(
   async (
     attendanceEnabledOnly: boolean,
-  ): Promise<Pick<Company, "id" | "name_ar">[]> => {
+  ): Promise<
+    Pick<Company, "id" | "name_ar" | "attendance_month_start_day">[]
+  > => {
     const supabase = await createSupabaseServerClient();
     const { data } = await supabase
       .from("companies")
-      .select("id, name_ar, enabled_features")
+      .select("id, name_ar, enabled_features, attendance_month_start_day")
       .eq("active", true)
       .order("display_order")
       .order("name_ar");
 
     const rows = (data ?? []) as Pick<
       Company,
-      "id" | "name_ar" | "enabled_features"
+      "id" | "name_ar" | "enabled_features" | "attendance_month_start_day"
     >[];
 
+    const mapRow = (
+      company: Pick<
+        Company,
+        "id" | "name_ar" | "attendance_month_start_day"
+      >,
+    ) => ({
+      id: company.id,
+      name_ar: company.name_ar,
+      attendance_month_start_day: company.attendance_month_start_day ?? 1,
+    });
+
     if (!attendanceEnabledOnly) {
-      return rows.map(({ id, name_ar }) => ({ id, name_ar }));
+      return rows.map(mapRow);
     }
 
     return rows
       .filter((company) =>
         isFeatureEnabled("attendance", company.enabled_features),
       )
-      .map(({ id, name_ar }) => ({ id, name_ar }));
+      .map(mapRow);
   },
 );
 
 export async function getAttendanceCompanies(options?: {
   attendanceEnabledOnly?: boolean;
-}): Promise<Pick<Company, "id" | "name_ar">[]> {
+}): Promise<Pick<Company, "id" | "name_ar" | "attendance_month_start_day">[]> {
   return getAttendanceCompaniesCached(Boolean(options?.attendanceEnabledOnly));
+}
+
+export async function getCompanyAttendanceMonthStartDay(
+  companyId: string,
+): Promise<number> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("companies")
+    .select("attendance_month_start_day")
+    .eq("id", companyId)
+    .maybeSingle<{ attendance_month_start_day: number | null }>();
+  return data?.attendance_month_start_day ?? 1;
 }
 
 export const getAttendanceBranches = cache(

@@ -91,6 +91,7 @@ export function AttendanceDayPanel({
               {entry.record ? (
                 <AttendanceRecordEditRow
                   record={entry.record}
+                  person={entry.person}
                   shifts={shifts}
                   isSuperAdmin={isSuperAdmin}
                   employeeName={entry.person?.full_name}
@@ -136,6 +137,7 @@ export function AttendanceDayPanel({
             {entry.record ? (
               <AttendanceRecordEditRow
                 record={entry.record}
+                person={entry.person}
                 shifts={shifts}
                 isSuperAdmin={isSuperAdmin}
                 employeeName={entry.person?.full_name}

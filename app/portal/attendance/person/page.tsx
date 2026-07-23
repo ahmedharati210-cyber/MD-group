@@ -15,6 +15,7 @@ import {
   getAttendanceImport,
   getAttendancePeople,
 } from "@/lib/data/monthly-attendance";
+import { resolveAttendancePeriod } from "@/lib/attendance/attendance-period";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { formatPersonCustomScheduleLabel, personHasCustomSchedule } from "@/lib/attendance/person-schedule";
 import { buildBranchAttendanceHref } from "../attendance-navigation";
@@ -96,6 +97,13 @@ export default async function AttendancePersonPage({
   const exportHref = `/api/attendance/export.xlsx?companyId=${companyId}&branchId=${branchId}&month=${month}`;
   const exportPdfHref = `/api/attendance/export.pdf?companyId=${companyId}&branchId=${branchId}&month=${month}`;
 
+  const selectedCompany = companies.find((c) => c.id === companyId) ?? null;
+  const monthStartDay = selectedCompany?.attendance_month_start_day ?? 1;
+  const periodLabel =
+    monthStartDay !== 1
+      ? (resolveAttendancePeriod(month, monthStartDay)?.label ?? null)
+      : null;
+
   const detailKey = `${month}-${personId}`;
 
   return (
@@ -133,6 +141,7 @@ export default async function AttendancePersonPage({
           showCompanyPicker={attendanceShowCompanyPicker(profile)}
           basePath="/portal/attendance/person"
           preservePersonId={person.id}
+          periodLabel={periodLabel}
         />
       </div>
 
@@ -162,6 +171,9 @@ export default async function AttendancePersonPage({
           month={month}
           monthDate={monthDate}
           isSuperAdmin={profile.is_super_admin}
+          canResetLeaveBalance={
+            profile.is_super_admin || profile.role === "md_admin"
+          }
         />
       </Suspense>
     </div>

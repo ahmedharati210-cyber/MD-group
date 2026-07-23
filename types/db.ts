@@ -74,6 +74,11 @@ export interface Company {
   enabled_features: AppFeature[] | null;
   /** null = each role sees all enabled_features; object = per-role overrides */
   role_features: RoleFeatures | null;
+  /**
+   * Attendance period start day (1–28).
+   * 1 = calendar month; e.g. 28 = previous-month-28 through labeled-month-27.
+   */
+  attendance_month_start_day: number;
   created_at: string;
 }
 type CompanyInsert = {
@@ -86,6 +91,7 @@ type CompanyInsert = {
   display_order?: number;
   enabled_features?: AppFeature[] | null;
   role_features?: RoleFeatures | null;
+  attendance_month_start_day?: number;
   created_at?: string;
 };
 
@@ -181,6 +187,11 @@ export interface AttendancePerson {
   custom_early_leave_grace_minutes: number;
   /** JS getDay() 0–6. null = all days. */
   custom_work_days: number[] | null;
+  /** Remaining yearly vacation days (entitlement 14). May be negative. */
+  annual_leave_remaining: number;
+  /** Remaining sick leave days (entitlement 4). May be negative. */
+  sick_leave_remaining: number;
+  leave_balance_reset_at: string | null;
   created_at: string;
 }
 type AttendancePersonInsert = {
@@ -201,6 +212,9 @@ type AttendancePersonInsert = {
   custom_late_grace_minutes?: number;
   custom_early_leave_grace_minutes?: number;
   custom_work_days?: number[] | null;
+  annual_leave_remaining?: number;
+  sick_leave_remaining?: number;
+  leave_balance_reset_at?: string | null;
   created_at?: string;
 };
 

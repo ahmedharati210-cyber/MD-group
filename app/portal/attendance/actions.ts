@@ -25,6 +25,13 @@ import {
   parseManagementPassesFromForm,
 } from "@/lib/attendance/management-passes";
 import { buildRecalculatedRecordPatch } from "@/lib/attendance/recalculate-person-month";
+import {
+  ANNUAL_LEAVE_ENTITLEMENT,
+  balanceDeltaForLeaveChange,
+  formatLeaveBalanceWarning,
+  hasLeaveBalanceDelta,
+  SICK_LEAVE_ENTITLEMENT,
+} from "@/lib/attendance/leave-balance";
 import type { AttendancePerson } from "@/types/db";
 import {
   punchSessionFromManualEdit,
@@ -47,7 +54,9 @@ import {
   getAttendancePeople,
   getAttendancePeopleByExternalNumbers,
   getAttendanceShifts,
+  getCompanyAttendanceMonthStartDay,
 } from "@/lib/data/monthly-attendance";
+import { resolveAttendancePeriod } from "@/lib/attendance/attendance-period";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   ABSENT_STATUS,
@@ -62,6 +71,7 @@ export type ActionState = {
   error?: string;
   ok?: boolean;
   message?: string;
+  warning?: string;
   updatedCount?: number;
 };
 
@@ -122,6 +132,51 @@ function revalidateAttendanceData() {
   revalidatePath("/portal/attendance/summary");
   revalidatePath("/portal/attendance/branches");
   revalidateTag("attendance", "default");
+}
+
+async function applyPersonLeaveBalanceDelta(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  personId: string,
+  previousLeaveType: string | null | undefined,
+  nextLeaveType: string | null | undefined,
+): Promise<{ warning?: string } | { error: string }> {
+  const delta = balanceDeltaForLeaveChange(previousLeaveType, nextLeaveType);
+  if (!hasLeaveBalanceDelta(delta)) return {};
+
+  const { data: person, error: loadError } = await supabase
+    .from("attendance_people")
+    .select("id, annual_leave_remaining, sick_leave_remaining")
+    .eq("id", personId)
+    .maybeSingle<{
+      id: string;
+      annual_leave_remaining: number;
+      sick_leave_remaining: number;
+    }>();
+
+  if (loadError) return { error: loadError.message };
+  if (!person) return { error: "الموظف غير موجود" };
+
+  const annualRemaining = person.annual_leave_remaining + delta.annual;
+  const sickRemaining = person.sick_leave_remaining + delta.sick;
+
+  const { error: updateError } = await supabase
+    .from("attendance_people")
+    .update({
+      annual_leave_remaining: annualRemaining,
+      sick_leave_remaining: sickRemaining,
+    })
+    .eq("id", personId);
+
+  if (updateError) return { error: updateError.message };
+
+  return {
+    warning:
+      formatLeaveBalanceWarning({
+        annualRemaining,
+        sickRemaining,
+        delta,
+      }) ?? undefined,
+  };
 }
 
 const monthSchema = z.string().regex(/^\d{4}-\d{2}-01$/);
@@ -470,7 +525,7 @@ export async function updateMonthlyRecordAction(
   const { data: existing } = await supabase
     .from("attendance_monthly_records")
     .select(
-      "id, company_id, branch_id, attendance_person_id, first_check_in, last_check_out, is_holiday, date, raw_payload, punch_count",
+      "id, company_id, branch_id, attendance_person_id, first_check_in, last_check_out, is_holiday, date, raw_payload, punch_count, leave_type",
     )
     .eq("id", parsed.data.id)
     .single<{
@@ -484,6 +539,7 @@ export async function updateMonthlyRecordAction(
       date: string;
       raw_payload: Record<string, unknown> | null;
       punch_count: number | null;
+      leave_type: string | null;
     }>();
 
   if (!existing) return { error: "السجل غير موجود" };
@@ -675,8 +731,20 @@ export async function updateMonthlyRecordAction(
 
   if (error) return { error: error.message };
 
+  let warning: string | undefined;
+  if (existing.attendance_person_id) {
+    const balanceResult = await applyPersonLeaveBalanceDelta(
+      supabase,
+      existing.attendance_person_id,
+      existing.leave_type,
+      leaveType,
+    );
+    if ("error" in balanceResult) return { error: balanceResult.error };
+    warning = balanceResult.warning;
+  }
+
   revalidateAttendanceData();
-  return { ok: true };
+  return { ok: true, warning };
 }
 
 const recalculatePersonMonthSchema = z.object({
@@ -731,10 +799,13 @@ export async function recalculatePersonMonthAction(
 
   if (!personRow) return { error: "الموظف غير موجود" };
 
-  const [y, m] = parsed.data.month.split("-").map(Number);
-  const monthStart = `${parsed.data.month}-01`;
-  const lastDay = new Date(y, m, 0).getDate();
-  const monthEnd = `${parsed.data.month}-${String(lastDay).padStart(2, "0")}`;
+  const monthStartDay = await getCompanyAttendanceMonthStartDay(
+    parsed.data.company_id,
+  );
+  const period = resolveAttendancePeriod(parsed.data.month, monthStartDay);
+  if (!period) return { error: "شهر غير صالح" };
+  const monthStart = period.startDate;
+  const monthEnd = period.endDate;
 
   const { data: records, error: loadError } = await supabase
     .from("attendance_monthly_records")
@@ -835,10 +906,13 @@ export async function recalculateBranchMonthAction(
   );
   if ("error" in branchCheck) return { error: branchCheck.error };
 
-  const [y, m] = parsed.data.month.split("-").map(Number);
-  const monthStart = `${parsed.data.month}-01`;
-  const lastDay = new Date(y, m, 0).getDate();
-  const monthEnd = `${parsed.data.month}-${String(lastDay).padStart(2, "0")}`;
+  const monthStartDay = await getCompanyAttendanceMonthStartDay(
+    parsed.data.company_id,
+  );
+  const period = resolveAttendancePeriod(parsed.data.month, monthStartDay);
+  if (!period) return { error: "شهر غير صالح" };
+  const monthStart = period.startDate;
+  const monthEnd = period.endDate;
 
   const supabase = await createSupabaseServerClient();
   const [people, shifts, branch, recordsResult] = await Promise.all([
@@ -1027,8 +1101,20 @@ export async function createLeaveRecordAction(
     return { error: error.message };
   }
 
+  let warning: string | undefined;
+  if (leaveType) {
+    const balanceResult = await applyPersonLeaveBalanceDelta(
+      supabase,
+      person.id,
+      null,
+      leaveType,
+    );
+    if ("error" in balanceResult) return { error: balanceResult.error };
+    warning = balanceResult.warning;
+  }
+
   revalidateAttendanceData();
-  return { ok: true };
+  return { ok: true, warning };
 }
 
 const branchSchema = z.object({
@@ -1167,6 +1253,99 @@ export async function createAttendancePersonAction(
 
   revalidatePath("/portal/attendance/branches");
   return { ok: true };
+}
+
+const resetPersonLeaveBalanceSchema = z.object({
+  attendance_person_id: z.string().uuid(),
+});
+
+export async function resetPersonLeaveBalanceAction(
+  _prev: ActionState | undefined,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAttendanceAccess();
+  const current = await requireRole(["md_admin"]);
+
+  const parsed = resetPersonLeaveBalanceSchema.safeParse({
+    attendance_person_id: formData.get("attendance_person_id"),
+  });
+  if (!parsed.success) return { error: "بيانات غير صالحة" };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: person } = await supabase
+    .from("attendance_people")
+    .select("id, company_id")
+    .eq("id", parsed.data.attendance_person_id)
+    .maybeSingle<{ id: string; company_id: string }>();
+
+  if (!person) return { error: "الموظف غير موجود" };
+
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    person.company_id,
+  );
+  if ("error" in companyAccess) return { error: companyAccess.error };
+
+  const { error } = await supabase
+    .from("attendance_people")
+    .update({
+      annual_leave_remaining: ANNUAL_LEAVE_ENTITLEMENT,
+      sick_leave_remaining: SICK_LEAVE_ENTITLEMENT,
+      leave_balance_reset_at: new Date().toISOString(),
+    })
+    .eq("id", person.id);
+
+  if (error) return { error: error.message };
+
+  revalidateAttendanceData();
+  return {
+    ok: true,
+    message: `تمت إعادة تعيين الرصيد إلى ${ANNUAL_LEAVE_ENTITLEMENT} سنوية و ${SICK_LEAVE_ENTITLEMENT} مرضية`,
+  };
+}
+
+const updateCompanyMonthStartSchema = z.object({
+  company_id: z.string().uuid(),
+  attendance_month_start_day: z.coerce.number().int().min(1).max(28),
+});
+
+export async function updateCompanyAttendanceMonthStartAction(
+  _prev: ActionState | undefined,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAttendanceAccess();
+  const current = await requireRole(["md_admin"]);
+
+  const parsed = updateCompanyMonthStartSchema.safeParse({
+    company_id: formData.get("company_id"),
+    attendance_month_start_day: formData.get("attendance_month_start_day"),
+  });
+  if (!parsed.success) return { error: "بيانات غير صالحة" };
+
+  const companyAccess = await assertAttendanceCompanyAccess(
+    current.profile,
+    parsed.data.company_id,
+  );
+  if ("error" in companyAccess) return { error: companyAccess.error };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("companies")
+    .update({
+      attendance_month_start_day: parsed.data.attendance_month_start_day,
+    })
+    .eq("id", parsed.data.company_id);
+
+  if (error) return { error: error.message };
+
+  revalidateAttendanceData();
+  revalidatePath("/portal/companies");
+  revalidateTag("companies", "default");
+  revalidateTag(`company:${parsed.data.company_id}`, "default");
+  return {
+    ok: true,
+    message: `تم ضبط بداية شهر الحضور على اليوم ${parsed.data.attendance_month_start_day}`,
+  };
 }
 
 const timeHmSchema = z
@@ -1340,9 +1519,14 @@ export async function deleteMonthlyRecordAction(
   const supabase = await createSupabaseServerClient();
   const { data: row } = await supabase
     .from("attendance_monthly_records")
-    .select("id, company_id")
+    .select("id, company_id, attendance_person_id, leave_type")
     .eq("id", id)
-    .maybeSingle<{ id: string; company_id: string }>();
+    .maybeSingle<{
+      id: string;
+      company_id: string;
+      attendance_person_id: string | null;
+      leave_type: string | null;
+    }>();
 
   if (!row) return { error: "السجل غير موجود" };
   if (
@@ -1354,6 +1538,16 @@ export async function deleteMonthlyRecordAction(
 
   const { error } = await supabase.from("attendance_monthly_records").delete().eq("id", id);
   if (error) return { error: error.message };
+
+  if (row.attendance_person_id && row.leave_type) {
+    const balanceResult = await applyPersonLeaveBalanceDelta(
+      supabase,
+      row.attendance_person_id,
+      row.leave_type,
+      null,
+    );
+    if ("error" in balanceResult) return { error: balanceResult.error };
+  }
 
   revalidateAttendanceData();
   return { ok: true };

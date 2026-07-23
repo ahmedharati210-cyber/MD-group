@@ -20,10 +20,15 @@ const inputClasses =
 const labelClasses =
   "block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5";
 
+type CompanyOption = { id: string; name_ar: string };
+
 type Props = {
   documentId: string;
   title: string;
   category: string;
+  companyId: string;
+  companies?: CompanyOption[];
+  canChangeCompany?: boolean;
   issuedOn: string | null;
   expiresOn: string | null;
   expiryNotifiedAt: string | null;
@@ -46,6 +51,9 @@ export function PaperDatesForm({
   documentId,
   title,
   category,
+  companyId,
+  companies = [],
+  canChangeCompany = false,
   issuedOn,
   expiresOn,
   expiryNotifiedAt,
@@ -138,6 +146,30 @@ export function PaperDatesForm({
   return (
     <form action={formAction} className="space-y-3">
       <input type="hidden" name="document_id" value={documentId} />
+      {canChangeCompany ? (
+        <div>
+          <label className={labelClasses} htmlFor={`company-${documentId}`}>
+            الشركة
+          </label>
+          <select
+            id={`company-${documentId}`}
+            name="company_id"
+            required
+            defaultValue={companyId}
+            className={inputClasses}
+          >
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name_ar}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+            عند نقل الورقة لشركة أخرى، يُزال ربط الموظف إذا لم يكن تابعاً للشركة
+            الجديدة.
+          </p>
+        </div>
+      ) : null}
       <div>
         <label className={labelClasses} htmlFor={`title-${documentId}`}>
           عنوان الورقة

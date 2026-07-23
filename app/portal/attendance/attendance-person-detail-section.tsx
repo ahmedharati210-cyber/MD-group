@@ -7,10 +7,12 @@ import {
   getAttendanceImport,
   getAttendancePeople,
   getAttendanceShifts,
+  getCompanyAttendanceMonthStartDay,
   getMonthlyAttendanceRecords,
 } from "@/lib/data/monthly-attendance";
 import { AttendancePersonMonthTable } from "./attendance-person-month-table";
 import { AttendancePersonSummaryCards } from "./attendance-summary-cards";
+import { PersonLeaveBalanceBadges } from "./person-leave-balance";
 
 type Props = {
   companyId: string;
@@ -19,6 +21,7 @@ type Props = {
   month: string;
   monthDate: string;
   isSuperAdmin: boolean;
+  canResetLeaveBalance?: boolean;
 };
 
 export async function AttendancePersonDetailSection({
@@ -28,11 +31,13 @@ export async function AttendancePersonDetailSection({
   month,
   monthDate,
   isSuperAdmin,
+  canResetLeaveBalance = false,
 }: Props) {
-  const [importRow, people, branchShifts] = await Promise.all([
+  const [importRow, people, branchShifts, monthStartDay] = await Promise.all([
     getAttendanceImport(companyId, branchId, monthDate),
     getAttendancePeople(companyId, branchId),
     getAttendanceShifts(branchId),
+    getCompanyAttendanceMonthStartDay(companyId),
   ]);
 
   const person = people.find((p) => p.id === personId);
@@ -47,8 +52,18 @@ export async function AttendancePersonDetailSection({
     (record) => record.attendance_person_id === person.id,
   );
   const workDays = resolvePersonWorkDays(person, branchShifts);
-  const calendarDays = buildPersonCalendarDays(month, personRecords, workDays);
-  const personStats = buildPersonMonthStats(month, personRecords, workDays);
+  const calendarDays = buildPersonCalendarDays(
+    month,
+    personRecords,
+    workDays,
+    monthStartDay,
+  );
+  const personStats = buildPersonMonthStats(
+    month,
+    personRecords,
+    workDays,
+    monthStartDay,
+  );
 
   if (!importRow) {
     return (
@@ -60,12 +75,20 @@ export async function AttendancePersonDetailSection({
 
   return (
     <>
+      <div className="mb-4">
+        <PersonLeaveBalanceBadges
+          person={person}
+          personId={person.id}
+          canReset={canResetLeaveBalance}
+        />
+      </div>
       <AttendancePersonSummaryCards
         stats={personStats}
         month={month}
         records={personRecords}
         employeeName={person.full_name}
         workDays={workDays}
+        monthStartDay={monthStartDay}
         compact
       />
       <AttendancePersonMonthTable

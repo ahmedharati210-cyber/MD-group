@@ -60,14 +60,14 @@ export function CompanyForm({ action, initial, submitLabel = "حفظ" }: Props) 
           <label className={labelClasses}>المعرّف (slug)</label>
           <input
             name="slug"
-            required
             defaultValue={initial?.slug ?? ""}
             className={inputClasses}
-            placeholder="united-construction"
+            placeholder="اتركه فارغًا للتوليد تلقائيًا"
             dir="ltr"
           />
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            يُستخدم داخليًا فقط — أحرف لاتينية صغيرة وأرقام وشرطات.
+            اختياري — يُولَّد تلقائيًا إن تُرك فارغًا. أحرف لاتينية وأرقام
+            وشرطات (يُحوَّل إلى أحرف صغيرة).
           </p>
         </div>
 

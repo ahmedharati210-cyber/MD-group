@@ -17,6 +17,7 @@ import {
   getAttendanceBranch,
   getAttendancePeopleByExternalNumbers,
   getAttendanceShifts,
+  getCompanyAttendanceMonthStartDay,
 } from "@/lib/data/monthly-attendance";
 import type { AttendanceBranch, AttendancePerson } from "@/types/db";
 
@@ -47,10 +48,11 @@ export async function processAttendanceImportFile(
   month: string,
 ): Promise<ProcessedImport | { error: string }> {
   const format = await detectAttendanceFileFormat(buffer);
-  const [people, shifts, branch] = await Promise.all([
+  const [people, shifts, branch, monthStartDay] = await Promise.all([
     getAttendancePeopleByExternalNumbers(companyId, branchId),
     getAttendanceShifts(branchId),
     getAttendanceBranch(branchId),
+    getCompanyAttendanceMonthStartDay(companyId),
   ]);
   const fullTimeConfig = fullTimeConfigFromBranch(branch);
 
@@ -83,6 +85,7 @@ export async function processAttendanceImportFile(
   const monthMismatch = detectImportMonthMismatch(
     month,
     rows.map((r) => r.date),
+    monthStartDay,
   );
   if (monthMismatch) {
     warnings.unshift(monthMismatch.message);
