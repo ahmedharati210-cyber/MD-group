@@ -18,6 +18,7 @@ export function QaProjectStatusSelect({
     <select
       value={status}
       disabled={isPending}
+      aria-label="حالة المنصة"
       onChange={(e) => {
         const next = e.target.value as QaProjectStatus;
         startTransition(async () => {

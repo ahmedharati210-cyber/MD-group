@@ -45,6 +45,7 @@ export function QaTestResultPanel({
   testedAt,
   testerName,
   canManage,
+  canInteract,
   compact = false,
 }: {
   itemId: string;
@@ -55,6 +56,7 @@ export function QaTestResultPanel({
   testedAt: string | null;
   testerName: string | null;
   canManage: boolean;
+  canInteract: boolean;
   compact?: boolean;
 }) {
   const [pendingResult, setPendingResult] = useState<QaTestResult | null>(null);
@@ -104,12 +106,25 @@ export function QaTestResultPanel({
   }
 
   if (itemKind === "task") {
+    if (!canInteract) {
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-md text-[11px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300",
+            compact ? "px-2 py-1" : "px-3 py-1.5",
+          )}
+        >
+          مهمة قيد التطوير
+        </span>
+      );
+    }
     return (
       <button
         type="button"
         disabled={isPending}
         onClick={markReady}
         title="تم وجاهز للاختبار"
+        aria-label="تم وجاهز للاختبار"
         className={cn(
           "inline-flex items-center gap-1 rounded-md text-[11px] font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50",
           compact ? "px-2 py-1" : "px-3 py-1.5",
@@ -153,6 +168,7 @@ export function QaTestResultPanel({
               disabled={isPending}
               onClick={reset}
               title="إعادة الاختبار"
+              aria-label="إعادة الاختبار"
               className="p-1 text-gray-400 hover:text-teal-600 disabled:opacity-50"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -176,6 +192,20 @@ export function QaTestResultPanel({
     );
   }
 
+  // Owners (view-only): show pending state without action buttons
+  if (!canInteract) {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center text-[11px] font-medium text-gray-400",
+          compact ? "px-1" : "px-2 py-1",
+        )}
+      >
+        بانتظار الاختبار
+      </span>
+    );
+  }
+
   const needsNote =
     pendingResult === "bug" ||
     pendingResult === "improve" ||
@@ -189,6 +219,7 @@ export function QaTestResultPanel({
           disabled={isPending}
           onClick={() => submit("pass")}
           title="تم بنجاح"
+          aria-label="تم بنجاح"
           className={cn(
             actionBtn,
             compact ? "px-2 py-1" : "px-2.5 py-1.5",
@@ -206,6 +237,7 @@ export function QaTestResultPanel({
             if (note.trim()) submit("bug");
           }}
           title="خلل"
+          aria-label="خلل"
           className={cn(
             actionBtn,
             compact ? "px-2 py-1" : "px-2.5 py-1.5",
@@ -223,6 +255,7 @@ export function QaTestResultPanel({
             if (note.trim()) submit("improve");
           }}
           title="يحتاج تحسين"
+          aria-label="يحتاج تحسين"
           className={cn(
             actionBtn,
             compact ? "px-2 py-1" : "px-2.5 py-1.5",
@@ -248,14 +281,27 @@ export function QaTestResultPanel({
             className="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 outline-hidden focus:border-teal-500"
           />
           {pendingResult && pendingResult !== "pass" ? (
-            <button
-              type="button"
-              disabled={isPending || !note.trim()}
-              onClick={() => submit(pendingResult)}
-              className="px-2 py-1 bg-teal-600 text-white text-[11px] font-semibold rounded-md hover:bg-teal-700 disabled:opacity-50"
-            >
-              حفظ
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={isPending || !note.trim()}
+                onClick={() => submit(pendingResult)}
+                className="px-2 py-1 bg-teal-600 text-white text-[11px] font-semibold rounded-md hover:bg-teal-700 disabled:opacity-50"
+              >
+                حفظ
+              </button>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => {
+                  setPendingResult(null);
+                  setNote("");
+                }}
+                className="px-2 py-1 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
+              >
+                إلغاء
+              </button>
+            </div>
           ) : null}
         </div>
       )}

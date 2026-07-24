@@ -28,6 +28,18 @@ export function hasTestingAccess(
   return Boolean(profile.is_super_admin || profile.testing_access_enabled);
 }
 
+/**
+ * True when the user may submit results / convert tasks.
+ * Owners with testing access are view-only (stats), so they return false.
+ */
+export function canInteractWithTesting(
+  profile: Pick<Profile, "role" | "is_super_admin" | "testing_access_enabled">,
+): boolean {
+  if (profile.is_super_admin) return true;
+  if (!profile.testing_access_enabled) return false;
+  return profile.role !== "owner";
+}
+
 /** Managers (and superadmin) with testing access can create/edit structure. */
 export function canManageTesting(
   profile: Pick<Profile, "role" | "is_super_admin" | "testing_access_enabled">,

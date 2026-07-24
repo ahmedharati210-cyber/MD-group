@@ -13,9 +13,11 @@ const inputCls =
 export function AddQaTestItemForm({
   sectionId,
   projectId,
+  onCancel,
 }: {
   sectionId: string;
   projectId: string;
+  onCancel: () => void;
 }) {
   const action = createQaTestItemAction.bind(null, sectionId, projectId);
   const [state, formAction, isPending] = useActionState(action, init);
@@ -36,6 +38,12 @@ export function AddQaTestItemForm({
     <form
       ref={formRef}
       action={formAction}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          onCancel();
+        }
+      }}
       className="pt-2 border-t border-dashed border-gray-200 dark:border-gray-700 mt-2 space-y-2"
     >
       {state?.error ? (
@@ -83,7 +91,7 @@ export function AddQaTestItemForm({
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         <button
           type="button"
           onClick={() => setRows((r) => [...r, ""])}
@@ -115,6 +123,14 @@ export function AddQaTestItemForm({
           {isPending
             ? "جارٍ الحفظ..."
             : `إضافة مهمة${filledCount > 1 ? ` (${filledCount})` : ""}`}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isPending}
+          className="px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50 transition-colors"
+        >
+          إلغاء
         </button>
       </div>
     </form>

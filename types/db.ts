@@ -694,7 +694,6 @@ export interface QaTestItem {
   title: string;
   description: string | null;
   item_kind: QaItemKind;
-  assigned_to: string | null;
   result: QaTestResult | null;
   result_note: string | null;
   tested_by: string | null;
@@ -709,7 +708,6 @@ type QaTestItemInsert = {
   title: string;
   description?: string | null;
   item_kind?: QaItemKind;
-  assigned_to?: string | null;
   result?: QaTestResult | null;
   result_note?: string | null;
   tested_by?: string | null;

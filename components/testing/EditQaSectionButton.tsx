@@ -43,7 +43,10 @@ export function EditQaSectionButton({
   }
 
   return (
-    <form action={formAction} className="flex items-center gap-1.5 flex-wrap">
+    <form
+      action={formAction}
+      className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0"
+    >
       {state?.error ? (
         <span className="text-xs text-red-500 w-full">{state.error}</span>
       ) : null}
@@ -51,8 +54,9 @@ export function EditQaSectionButton({
         type="text"
         name="name"
         required
+        aria-label="اسم القسم"
         defaultValue={name}
-        className="px-2 py-1 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 w-40"
+        className="px-2 py-1 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 flex-1 min-w-0"
       />
       <button
         type="submit"

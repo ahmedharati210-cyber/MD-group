@@ -279,6 +279,7 @@ const testingAccessSchema = z.object({
 
 /**
  * Grant or revoke Al Itqan testing module access for any active user role.
+ * Owners may be granted access but remain view-only (stats) in the module.
  */
 export async function setTestingAccessAction(
   profileId: string,
@@ -300,9 +301,6 @@ export async function setTestingAccessAction(
     .single<{ role: string }>();
 
   if (!target) return { error: "المستخدم غير موجود" };
-  if (target.role === "owner") {
-    return { error: "لا يمكن منح المنظومات والمواقع لدور المالك" };
-  }
 
   const { error } = await supabase
     .from("profiles")

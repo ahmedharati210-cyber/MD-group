@@ -2,7 +2,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
 import { requireTestingAccess } from "@/lib/auth";
-import { canManageTesting, getItqanCompanyId } from "@/lib/itqan-testing";
+import {
+  canInteractWithTesting,
+  canManageTesting,
+  getItqanCompanyId,
+} from "@/lib/itqan-testing";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { DeleteQaProjectButton } from "@/components/testing/DeleteQaProjectButton";
@@ -11,7 +15,7 @@ import {
   QaSectionsList,
   type QaListSection,
 } from "@/components/testing/QaSectionsList";
-import type { QaProjectStatus } from "@/types/db";
+import type { QaItemKind, QaProjectStatus } from "@/types/db";
 
 type ProjectRow = {
   id: string;
@@ -28,6 +32,7 @@ export default async function QaProjectDetailPage({
   const { id } = await params;
   const { profile } = await requireTestingAccess();
   const canManage = canManageTesting(profile);
+  const canInteract = canInteractWithTesting(profile);
   const companyId = await getItqanCompanyId();
   const supabase = await createSupabaseServerClient();
 
@@ -65,11 +70,15 @@ export default async function QaProjectDetailPage({
   );
 
   const allItems = sections.flatMap((s) => s.items);
-  const total = allItems.length;
-  const tested = allItems.filter((i) => i.result != null).length;
-  const bugs = allItems.filter((i) => i.result === "bug").length;
-  const improves = allItems.filter((i) => i.result === "improve").length;
-  const passes = allItems.filter((i) => i.result === "pass").length;
+  const testItems = allItems.filter(
+    (i) => (i.item_kind as QaItemKind | undefined) !== "task",
+  );
+  const taskCount = allItems.length - testItems.length;
+  const total = testItems.length;
+  const tested = testItems.filter((i) => i.result != null).length;
+  const bugs = testItems.filter((i) => i.result === "bug").length;
+  const improves = testItems.filter((i) => i.result === "improve").length;
+  const passes = testItems.filter((i) => i.result === "pass").length;
   const pct = total > 0 ? Math.round((tested / total) * 100) : 0;
 
   return (
@@ -110,6 +119,11 @@ export default async function QaProjectDetailPage({
         <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
           {tested}/{total} ({pct}%)
         </span>
+        {taskCount > 0 ? (
+          <span className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
+            {taskCount} مهام
+          </span>
+        ) : null}
         {passes > 0 ? (
           <span className="text-[11px] font-medium text-emerald-600">
             {passes} نجاح
@@ -125,7 +139,14 @@ export default async function QaProjectDetailPage({
         ) : null}
       </div>
 
-      <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-4">
+      <div
+        className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-4"
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`تقدم الاختبار ${pct}%`}
+      >
         <div
           className="h-full bg-teal-500 rounded-full transition-all"
           style={{ width: `${pct}%` }}
@@ -136,6 +157,7 @@ export default async function QaProjectDetailPage({
         projectId={id}
         sections={sections}
         canManage={canManage}
+        canInteract={canInteract}
       />
     </div>
   );

@@ -147,16 +147,14 @@ export default async function AdminPage() {
                     </div>
                   ) : null}
 
-                  {/* Al Itqan testing access — any role except owner */}
-                  {user.role !== "owner" ? (
-                    <div className="shrink-0">
-                      <TestingAccessToggle
-                        profileId={user.id}
-                        fullName={user.full_name}
-                        enabled={user.testing_access_enabled}
-                      />
-                    </div>
-                  ) : null}
+                  {/* Al Itqan testing access — owners get view-only (stats) */}
+                  <div className="shrink-0">
+                    <TestingAccessToggle
+                      profileId={user.id}
+                      fullName={user.full_name}
+                      enabled={user.testing_access_enabled}
+                    />
+                  </div>
                 </div>
               </div>
             );

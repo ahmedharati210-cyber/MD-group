@@ -27,6 +27,7 @@ function shouldDisplayPayloadEntry(key: string, value: unknown): boolean {
     "company_id",
     "project_id",
     "category_id",
+    "section_id",
     "invite_id",
     "entity_id",
   ]);
@@ -41,7 +42,7 @@ const payloadKeyLabels: Record<string, string> = {
   name: "الاسم",
   status: "الحالة",
   title: "العنوان",
-  titles: "المهام",
+  titles: "العناوين",
   email: "البريد",
   recipients: "عدد المستلمين",
   removed_paths: "عدد الملفات المحذوفة",
@@ -59,7 +60,38 @@ const payloadKeyLabels: Record<string, string> = {
   changed: "الحقول المُعدَّلة",
   features: "الميزات المُفعَّلة",
   company_id_changed: "تغيير الشركة",
+  // Al Itqan / QA testing
+  testing_access_enabled: "صلاحية المنظومات والمواقع",
+  item_kind: "النوع",
+  ready_for_test: "جاهز للاختبار",
+  result: "النتيجة",
+  reset: "إعادة فتح",
+  convert: "تحويل النوع",
+  reorder: "إعادة ترتيب",
+  count: "العدد",
+  description: "الوصف",
 };
+
+const payloadValueLabels: Record<string, string> = {
+  true: "نعم",
+  false: "لا",
+  pass: "تم بنجاح",
+  bug: "خلل",
+  improve: "يحتاج تحسين",
+  test: "اختبار",
+  task: "مهمة",
+  active: "نشط",
+  done: "منتهٍ",
+};
+
+function formatPayloadValue(value: unknown): string {
+  if (typeof value === "boolean") {
+    return value ? "نعم" : "لا";
+  }
+  if (value === null || value === undefined) return "—";
+  const raw = String(value);
+  return payloadValueLabels[raw] ?? raw;
+}
 
 export const metadata = { title: "سجل التدقيق" };
 
@@ -117,6 +149,9 @@ const entityLabels: Record<string, string> = {
   report:           "تقرير",
   request:          "طلب",
   map:              "خريطة",
+  qa_project:       "منصة",
+  qa_section:       "قسم اختبار",
+  qa_test_item:     "عنصر اختبار",
   // DB-trigger format (plural / legacy)
   documents:        "وثيقة",
   profiles:         "مستخدم",
@@ -143,6 +178,9 @@ const KNOWN_ENTITIES: { value: string; label: string }[] = [
   { value: "profile",          label: "مستخدم" },
   { value: "company",          label: "شركة" },
   { value: "document",         label: "وثيقة" },
+  { value: "qa_project",       label: "منصة" },
+  { value: "qa_section",       label: "قسم اختبار" },
+  { value: "qa_test_item",     label: "عنصر اختبار" },
   { value: "employee_signup_invite",   label: "رابط تسجيل موظف" },
   { value: "employee_signup_invites",  label: "رابط تسجيل موظف" },
   { value: "employee_signup_requests", label: "طلب تسجيل موظف" },
@@ -313,7 +351,9 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Sea
                                   <span className="text-gray-400 dark:text-gray-500">
                                     {payloadKeyLabels[k] ?? k}:
                                   </span>{" "}
-                                  <span className="font-medium">{String(v)}</span>
+                                  <span className="font-medium">
+                                    {formatPayloadValue(v)}
+                                  </span>
                                 </span>
                               ))}
                             </div>

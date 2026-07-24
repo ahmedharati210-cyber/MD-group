@@ -16,7 +16,7 @@ const PROJECT_SELECT = `
   id, name, description, status,
   sections:qa_sections(
     id, name, sort_order,
-    items:qa_test_items(id, title, result, sort_order)
+    items:qa_test_items(id, title, result, item_kind, sort_order)
   )
 `;
 

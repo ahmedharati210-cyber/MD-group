@@ -30,8 +30,11 @@ export function QaProjectForm({ project }: { project?: QaProject }) {
       ) : null}
 
       <div>
-        <label className={labelCls}>اسم المنصة *</label>
+        <label htmlFor="qa-project-name" className={labelCls}>
+          اسم المنصة *
+        </label>
         <input
+          id="qa-project-name"
           type="text"
           name="name"
           required
@@ -42,8 +45,11 @@ export function QaProjectForm({ project }: { project?: QaProject }) {
       </div>
 
       <div>
-        <label className={labelCls}>وصف / ملاحظات</label>
+        <label htmlFor="qa-project-description" className={labelCls}>
+          وصف / ملاحظات
+        </label>
         <textarea
+          id="qa-project-description"
           name="description"
           rows={3}
           defaultValue={project?.description ?? ""}
@@ -53,8 +59,11 @@ export function QaProjectForm({ project }: { project?: QaProject }) {
       </div>
 
       <div>
-        <label className={labelCls}>الحالة</label>
+        <label htmlFor="qa-project-status" className={labelCls}>
+          الحالة
+        </label>
         <select
+          id="qa-project-status"
           name="status"
           defaultValue={project?.status ?? "active"}
           className={inputCls}

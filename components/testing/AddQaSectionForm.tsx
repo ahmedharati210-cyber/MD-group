@@ -31,6 +31,7 @@ export function AddQaSectionForm({ projectId }: { projectId: string }) {
         type="text"
         name="name"
         required
+        aria-label="اسم القسم"
         placeholder="اسم القسم (مثال: تسجيل الدخول، الدفع، لوحة التحكم...)"
         className="flex-1 min-w-[200px] px-4 py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-teal-500 focus:border-solid focus:ring-4 focus:ring-teal-500/10 outline-hidden text-sm"
       />
