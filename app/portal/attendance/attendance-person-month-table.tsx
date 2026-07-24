@@ -153,7 +153,7 @@ export function AttendancePersonMonthTable({
           if (record) {
             return (
               <AttendanceRecordMobileCard
-                key={`mobile-${record.id}:${record.is_absent}:${record.leave_type}`}
+                key={`mobile-${record.id}:${record.is_absent}:${record.leave_type}:${record.first_check_in}:${record.last_check_out}:${record.notes}:${(record.raw_payload as Record<string, unknown> | null)?.waive_late}:${(record.raw_payload as Record<string, unknown> | null)?.waive_early_leave}`}
                 record={record}
                 person={person}
                 shifts={shifts}

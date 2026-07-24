@@ -40,9 +40,6 @@ export default async function AttendanceSummaryPage({
   const { profile } = await requireAttendanceAccess();
   const params = await searchParams;
 
-  const defaultMonth = getDefaultAttendanceMonth();
-  const month = params.month ?? defaultMonth;
-
   const companies = await getAttendanceCompanies({
     attendanceEnabledOnly: profile.role === "md_admin" && !profile.is_super_admin,
   });
@@ -51,6 +48,10 @@ export default async function AttendanceSummaryPage({
     params.companyId,
     companies,
   );
+  const selectedCompany = companies.find((c) => c.id === companyId) ?? null;
+  const companyMonthStartDay = selectedCompany?.attendance_month_start_day ?? 1;
+  const defaultMonth = getDefaultAttendanceMonth(new Date(), companyMonthStartDay);
+  const month = params.month ?? defaultMonth;
 
   const branches = companyId ? await getAttendanceBranches(companyId) : [];
   const branchId = resolveAttendanceBranchId(params.branchId, branches);

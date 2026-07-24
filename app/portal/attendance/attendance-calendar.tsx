@@ -108,7 +108,7 @@ export function AttendanceCalendar({
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4">
       <h2 className="text-base font-bold mb-3">{title}</h2>
       {!personMode ? (
-        <div className="hidden sm:flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500 mb-3">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500 mb-3">
           <span><span className="text-emerald-600 font-semibold">ح</span> حضور</span>
           <span><span className="text-red-600 font-semibold">غ</span> غياب</span>
           <span><span className="text-teal-600 font-semibold">إ</span> إجازة</span>
@@ -200,10 +200,16 @@ export function AttendanceCalendar({
                     </span>
                   ) : null}
                   {day.late > 0 ? (
-                    <span className="hidden sm:block text-amber-600">ت {day.late}</span>
+                    <span className="block text-amber-600">
+                      <span className="sm:hidden">ت{day.late}</span>
+                      <span className="hidden sm:inline">ت {day.late}</span>
+                    </span>
                   ) : null}
                   {day.missingPunch > 0 ? (
-                    <span className="hidden sm:block text-orange-600">بصمة {day.missingPunch}</span>
+                    <span className="block text-orange-600">
+                      <span className="sm:hidden">ب{day.missingPunch}</span>
+                      <span className="hidden sm:inline">بصمة {day.missingPunch}</span>
+                    </span>
                   ) : null}
                   {day.off > 0 ? (
                     <span className="block text-slate-500">

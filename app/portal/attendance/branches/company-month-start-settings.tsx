@@ -40,14 +40,30 @@ export function CompanyMonthStartSettings({ companyId, startDay }: Props) {
     if (state?.ok) toast.success(state.message ?? "تم الحفظ");
   }, [state]);
 
+  function submitWithConfirm(formData: FormData) {
+    const nextDay = normalizeAttendanceMonthStartDay(
+      Number(formData.get("attendance_month_start_day")),
+    );
+    const previousDay = normalizeAttendanceMonthStartDay(startDay);
+    if (nextDay !== previousDay) {
+      const ok = window.confirm(
+        `تغيير بداية شهر الحضور من اليوم ${previousDay} إلى اليوم ${nextDay} سيعيد تفسير فترات كل الاستيرادات والسجلات الحالية لهذه الشركة.\n\nهل تريد المتابعة؟`,
+      );
+      if (!ok) return;
+      formData.set("confirm_period_change", "true");
+    }
+    return action(formData);
+  }
+
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 mb-8">
       <h3 className="font-bold mb-1">فترة شهر الحضور</h3>
       <p className="text-sm text-gray-500 mb-4">
-        مثال: من 28 إلى 27 = من 28 الشهر السابق إلى 27 الشهر المختار.
+        مثال: من 28 إلى 27 = من 28 الشهر السابق إلى 27 الشهر المختار. تغيير هذا
+        الرقم يعيد تفسير الاستيرادات الحالية.
       </p>
       <form
-        action={withPreservedScroll(action)}
+        action={withPreservedScroll(submitWithConfirm)}
         className="grid gap-4 sm:grid-cols-3 items-end"
       >
         <input type="hidden" name="company_id" value={companyId} />

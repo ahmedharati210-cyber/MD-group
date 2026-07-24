@@ -15,7 +15,10 @@ import {
   getAttendanceCompanies,
   getAttendanceImport,
 } from "@/lib/data/monthly-attendance";
-import { resolveAttendancePeriod } from "@/lib/attendance/attendance-period";
+import {
+  isDateInAttendancePeriod,
+  resolveAttendancePeriod,
+} from "@/lib/attendance/attendance-period";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { AttendanceImportForm } from "./attendance-import-form";
 import { AttendanceSearch } from "./attendance-search";
@@ -49,11 +52,6 @@ export default async function AttendancePage({
   const { profile } = await requireAttendanceAccess();
   const params = await searchParams;
   const searchQuery = normalizeSearchQuery(params.q);
-
-  const defaultMonth = getDefaultAttendanceMonth();
-  const month = params.month ?? defaultMonth;
-  const monthDate = `${month}-01`;
-  const selectedDay = params.day ?? null;
   const selectedPersonId = params.personId ?? null;
 
   const companies = await getAttendanceCompanies({
@@ -65,16 +63,32 @@ export default async function AttendancePage({
     companies,
   );
 
+  const selectedCompany = companies.find((c) => c.id === companyId) ?? null;
+  const monthStartDay = selectedCompany?.attendance_month_start_day ?? 1;
+  const defaultMonth = getDefaultAttendanceMonth(new Date(), monthStartDay);
+  const month = params.month ?? defaultMonth;
+  const monthDate = `${month}-01`;
+  const period = resolveAttendancePeriod(month, monthStartDay);
+  const rawSelectedDay = params.day ?? null;
+  const selectedDay =
+    rawSelectedDay &&
+    period &&
+    isDateInAttendancePeriod(rawSelectedDay, period)
+      ? rawSelectedDay
+      : null;
+
   const branches = companyId ? await getAttendanceBranches(companyId) : [];
   const branchId = resolveAttendanceBranchId(params.branchId, branches);
 
   // Keep URL in sync with resolved company/branch/month so back links land correctly.
+  // Also drop invalid out-of-period ?day= values.
   if (
     companyId &&
     branchId &&
     (params.companyId !== companyId ||
       params.branchId !== branchId ||
-      params.month !== month)
+      params.month !== month ||
+      (rawSelectedDay != null && selectedDay !== rawSelectedDay))
   ) {
     redirect(
       buildBranchAttendanceHref(
@@ -105,12 +119,8 @@ export default async function AttendancePage({
   const canExport = Boolean(companyId && branchId && importRow);
   const showExportHint = Boolean(companyId && branchId && !importRow);
 
-  const selectedCompany = companies.find((c) => c.id === companyId) ?? null;
-  const monthStartDay = selectedCompany?.attendance_month_start_day ?? 1;
   const periodLabel =
-    monthStartDay !== 1
-      ? (resolveAttendancePeriod(month, monthStartDay)?.label ?? null)
-      : null;
+    monthStartDay !== 1 ? (period?.label ?? null) : null;
 
   const overviewKey = `${month}-${selectedDay ?? ""}-${selectedPersonId ?? ""}-${searchQuery}`;
   const listKey = `${month}-${searchQuery}`;

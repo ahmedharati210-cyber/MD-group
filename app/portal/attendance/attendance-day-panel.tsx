@@ -31,9 +31,31 @@ type Props = {
 };
 
 function entryKey(entry: DayRosterEntry, index: number): string {
+  const record = entry.record;
+  if (record) {
+    // Include mutable fields so the edit row remounts after save (avoids stale useState/defaultValue).
+    const payloadStamp = record.raw_payload
+      ? JSON.stringify({
+          mo: record.raw_payload.manually_overridden,
+          wl: record.raw_payload.waive_late,
+          we: record.raw_payload.waive_early_leave,
+          ma: record.raw_payload.manual_absent,
+          ml: record.raw_payload.manual_leave,
+        })
+      : "";
+    return [
+      record.id,
+      record.leave_type ?? "",
+      record.is_absent ? "1" : "0",
+      record.first_check_in ?? "",
+      record.last_check_out ?? "",
+      record.shift_id ?? "",
+      record.notes ?? "",
+      payloadStamp,
+    ].join("|");
+  }
   return (
     entry.person?.id ??
-    entry.record?.id ??
     `${entry.record?.external_employee_number ?? "row"}-${index}`
   );
 }

@@ -30,6 +30,7 @@ import {
   balanceDeltaForLeaveChange,
   formatLeaveBalanceWarning,
   hasLeaveBalanceDelta,
+  type LeaveBalanceDelta,
   SICK_LEAVE_ENTITLEMENT,
 } from "@/lib/attendance/leave-balance";
 import type { AttendancePerson } from "@/types/db";
@@ -56,7 +57,7 @@ import {
   getAttendanceShifts,
   getCompanyAttendanceMonthStartDay,
 } from "@/lib/data/monthly-attendance";
-import { resolveAttendancePeriod } from "@/lib/attendance/attendance-period";
+import { resolveAttendancePeriod, resolveAttendanceLabelForDate } from "@/lib/attendance/attendance-period";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   ABSENT_STATUS,
@@ -134,15 +135,38 @@ function revalidateAttendanceData() {
   revalidateTag("attendance", "default");
 }
 
-async function applyPersonLeaveBalanceDelta(
+type LeaveRecordSnapshot = {
+  attendance_person_id: string | null;
+  leave_type: string | null;
+};
+
+async function applyLeaveBalanceDeltaRaw(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   personId: string,
-  previousLeaveType: string | null | undefined,
-  nextLeaveType: string | null | undefined,
-): Promise<{ warning?: string } | { error: string }> {
-  const delta = balanceDeltaForLeaveChange(previousLeaveType, nextLeaveType);
-  if (!hasLeaveBalanceDelta(delta)) return {};
+  delta: LeaveBalanceDelta,
+): Promise<
+  | { annualRemaining: number; sickRemaining: number }
+  | { error: string }
+> {
+  const { data, error } = await supabase.rpc(
+    "apply_attendance_leave_balance_delta",
+    {
+      p_person_id: personId,
+      p_annual_delta: delta.annual,
+      p_sick_delta: delta.sick,
+    },
+  );
 
+  if (!error) {
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) return { error: "الموظف غير موجود" };
+    return {
+      annualRemaining: Number(row.annual_leave_remaining),
+      sickRemaining: Number(row.sick_leave_remaining),
+    };
+  }
+
+  // Fallback when RPC migration is not applied yet.
   const { data: person, error: loadError } = await supabase
     .from("attendance_people")
     .select("id, annual_leave_remaining, sick_leave_remaining")
@@ -153,12 +177,11 @@ async function applyPersonLeaveBalanceDelta(
       sick_leave_remaining: number;
     }>();
 
-  if (loadError) return { error: loadError.message };
+  if (loadError) return { error: loadError.message || error.message };
   if (!person) return { error: "الموظف غير موجود" };
 
   const annualRemaining = person.annual_leave_remaining + delta.annual;
   const sickRemaining = person.sick_leave_remaining + delta.sick;
-
   const { error: updateError } = await supabase
     .from("attendance_people")
     .update({
@@ -168,15 +191,73 @@ async function applyPersonLeaveBalanceDelta(
     .eq("id", personId);
 
   if (updateError) return { error: updateError.message };
+  return { annualRemaining, sickRemaining };
+}
+
+async function applyPersonLeaveBalanceDelta(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  personId: string,
+  previousLeaveType: string | null | undefined,
+  nextLeaveType: string | null | undefined,
+): Promise<{ warning?: string } | { error: string }> {
+  const delta = balanceDeltaForLeaveChange(previousLeaveType, nextLeaveType);
+  if (!hasLeaveBalanceDelta(delta)) return {};
+
+  const result = await applyLeaveBalanceDeltaRaw(supabase, personId, delta);
+  if ("error" in result) return { error: result.error };
 
   return {
     warning:
       formatLeaveBalanceWarning({
-        annualRemaining,
-        sickRemaining,
+        annualRemaining: result.annualRemaining,
+        sickRemaining: result.sickRemaining,
         delta,
       }) ?? undefined,
   };
+}
+
+/** Aggregate restore deltas (leave_type → null) per person, then apply atomically. */
+async function restoreLeaveBalancesForDeletedRecords(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  records: LeaveRecordSnapshot[],
+): Promise<{ error?: string }> {
+  const byPerson = new Map<string, LeaveBalanceDelta>();
+
+  for (const record of records) {
+    if (!record.attendance_person_id || !record.leave_type) continue;
+    const delta = balanceDeltaForLeaveChange(record.leave_type, null);
+    if (!hasLeaveBalanceDelta(delta)) continue;
+    const current = byPerson.get(record.attendance_person_id) ?? {
+      annual: 0,
+      sick: 0,
+    };
+    current.annual += delta.annual;
+    current.sick += delta.sick;
+    byPerson.set(record.attendance_person_id, current);
+  }
+
+  for (const [personId, delta] of byPerson) {
+    const result = await applyLeaveBalanceDeltaRaw(supabase, personId, delta);
+    if ("error" in result) return { error: result.error };
+  }
+
+  return {};
+}
+
+const IMPORT_RECORD_INSERT_CHUNK = 400;
+
+async function insertAttendanceRecordsChunked(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  recordRows: Record<string, unknown>[],
+): Promise<{ error?: string }> {
+  for (let i = 0; i < recordRows.length; i += IMPORT_RECORD_INSERT_CHUNK) {
+    const chunk = recordRows.slice(i, i + IMPORT_RECORD_INSERT_CHUNK);
+    const { error } = await supabase
+      .from("attendance_monthly_records")
+      .insert(chunk);
+    if (error) return { error: error.message };
+  }
+  return {};
 }
 
 const monthSchema = z.string().regex(/^\d{4}-\d{2}-01$/);
@@ -250,7 +331,7 @@ export async function previewAttendanceImportAction(
     const { data: existingRecords } = await supabase
       .from("attendance_monthly_records")
       .select(
-        "external_employee_number, date, first_check_in, last_check_out, manually_overridden",
+        "external_employee_number, date, first_check_in, last_check_out, leave_type, is_holiday, raw_payload",
       )
       .eq("import_id", existingImport.id);
 
@@ -405,45 +486,19 @@ export async function saveAttendanceImportAction(
     .eq("month", monthDate)
     .maybeSingle<{ id: string }>();
 
+  // Capture leave rows before the atomic replace so balances can be restored.
+  let oldLeaveRows: LeaveRecordSnapshot[] = [];
   if (existingImport?.id) {
-    await supabase
+    const { data } = await supabase
       .from("attendance_monthly_records")
-      .delete()
-      .eq("import_id", existingImport.id);
-    await supabase.from("attendance_imports").delete().eq("id", existingImport.id);
+      .select("attendance_person_id, leave_type")
+      .eq("import_id", existingImport.id)
+      .not("leave_type", "is", null);
+    oldLeaveRows = data ?? [];
   }
 
-  const { data: importRow, error: importError } = await supabase
-    .from("attendance_imports")
-    .insert({
-      company_id: scope.companyId,
-      branch_id: branchId,
-      month: monthDate,
-      file_name: typeof fileName === "string" ? fileName : null,
-      created_by: current.userId,
-      matched_count: existingCount,
-      unmatched_count: newCount,
-      warning_summary:
-        newCount || processed.warnings.length
-          ? {
-              new_people_count: newCount,
-              messages: processed.warnings.slice(0, 100),
-            }
-          : null,
-    })
-    .select("id")
-    .single<{ id: string }>();
-
-  if (importError || !importRow) {
-    return { error: importError?.message ?? "تعذر حفظ الاستيراد" };
-  }
-
-  const recordRows = rows.map((r) => ({
-    import_id: importRow.id,
-    company_id: scope.companyId,
-    branch_id: branchId,
+  const recordPayload = rows.map((r) => ({
     attendance_person_id: personIdByExt.get(r.externalEmployeeNumber) ?? null,
-    profile_id: null,
     external_employee_number: r.externalEmployeeNumber,
     employee_name: r.employeeName,
     date: r.date,
@@ -468,11 +523,101 @@ export async function saveAttendanceImportAction(
     },
   }));
 
-  if (recordRows.length > 0) {
-    const { error: recordsError } = await supabase
-      .from("attendance_monthly_records")
-      .insert(recordRows);
-    if (recordsError) return { error: recordsError.message };
+  const warningSummary =
+    newCount || processed.warnings.length
+      ? {
+          new_people_count: newCount,
+          messages: processed.warnings.slice(0, 100),
+        }
+      : null;
+
+  // Prefer atomic RPC; fall back to chunked client writes if RPC is unavailable.
+  const { data: rpcImportId, error: rpcError } = await supabase.rpc(
+    "replace_attendance_import",
+    {
+      p_old_import_id: existingImport?.id ?? null,
+      p_company_id: scope.companyId,
+      p_branch_id: branchId,
+      p_month: monthDate,
+      p_file_name: typeof fileName === "string" ? fileName : null,
+      p_created_by: current.userId,
+      p_matched_count: existingCount,
+      p_unmatched_count: newCount,
+      p_warning_summary: warningSummary,
+      p_records: recordPayload,
+    },
+  );
+
+  if (rpcError) {
+    // Fallback path (migration not applied yet): wipe + chunked insert.
+    if (existingImport?.id) {
+      await supabase
+        .from("attendance_monthly_records")
+        .delete()
+        .eq("import_id", existingImport.id);
+      await supabase
+        .from("attendance_imports")
+        .delete()
+        .eq("id", existingImport.id);
+    }
+
+    const { data: importRow, error: importError } = await supabase
+      .from("attendance_imports")
+      .insert({
+        company_id: scope.companyId,
+        branch_id: branchId,
+        month: monthDate,
+        file_name: typeof fileName === "string" ? fileName : null,
+        created_by: current.userId,
+        matched_count: existingCount,
+        unmatched_count: newCount,
+        warning_summary: warningSummary,
+      })
+      .select("id")
+      .single<{ id: string }>();
+
+    if (importError || !importRow) {
+      return {
+        error:
+          importError?.message ??
+          rpcError.message ??
+          "تعذر حفظ الاستيراد",
+      };
+    }
+
+    const recordRows = recordPayload.map((r) => ({
+      ...r,
+      import_id: importRow.id,
+      company_id: scope.companyId,
+      branch_id: branchId,
+      profile_id: null,
+    }));
+
+    if (recordRows.length > 0) {
+      const insertResult = await insertAttendanceRecordsChunked(
+        supabase,
+        recordRows,
+      );
+      if (insertResult.error) {
+        return {
+          error: `${insertResult.error} أعد رفع الملف — تم مسح الاستيراد السابق لهذا الشهر.`,
+        };
+      }
+    }
+  } else if (!rpcImportId) {
+    return { error: "تعذر حفظ الاستيراد" };
+  }
+
+  if (oldLeaveRows.length > 0) {
+    const restoreResult = await restoreLeaveBalancesForDeletedRecords(
+      supabase,
+      oldLeaveRows,
+    );
+    if (restoreResult.error) {
+      return {
+        error: `تم حفظ الاستيراد لكن تعذر استعادة أرصدة الإجازات: ${restoreResult.error}`,
+      };
+    }
   }
 
   revalidateAttendanceData();
@@ -1025,7 +1170,15 @@ export async function createLeaveRecordAction(
   );
   if ("error" in branchCheck) return { error: branchCheck.error };
 
-  const month = `${parsed.data.date.slice(0, 7)}-01`;
+  const monthStartDay = await getCompanyAttendanceMonthStartDay(
+    parsed.data.company_id,
+  );
+  const labelMonth = resolveAttendanceLabelForDate(
+    parsed.data.date,
+    monthStartDay,
+  );
+  if (!labelMonth) return { error: "تاريخ غير صالح" };
+  const month = `${labelMonth}-01`;
   const importRow = await getAttendanceImport(
     parsed.data.company_id,
     parsed.data.branch_id,
@@ -1329,10 +1482,35 @@ export async function updateCompanyAttendanceMonthStartAction(
   if ("error" in companyAccess) return { error: companyAccess.error };
 
   const supabase = await createSupabaseServerClient();
+  const { data: company } = await supabase
+    .from("companies")
+    .select("id, attendance_month_start_day")
+    .eq("id", parsed.data.company_id)
+    .maybeSingle<{ id: string; attendance_month_start_day: number | null }>();
+
+  if (!company) return { error: "الشركة غير موجودة" };
+
+  const previousDay = company.attendance_month_start_day ?? 1;
+  const nextDay = parsed.data.attendance_month_start_day;
+  const confirmed = formData.get("confirm_period_change") === "true";
+
+  if (previousDay !== nextDay && !confirmed) {
+    const { count } = await supabase
+      .from("attendance_imports")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", parsed.data.company_id);
+
+    if ((count ?? 0) > 0) {
+      return {
+        error: `تغيير بداية الشهر من ${previousDay} إلى ${nextDay} سيعيد تفسير ${count} استيراد موجود. أكّد المتابعة.`,
+      };
+    }
+  }
+
   const { error } = await supabase
     .from("companies")
     .update({
-      attendance_month_start_day: parsed.data.attendance_month_start_day,
+      attendance_month_start_day: nextDay,
     })
     .eq("id", parsed.data.company_id);
 
@@ -1344,7 +1522,7 @@ export async function updateCompanyAttendanceMonthStartAction(
   revalidateTag(`company:${parsed.data.company_id}`, "default");
   return {
     ok: true,
-    message: `تم ضبط بداية شهر الحضور على اليوم ${parsed.data.attendance_month_start_day}`,
+    message: `تم ضبط بداية شهر الحضور على اليوم ${nextDay}`,
   };
 }
 
@@ -1495,9 +1673,21 @@ export async function deleteAttendanceImportAction(
     return { error: "صلاحيات غير كافية" };
   }
 
+  const { data: leaveRows } = await supabase
+    .from("attendance_monthly_records")
+    .select("attendance_person_id, leave_type")
+    .eq("import_id", importId)
+    .not("leave_type", "is", null);
+
   await supabase.from("attendance_monthly_records").delete().eq("import_id", importId);
   const { error } = await supabase.from("attendance_imports").delete().eq("id", importId);
   if (error) return { error: error.message };
+
+  const restoreResult = await restoreLeaveBalancesForDeletedRecords(
+    supabase,
+    leaveRows ?? [],
+  );
+  if (restoreResult.error) return { error: restoreResult.error };
 
   revalidateAttendanceData();
   revalidatePath("/portal/attendance/branches");
@@ -1598,10 +1788,22 @@ export async function deleteAttendancePersonAction(
   }
 
   if (force && (count ?? 0) > 0) {
+    const { data: leaveRows } = await supabase
+      .from("attendance_monthly_records")
+      .select("attendance_person_id, leave_type")
+      .eq("attendance_person_id", id)
+      .not("leave_type", "is", null);
+
     await supabase
       .from("attendance_monthly_records")
       .delete()
       .eq("attendance_person_id", id);
+
+    const restoreResult = await restoreLeaveBalancesForDeletedRecords(
+      supabase,
+      leaveRows ?? [],
+    );
+    if (restoreResult.error) return { error: restoreResult.error };
   }
 
   const { error } = await supabase.from("attendance_people").delete().eq("id", id);
@@ -1645,7 +1847,12 @@ export async function deleteAttendanceBranchAction(
     return { error: "صلاحيات غير كافية" };
   }
 
-  const [{ count: peopleCount }, { count: importCount }] = await Promise.all([
+  const [
+    { count: peopleCount },
+    { count: importCount },
+    { count: shiftCount },
+    { count: recordCount },
+  ] = await Promise.all([
     supabase
       .from("attendance_people")
       .select("id", { count: "exact", head: true })
@@ -1654,13 +1861,45 @@ export async function deleteAttendanceBranchAction(
       .from("attendance_imports")
       .select("id", { count: "exact", head: true })
       .eq("branch_id", id),
+    supabase
+      .from("attendance_shifts")
+      .select("id", { count: "exact", head: true })
+      .eq("branch_id", id),
+    supabase
+      .from("attendance_monthly_records")
+      .select("id", { count: "exact", head: true })
+      .eq("branch_id", id),
   ]);
 
-  const hasRelated = (peopleCount ?? 0) > 0 || (importCount ?? 0) > 0;
+  const hasRelated =
+    (peopleCount ?? 0) > 0 ||
+    (importCount ?? 0) > 0 ||
+    (shiftCount ?? 0) > 0 ||
+    (recordCount ?? 0) > 0;
   if (hasRelated && !confirm) {
     return {
-      error: `الفرع "${branch.name}" يحتوي على ${peopleCount ?? 0} شخص و${importCount ?? 0} استيراد. أعد المحاولة مع التأكيد.`,
+      error: `الفرع "${branch.name}" يحتوي على ${peopleCount ?? 0} شخص و${importCount ?? 0} استيراد و${shiftCount ?? 0} وردية و${recordCount ?? 0} سجل حضور. أعد المحاولة مع التأكيد.`,
     };
+  }
+
+  // Re-check immediately before delete to shrink the TOCTOU window.
+  if (confirm) {
+    const [{ count: peopleNow }, { count: importsNow }] = await Promise.all([
+      supabase
+        .from("attendance_people")
+        .select("id", { count: "exact", head: true })
+        .eq("branch_id", id),
+      supabase
+        .from("attendance_imports")
+        .select("id", { count: "exact", head: true })
+        .eq("branch_id", id),
+    ]);
+    if ((peopleNow ?? 0) !== (peopleCount ?? 0) || (importsNow ?? 0) !== (importCount ?? 0)) {
+      return {
+        error:
+          "عناصر مرتبطة تغيّرت أثناء التأكيد. أعد المحاولة لعرض العدد المحدّث قبل الحذف.",
+      };
+    }
   }
 
   const { error } = await supabase.from("attendance_branches").delete().eq("id", id);

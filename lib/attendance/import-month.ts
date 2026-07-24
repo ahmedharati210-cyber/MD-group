@@ -3,6 +3,7 @@
 import {
   DEFAULT_ATTENDANCE_MONTH_START_DAY,
   isDateInAttendancePeriod,
+  resolveAttendanceLabelForDate,
   resolveAttendancePeriod,
 } from "@/lib/attendance/attendance-period";
 
@@ -27,13 +28,35 @@ export type MonthMismatchInfo = {
   message: string;
 };
 
-export function getDefaultAttendanceMonth(reference = new Date()): string {
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function previousLabeledMonth(month: string): string {
+  const match = month.match(/^(\d{4})-(\d{2})$/);
+  if (!match) return month;
+  const year = Number(match[1]);
+  const monthNum = Number(match[2]);
+  if (monthNum <= 1) return `${year - 1}-12`;
+  return `${year}-${pad2(monthNum - 1)}`;
+}
+
+/**
+ * Default import/view month: the labeled period before the one containing `reference`.
+ * Honors company `attendance_month_start_day` so custom cycles (e.g. 28→27) pick the right label.
+ */
+export function getDefaultAttendanceMonth(
+  reference = new Date(),
+  startDay: number = DEFAULT_ATTENDANCE_MONTH_START_DAY,
+): string {
+  const iso = `${reference.getFullYear()}-${pad2(reference.getMonth() + 1)}-${pad2(reference.getDate())}`;
+  const currentLabel = resolveAttendanceLabelForDate(iso, startDay);
+  if (currentLabel) return previousLabeledMonth(currentLabel);
+
   const year = reference.getFullYear();
   const monthIndex = reference.getMonth();
-  if (monthIndex === 0) {
-    return `${year - 1}-12`;
-  }
-  return `${year}-${String(monthIndex).padStart(2, "0")}`;
+  if (monthIndex === 0) return `${year - 1}-12`;
+  return `${year}-${pad2(monthIndex)}`;
 }
 
 export function formatMonthLabel(month: string): string {
@@ -45,10 +68,17 @@ export function formatMonthLabel(month: string): string {
   return `${ARABIC_MONTHS[monthIndex]} ${year}`;
 }
 
-export function detectDominantMonthFromDates(dates: string[]): string | null {
+/**
+ * Dominant labeled attendance month across punch dates (period-aware).
+ */
+export function detectDominantMonthFromDates(
+  dates: string[],
+  startDay: number = DEFAULT_ATTENDANCE_MONTH_START_DAY,
+): string | null {
   const counts = new Map<string, number>();
   for (const date of dates) {
-    const month = date.slice(0, 7);
+    const month =
+      resolveAttendanceLabelForDate(date, startDay) ?? date.slice(0, 7);
     if (!/^\d{4}-\d{2}$/.test(month)) continue;
     counts.set(month, (counts.get(month) ?? 0) + 1);
   }
@@ -83,7 +113,7 @@ export function detectImportMonthMismatch(
   );
   if (outside.length <= dates.length / 2) return null;
 
-  const detectedMonth = detectDominantMonthFromDates(dates);
+  const detectedMonth = detectDominantMonthFromDates(dates, monthStartDay);
   return {
     detectedMonth: detectedMonth ?? selectedMonth,
     selectedMonth,

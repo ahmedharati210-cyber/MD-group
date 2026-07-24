@@ -1,5 +1,9 @@
 import "server-only";
 
+import {
+  isDateInAttendancePeriod,
+  resolveAttendancePeriod,
+} from "@/lib/attendance/attendance-period";
 import { dedupeMatchedImportRows } from "@/lib/attendance/import-dedupe";
 import { detectAttendanceFileFormat } from "@/lib/attendance/attendance-format";
 import { detectImportMonthMismatch } from "@/lib/attendance/import-month";
@@ -82,13 +86,26 @@ export async function processAttendanceImportFile(
     return { error: "صيغة الملف غير معروفة. استخدم ملف البصمة اليومي أو سجل البصمات الخام." };
   }
 
+  const allDates = rows.map((r) => r.date);
   const monthMismatch = detectImportMonthMismatch(
     month,
-    rows.map((r) => r.date),
+    allDates,
     monthStartDay,
   );
   if (monthMismatch) {
     warnings.unshift(monthMismatch.message);
+  }
+
+  const period = resolveAttendancePeriod(month, monthStartDay);
+  if (period) {
+    const beforeCount = rows.length;
+    rows = rows.filter((row) => isDateInAttendancePeriod(row.date, period));
+    const dropped = beforeCount - rows.length;
+    if (dropped > 0) {
+      warnings.push(
+        `تم استبعاد ${dropped} يوم خارج فترة الحضور (${period.label}).`,
+      );
+    }
   }
 
   rows = dedupeMatchedImportRows(rows, shifts, fullTimeConfig, people);

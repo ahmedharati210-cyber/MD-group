@@ -68,8 +68,15 @@ export async function assertAttendanceCompanyAccess(
     return { ok: true };
   }
 
+  // Match resolveCompanyScope / resolveAttendanceCompanyId: md_admin is
+  // scoped to their shell company, not arbitrary company IDs.
   if (profile.role === "md_admin") {
-    return { ok: true };
+    const shellId = await getShellCompanyIdForProfile(profile);
+    if (shellId && shellId === companyId) return { ok: true };
+    if (!shellId && profile.company_id && profile.company_id === companyId) {
+      return { ok: true };
+    }
+    return { error: "صلاحيات غير كافية" };
   }
 
   return { error: "صلاحيات غير كافية" };

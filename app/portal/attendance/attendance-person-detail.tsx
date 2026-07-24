@@ -38,8 +38,10 @@ export function AttendancePersonHeader({
       <div className="space-y-3 min-w-0">
         <div>
           <h3 className="font-bold text-lg">{personName}</h3>
-          <p className="text-sm text-gray-500" dir="ltr">
-            #{externalNumber} — {recordCount} سجل هذا الشهر
+          <p className="text-sm text-gray-500">
+            <span dir="ltr">#{externalNumber}</span>
+            {" — "}
+            {recordCount} سجل هذا الشهر
             {leaveDays != null && leaveDays > 0 ? ` — إجازات: ${leaveDays}` : ""}
           </p>
         </div>

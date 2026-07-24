@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import toast from "react-hot-toast";
 import { Trash2 } from "lucide-react";
 import { preserveScrollAround } from "./preserve-scroll";
 
@@ -13,7 +14,7 @@ type Props = {
   className?: string;
 };
 
-type ActionResult = { error?: string; ok?: boolean };
+type ActionResult = { error?: string; ok?: boolean; message?: string };
 
 export function DeleteConfirmButton({
   label,
@@ -33,7 +34,12 @@ export function DeleteConfirmButton({
     }
     startTransition(async () => {
       const result = await action(fd);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
       if (result?.ok) {
+        if (result.message) toast.success(result.message);
         preserveScrollAround(() => {
           router.refresh();
         });

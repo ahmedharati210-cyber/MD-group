@@ -78,21 +78,29 @@ function excelTimeToHHMM(value: ExcelJS.CellValue): string | null {
   return cellText(value) || null;
 }
 
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** Date-only Excel values: prefer UTC midnight components, else local calendar day. */
 function excelDateToIso(value: ExcelJS.CellValue): string | null {
   if (value == null || value === "") return null;
   if (value instanceof Date) {
-    const y = value.getFullYear();
-    const m = String(value.getMonth() + 1).padStart(2, "0");
-    const d = String(value.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
+    const isUtcMidnight =
+      value.getUTCHours() === 0 &&
+      value.getUTCMinutes() === 0 &&
+      value.getUTCSeconds() === 0 &&
+      value.getUTCMilliseconds() === 0;
+    if (isUtcMidnight) {
+      return `${value.getUTCFullYear()}-${pad2(value.getUTCMonth() + 1)}-${pad2(value.getUTCDate())}`;
+    }
+    return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`;
   }
   if (typeof value === "number") {
-    const epoch = new Date(Date.UTC(1899, 11, 30));
-    const date = new Date(epoch.getTime() + value * 86400000);
-    const y = date.getUTCFullYear();
-    const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const d = String(date.getUTCDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
+    // Excel serial day count since 1899-12-30 (date-only, timezone-independent).
+    const wholeDays = Math.floor(value);
+    const date = new Date(Date.UTC(1899, 11, 30 + wholeDays));
+    return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
   }
   const text = cellText(value);
   if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
@@ -216,15 +224,17 @@ export async function parseRawAttendanceWorkbook(
       (colMap.day ? cellText(row.getCell(colMap.day).value) : null) ||
       cellText(row.getCell(2).value) ||
       null;
-    const parsedFirst =
-      (colMap.checkIn ? excelTimeToHHMM(row.getCell(colMap.checkIn).value) : null) ??
-      excelTimeToHHMM(row.getCell(3).value);
-    const parsedLast =
-      (colMap.checkOut ? excelTimeToHHMM(row.getCell(colMap.checkOut).value) : null) ??
-      excelTimeToHHMM(row.getCell(2).value);
+    // Only fall back to positional columns when headers were not mapped — never
+    // treat an empty mapped cell as "read the weekday/date neighbor".
+    const parsedFirst = colMap.checkIn
+      ? excelTimeToHHMM(row.getCell(colMap.checkIn).value)
+      : excelTimeToHHMM(row.getCell(3).value);
+    const parsedLast = colMap.checkOut
+      ? excelTimeToHHMM(row.getCell(colMap.checkOut).value)
+      : excelTimeToHHMM(row.getCell(4).value);
     const parsedTotal = colMap.total
       ? cellText(row.getCell(colMap.total).value) || null
-      : cells[0] ?? null;
+      : null;
 
     if (!parsedFirst && !parsedLast) return;
 

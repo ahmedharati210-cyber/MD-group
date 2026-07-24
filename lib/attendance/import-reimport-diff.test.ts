@@ -49,7 +49,7 @@ describe("computeImportReimportDiff", () => {
         date: "2026-06-02",
         first_check_in: "09:00:00",
         last_check_out: "17:00:00",
-        manually_overridden: true,
+        raw_payload: { manually_overridden: true },
       },
     ];
     const incoming = [
@@ -64,5 +64,29 @@ describe("computeImportReimportDiff", () => {
     expect(diff.manuallyEditedAtRisk).toBe(1);
     expect(diff.newDays).toBe(1);
     expect(diff.removedDays).toBe(0);
+  });
+
+  it("flags removed leave/holiday days as at risk", () => {
+    const existing = [
+      {
+        external_employee_number: "1",
+        date: "2026-06-01",
+        first_check_in: null,
+        last_check_out: null,
+        leave_type: "إجازة سنوية",
+      },
+      {
+        external_employee_number: "1",
+        date: "2026-06-02",
+        first_check_in: "09:00:00",
+        last_check_out: "17:00:00",
+      },
+    ];
+    const incoming = [importRow("1", "2026-06-02", "09:00", "17:00")];
+
+    const diff = computeImportReimportDiff(existing, incoming);
+    expect(diff.removedDays).toBe(1);
+    expect(diff.manuallyEditedAtRisk).toBe(1);
+    expect(diff.unchanged).toBe(1);
   });
 });

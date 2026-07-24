@@ -57,7 +57,10 @@ export default async function AttendanceBranchesPage({
   const selectedCompany = companies.find((c) => c.id === companyId) ?? null;
   const canEditMonthStart =
     profile.is_super_admin || profile.role === "md_admin";
-  const month = getDefaultAttendanceMonth();
+  const month = getDefaultAttendanceMonth(
+    new Date(),
+    selectedCompany?.attendance_month_start_day ?? 1,
+  );
   const backHref =
     companyId && selectedBranchId
       ? buildBranchAttendanceHref({

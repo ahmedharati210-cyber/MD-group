@@ -61,9 +61,6 @@ export default async function AttendancePersonPage({
   const { profile } = await requireAttendanceAccess();
   const params = await searchParams;
 
-  const defaultMonth = getDefaultAttendanceMonth();
-  const month = params.month ?? defaultMonth;
-
   const companies = await getAttendanceCompanies({
     attendanceEnabledOnly: profile.role === "md_admin" && !profile.is_super_admin,
   });
@@ -72,6 +69,10 @@ export default async function AttendancePersonPage({
     params.companyId,
     companies,
   );
+  const selectedCompany = companies.find((c) => c.id === companyId) ?? null;
+  const monthStartDay = selectedCompany?.attendance_month_start_day ?? 1;
+  const defaultMonth = getDefaultAttendanceMonth(new Date(), monthStartDay);
+  const month = params.month ?? defaultMonth;
 
   const branches = companyId ? await getAttendanceBranches(companyId) : [];
   const branchId = resolveAttendanceBranchId(params.branchId, branches);
@@ -97,8 +98,6 @@ export default async function AttendancePersonPage({
   const exportHref = `/api/attendance/export.xlsx?companyId=${companyId}&branchId=${branchId}&month=${month}`;
   const exportPdfHref = `/api/attendance/export.pdf?companyId=${companyId}&branchId=${branchId}&month=${month}`;
 
-  const selectedCompany = companies.find((c) => c.id === companyId) ?? null;
-  const monthStartDay = selectedCompany?.attendance_month_start_day ?? 1;
   const periodLabel =
     monthStartDay !== 1
       ? (resolveAttendancePeriod(month, monthStartDay)?.label ?? null)

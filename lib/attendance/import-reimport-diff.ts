@@ -1,4 +1,5 @@
 import type { MatchedImportRow } from "@/lib/attendance/raw-excel-parser";
+import { leaveTypeToBalancePool } from "@/lib/attendance/leave-balance";
 
 export type ImportReimportDiff = {
   existingRecordCount: number;
@@ -15,7 +16,11 @@ export type ExistingImportRecord = {
   date: string;
   first_check_in: string | null;
   last_check_out: string | null;
+  /** Prefer reading from raw_payload.manually_overridden in callers. */
   manually_overridden?: boolean | null;
+  leave_type?: string | null;
+  is_holiday?: boolean | null;
+  raw_payload?: Record<string, unknown> | null;
 };
 
 function rowKey(externalNumber: string, date: string): string {
@@ -25,6 +30,21 @@ function rowKey(externalNumber: string, date: string): string {
 function normalizeTime(time: string | null | undefined): string | null {
   if (!time) return null;
   return time.slice(0, 5);
+}
+
+function isManuallyOverridden(record: ExistingImportRecord): boolean {
+  if (record.manually_overridden) return true;
+  return Boolean(record.raw_payload?.manually_overridden);
+}
+
+function isProtectedLeaveOrHoliday(record: ExistingImportRecord): boolean {
+  if (record.is_holiday) return true;
+  if (record.leave_type) return true;
+  if (leaveTypeToBalancePool(record.leave_type)) return true;
+  if (record.raw_payload?.manual_leave || record.raw_payload?.manual_absent) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -69,12 +89,19 @@ export function computeImportReimportDiff(
       unchanged += 1;
     } else {
       changedPunches += 1;
-      if (prior.manually_overridden) manuallyEditedAtRisk += 1;
+      if (isManuallyOverridden(prior) || isProtectedLeaveOrHoliday(prior)) {
+        manuallyEditedAtRisk += 1;
+      }
     }
   }
 
-  for (const key of existingByKey.keys()) {
-    if (!incomingByKey.has(key)) removedDays += 1;
+  for (const [key, prior] of existingByKey) {
+    if (incomingByKey.has(key)) continue;
+    removedDays += 1;
+    // Leave/holiday-only days present in DB but missing from the new file.
+    if (isManuallyOverridden(prior) || isProtectedLeaveOrHoliday(prior)) {
+      manuallyEditedAtRisk += 1;
+    }
   }
 
   return {

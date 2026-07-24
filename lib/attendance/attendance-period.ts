@@ -84,6 +84,16 @@ function clampDay(year: number, month: number, day: number): number {
   return Math.min(day, daysInCalendarMonth(year, month));
 }
 
+function addDaysIso(date: string, days: number): string {
+  const cursor = new Date(`${date}T12:00:00`);
+  cursor.setDate(cursor.getDate() + days);
+  return formatIsoDate(
+    cursor.getFullYear(),
+    cursor.getMonth() + 1,
+    cursor.getDate(),
+  );
+}
+
 function enumerateInclusiveDates(startDate: string, endDate: string): string[] {
   const days: string[] = [];
   const cursor = new Date(`${startDate}T12:00:00`);
@@ -140,17 +150,23 @@ export function resolveAttendancePeriod(
       daysInCalendarMonth(year, labeledMonth),
     );
   } else {
+    // Start = clamp(prev-month, startDay). End = day before next period's start
+    // so adjacent periods stay disjoint when short months clamp (e.g. start 31 in Feb).
     const prev = addCalendarMonths(year, labeledMonth, -1);
     startDate = formatIsoDate(
       prev.year,
       prev.month,
       clampDay(prev.year, prev.month, day),
     );
-    endDate = formatIsoDate(
+    const nextPeriodStart = formatIsoDate(
       year,
       labeledMonth,
-      clampDay(year, labeledMonth, day - 1),
+      clampDay(year, labeledMonth, day),
     );
+    endDate = addDaysIso(nextPeriodStart, -1);
+    if (endDate < startDate) {
+      endDate = startDate;
+    }
   }
 
   const days = enumerateInclusiveDates(startDate, endDate);
@@ -169,4 +185,39 @@ export function isDateInAttendancePeriod(
   period: Pick<AttendancePeriod, "startDate" | "endDate">,
 ): boolean {
   return date >= period.startDate && date <= period.endDate;
+}
+
+/**
+ * Map a calendar date (YYYY-MM-DD) to the labeled attendance month (YYYY-MM)
+ * that contains it for the given company month-start day.
+ *
+ * When startDay is 1 this is just the date's calendar month.
+ * When startDay is e.g. 28, dates like 2026-05-29 belong to labeled 2026-06.
+ */
+export function resolveAttendanceLabelForDate(
+  date: string,
+  startDay: number = DEFAULT_ATTENDANCE_MONTH_START_DAY,
+): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+
+  const day = normalizeAttendanceMonthStartDay(startDay);
+  const dateMonth = date.slice(0, 7);
+  if (day === 1) return parseMonthParam(dateMonth) ? dateMonth : null;
+
+  const parsed = parseMonthParam(dateMonth);
+  if (!parsed) return null;
+
+  const samePeriod = resolveAttendancePeriod(dateMonth, day);
+  if (samePeriod && isDateInAttendancePeriod(date, samePeriod)) {
+    return samePeriod.month;
+  }
+
+  const next = addCalendarMonths(parsed.year, parsed.month, 1);
+  const nextLabel = `${next.year}-${pad2(next.month)}`;
+  const nextPeriod = resolveAttendancePeriod(nextLabel, day);
+  if (nextPeriod && isDateInAttendancePeriod(date, nextPeriod)) {
+    return nextPeriod.month;
+  }
+
+  return dateMonth;
 }
