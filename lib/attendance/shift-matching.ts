@@ -36,6 +36,7 @@ function circularDistance(a: number, b: number): number {
 
 const FALLBACK_START_MINUTES = 9 * 60;
 const FALLBACK_LATE_GRACE_MINUTES = 15;
+const FALLBACK_EARLY_LEAVE_GRACE_MINUTES = 15;
 
 function computeLateMinutesForFullTime(
   firstCheckIn: string | null,
@@ -50,6 +51,29 @@ function computeLateMinutesForFullTime(
   return Math.max(0, checkInMinutes - startExpected - grace);
 }
 
+/**
+ * Early leave for full-time days: expected end = shift start (or 09:00 fallback)
+ * + full-time expected minutes. Used for reporting; deductions still use shortfall.
+ */
+function computeEarlyLeaveMinutesForFullTime(
+  lastCheckOut: string | null,
+  expectedMinutes: number,
+  shift: AttendanceShift | null,
+): number {
+  if (!lastCheckOut) return 0;
+  const startExpected = shift
+    ? timeToMinutes(shift.start_time.slice(0, 5))
+    : FALLBACK_START_MINUTES;
+  const grace =
+    shift?.early_leave_grace_minutes ?? FALLBACK_EARLY_LEAVE_GRACE_MINUTES;
+  const expectedEnd = startExpected + expectedMinutes;
+  let checkOutMinutes = timeToMinutes(lastCheckOut);
+  if (checkOutMinutes <= startExpected) {
+    checkOutMinutes += 24 * 60;
+  }
+  return Math.max(0, expectedEnd - checkOutMinutes - grace);
+}
+
 function computeFullTimeRecord(
   session: PunchSession,
   config: FullTimeConfig,
@@ -58,6 +82,11 @@ function computeFullTimeRecord(
   const totalMinutes = calcSessionMinutes(session);
   const expectedMinutes = config.expectedMinutes;
   const lateMinutes = computeLateMinutesForFullTime(session.firstCheckIn, shift);
+  const earlyLeaveMinutes = computeEarlyLeaveMinutesForFullTime(
+    session.lastCheckOut,
+    expectedMinutes,
+    shift,
+  );
   const overtimeMinutes = Math.max(0, totalMinutes - expectedMinutes);
   const shortfallMinutes = Math.max(0, expectedMinutes - totalMinutes);
   const deductionMinutes = lateMinutes + shortfallMinutes;
@@ -67,7 +96,7 @@ function computeFullTimeRecord(
     expectedMinutes,
     totalMinutes,
     lateMinutes,
-    earlyLeaveMinutes: 0,
+    earlyLeaveMinutes,
     overtimeMinutes,
     deductionMinutes,
     isAbsent: false,

@@ -1,9 +1,10 @@
 import "server-only";
 
 import { pickDefaultAttendanceCompanyId } from "@/lib/attendance/defaults";
+import { isFeatureEnabled } from "@/lib/features";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getShellCompanyIdForProfile } from "@/lib/portal-active-company";
-import type { AttendanceBranch, Company, Profile } from "@/types/db";
+import type { AppFeature, AttendanceBranch, Company, Profile } from "@/types/db";
 
 export function attendanceShowCompanyPicker(
   profile: Pick<Profile, "role" | "is_super_admin">,
@@ -68,12 +69,17 @@ export async function assertAttendanceCompanyAccess(
     return { ok: true };
   }
 
-  // Match resolveCompanyScope / resolveAttendanceCompanyId: md_admin is
-  // scoped to their shell company, not arbitrary company IDs.
+  // md_admin may work any attendance-enabled company (same as page picker /
+  // requireAttendanceAccess — no shell-cookie parity required for exports).
   if (profile.role === "md_admin") {
-    const shellId = await getShellCompanyIdForProfile(profile);
-    if (shellId && shellId === companyId) return { ok: true };
-    if (!shellId && profile.company_id && profile.company_id === companyId) {
+    const supabase = await createSupabaseServerClient();
+    const { data: company } = await supabase
+      .from("companies")
+      .select("enabled_features")
+      .eq("id", companyId)
+      .eq("active", true)
+      .maybeSingle<{ enabled_features: AppFeature[] | null }>();
+    if (company && isFeatureEnabled("attendance", company.enabled_features)) {
       return { ok: true };
     }
     return { error: "صلاحيات غير كافية" };

@@ -99,6 +99,63 @@ describe("computeSessionRecord full-time late", () => {
   });
 });
 
+describe("computeSessionRecord full-time early leave", () => {
+  // Branch-style config: threshold 9h, expected 11h (matches بن عاشور).
+  const BRANCH_FULL_TIME = {
+    thresholdMinutes: 9 * 60,
+    expectedMinutes: 11 * 60,
+  };
+
+  it("counts early leave when full-time checkout is before expected end", () => {
+    // Morning start 09:30 + 660 expected → end 20:30; checkout 19:58 → 32−15 grace = 17
+    const { computed } = computeSessionRecord(
+      makeSession("09:30", "19:58"),
+      [MORNING_SHIFT],
+      BRANCH_FULL_TIME,
+    );
+
+    expect(computed.shiftType).toBe("دوام كامل");
+    expect(computed.earlyLeaveMinutes).toBe(17);
+    expect(computed.totalMinutes).toBe(628);
+  });
+
+  it("counts zero early leave when checkout meets or exceeds expected end", () => {
+    // 09:30 + 660 = 20:30; checkout 20:20 is within 15 grace → 0
+    const { computed } = computeSessionRecord(
+      makeSession("09:30", "20:20"),
+      [MORNING_SHIFT],
+      BRANCH_FULL_TIME,
+    );
+
+    expect(computed.shiftType).toBe("دوام كامل");
+    expect(computed.earlyLeaveMinutes).toBe(0);
+  });
+
+  it("counts zero early leave on overtime full-time days", () => {
+    const { computed } = computeSessionRecord(
+      makeSession("09:30", "22:00"),
+      [MORNING_SHIFT],
+      BRANCH_FULL_TIME,
+    );
+
+    expect(computed.shiftType).toBe("دوام كامل");
+    expect(computed.earlyLeaveMinutes).toBe(0);
+    expect(computed.overtimeMinutes).toBeGreaterThan(0);
+  });
+
+  it("uses 09:00 fallback start when no shifts are configured", () => {
+    // Fallback start 09:00 + 660 = 20:00; checkout 19:00 → 60−15 = 45
+    const { computed } = computeSessionRecord(
+      makeSession("09:00", "19:00"),
+      [],
+      BRANCH_FULL_TIME,
+    );
+
+    expect(computed.shiftType).toBe("دوام كامل");
+    expect(computed.earlyLeaveMinutes).toBe(45);
+  });
+});
+
 describe("computeSessionRecord one-punch late", () => {
   function onePunchSession(time: string, date = "2026-06-05"): PunchSession {
     return {
