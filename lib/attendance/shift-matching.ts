@@ -52,44 +52,105 @@ function computeLateMinutesForFullTime(
 }
 
 /**
- * Early leave for full-time days: expected end = shift start (or 09:00 fallback)
- * + full-time expected minutes. Used for reporting; deductions still use shortfall.
+ * Nearest shift by END for a full-time checkout, considering only shifts
+ * whose end has not already passed relative to the checkout (a shift already
+ * finished can't be "left early" from). Returns null when no active shifts
+ * exist at all (caller falls back to the 09:00 synthetic window), or when
+ * checkout is at/after every active shift's own end (genuinely not early).
+ */
+function resolveShiftForFullTimeCheckout(
+  checkoutMinutes: number,
+  shiftDate: string,
+  shifts: AttendanceShift[],
+): { shift: AttendanceShift | null; hasActiveShifts: boolean } {
+  const active = shifts.filter(
+    (s) => s.active && isPersonWorkDay(shiftDate, s.work_days),
+  );
+  if (active.length === 0) return { shift: null, hasActiveShifts: false };
+
+  let best: AttendanceShift | null = null;
+  let bestDist = Infinity;
+  for (const shift of active) {
+    if (punchIsAfterExpectedEnd(checkoutMinutes, shift)) continue;
+    const startMinutes = timeToMinutes(shift.start_time.slice(0, 5));
+    const endMinutes = minutesOnClock(startMinutes + shift.expected_minutes);
+    const dist = circularDistance(checkoutMinutes, endMinutes);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = shift;
+    }
+  }
+  return { shift: best, hasActiveShifts: true };
+}
+
+/**
+ * Early leave for full-time days: vs the nearest unpassed shift's own end.
+ * Used for reporting; deductions still use shortfall.
  */
 function computeEarlyLeaveMinutesForFullTime(
   lastCheckOut: string | null,
   expectedMinutes: number,
-  shift: AttendanceShift | null,
+  checkoutShift: AttendanceShift | null,
+  hasActiveShifts: boolean,
 ): number {
   if (!lastCheckOut) return 0;
-  const startExpected = shift
-    ? timeToMinutes(shift.start_time.slice(0, 5))
-    : FALLBACK_START_MINUTES;
-  const grace =
-    shift?.early_leave_grace_minutes ?? FALLBACK_EARLY_LEAVE_GRACE_MINUTES;
-  const expectedEnd = startExpected + expectedMinutes;
   let checkOutMinutes = timeToMinutes(lastCheckOut);
-  if (checkOutMinutes <= startExpected) {
-    checkOutMinutes += 24 * 60;
+
+  if (checkoutShift) {
+    const startExpected = timeToMinutes(checkoutShift.start_time.slice(0, 5));
+    const expectedEnd = startExpected + checkoutShift.expected_minutes;
+    if (checkOutMinutes <= startExpected) checkOutMinutes += 24 * 60;
+    return Math.max(
+      0,
+      expectedEnd - checkOutMinutes - checkoutShift.early_leave_grace_minutes,
+    );
   }
-  return Math.max(0, expectedEnd - checkOutMinutes - grace);
+
+  if (hasActiveShifts) return 0; // checked out at/after every real shift's end
+
+  // No shifts configured: fall back to synthetic 09:00 + expectedMinutes window.
+  const expectedEnd = FALLBACK_START_MINUTES + expectedMinutes;
+  if (checkOutMinutes <= FALLBACK_START_MINUTES) checkOutMinutes += 24 * 60;
+  return Math.max(
+    0,
+    expectedEnd - checkOutMinutes - FALLBACK_EARLY_LEAVE_GRACE_MINUTES,
+  );
 }
 
 function computeFullTimeRecord(
   session: PunchSession,
   config: FullTimeConfig,
-  shift: AttendanceShift | null = null,
+  shifts: AttendanceShift[],
+  lateShift: AttendanceShift | null,
 ): ComputedDay {
   const totalMinutes = calcSessionMinutes(session);
   const expectedMinutes = config.expectedMinutes;
-  const lateMinutes = computeLateMinutesForFullTime(session.firstCheckIn, shift);
+  const lateMinutes = computeLateMinutesForFullTime(
+    session.firstCheckIn,
+    lateShift,
+  );
+
+  const checkoutMinutes = session.lastCheckOut
+    ? timeToMinutes(session.lastCheckOut)
+    : null;
+  const { shift: checkoutShift, hasActiveShifts } =
+    checkoutMinutes != null
+      ? resolveShiftForFullTimeCheckout(
+          checkoutMinutes,
+          session.shiftDate,
+          shifts,
+        )
+      : { shift: null, hasActiveShifts: false };
   const earlyLeaveMinutes = computeEarlyLeaveMinutesForFullTime(
     session.lastCheckOut,
     expectedMinutes,
-    shift,
+    checkoutShift,
+    hasActiveShifts,
   );
   const overtimeMinutes = Math.max(0, totalMinutes - expectedMinutes);
+  // Shortfall alone — late/early are display-only; adding late would double-count.
   const shortfallMinutes = Math.max(0, expectedMinutes - totalMinutes);
-  const deductionMinutes = lateMinutes + shortfallMinutes;
+  const deductionMinutes = shortfallMinutes;
 
   return {
     shiftType: SHIFT_FULL,
@@ -135,7 +196,149 @@ export function resolveShiftForSession(
 }
 
 /**
- * One-punch day: count lateness for lateDays, but never deduct time or early leave.
+ * True when a lone punch falls after this shift's expected end.
+ * After-end punches must not be treated as early-leave checkouts.
+ */
+function punchIsAfterExpectedEnd(
+  punchMinutes: number,
+  shift: AttendanceShift,
+): boolean {
+  const startExpected = timeToMinutes(shift.start_time.slice(0, 5));
+  const expectedEnd = startExpected + shift.expected_minutes;
+
+  if (punchMinutes >= startExpected) {
+    // Same clock-side as start; overnight expectedEnd is >= 24h so this is false.
+    return punchMinutes > expectedEnd;
+  }
+
+  // Before start on the clock: only overnight shifts can still be "in window".
+  if (expectedEnd > 24 * 60 || shift.crosses_midnight) {
+    return punchMinutes + 24 * 60 > expectedEnd;
+  }
+
+  return false;
+}
+
+/**
+ * Whether a lone punch reads as a check-in (near start) or check-out (near end).
+ * Checkout is only valid when the punch is at or before the expected end.
+ */
+function classifyOnePunch(
+  punchMinutes: number,
+  shift: AttendanceShift,
+): { isCheckout: boolean; distance: number } {
+  const startMinutes = timeToMinutes(shift.start_time.slice(0, 5));
+  const endMinutes = minutesOnClock(startMinutes + shift.expected_minutes);
+  const distStart = circularDistance(punchMinutes, startMinutes);
+
+  if (punchIsAfterExpectedEnd(punchMinutes, shift)) {
+    return { isCheckout: false, distance: distStart };
+  }
+
+  const distEnd = circularDistance(punchMinutes, endMinutes);
+  return distEnd < distStart
+    ? { isCheckout: true, distance: distEnd }
+    : { isCheckout: false, distance: distStart };
+}
+
+function onePunchMinutesForShift(
+  punchMinutes: number,
+  shift: AttendanceShift,
+  isCheckout: boolean,
+): { lateMinutes: number; earlyLeaveMinutes: number } {
+  const startExpected = timeToMinutes(shift.start_time.slice(0, 5));
+  if (isCheckout) {
+    const expectedEnd = startExpected + shift.expected_minutes;
+    let checkoutMinutes = punchMinutes;
+    if (checkoutMinutes <= startExpected) checkoutMinutes += 24 * 60;
+    return {
+      lateMinutes: 0,
+      earlyLeaveMinutes: Math.max(
+        0,
+        expectedEnd - checkoutMinutes - shift.early_leave_grace_minutes,
+      ),
+    };
+  }
+  return {
+    lateMinutes: Math.max(
+      0,
+      punchMinutes - startExpected - shift.late_grace_minutes,
+    ),
+    earlyLeaveMinutes: 0,
+  };
+}
+
+/**
+ * Pick the active shift whose start or (valid) end is nearest the lone punch.
+ * Checkout candidates are only scored when punch <= expected end.
+ */
+function resolveShiftForOnePunch(
+  punchMinutes: number,
+  shiftDate: string,
+  shifts: AttendanceShift[],
+): { shift: AttendanceShift; isCheckout: boolean } | null {
+  const active = shifts.filter(
+    (s) => s.active && isPersonWorkDay(shiftDate, s.work_days),
+  );
+  if (active.length === 0) return null;
+
+  let best: AttendanceShift | null = null;
+  let bestIsCheckout = false;
+  let bestDist = Infinity;
+
+  for (const shift of active) {
+    const startMinutes = timeToMinutes(shift.start_time.slice(0, 5));
+    const endMinutes = minutesOnClock(startMinutes + shift.expected_minutes);
+
+    const distStart = circularDistance(punchMinutes, startMinutes);
+    if (distStart < bestDist) {
+      bestDist = distStart;
+      best = shift;
+      bestIsCheckout = false;
+    }
+
+    if (!punchIsAfterExpectedEnd(punchMinutes, shift)) {
+      const distEnd = circularDistance(punchMinutes, endMinutes);
+      if (distEnd < bestDist) {
+        bestDist = distEnd;
+        best = shift;
+        bestIsCheckout = true;
+      }
+    }
+  }
+
+  return best ? { shift: best, isCheckout: bestIsCheckout } : null;
+}
+
+function onePunchResult(
+  shift: AttendanceShift,
+  punchMinutes: number,
+  isCheckout: boolean,
+): { computed: ComputedDay; shift: AttendanceShift } {
+  const { lateMinutes, earlyLeaveMinutes } = onePunchMinutesForShift(
+    punchMinutes,
+    shift,
+    isCheckout,
+  );
+  return {
+    computed: {
+      shiftType: shift.name,
+      expectedMinutes: null,
+      totalMinutes: null,
+      lateMinutes,
+      earlyLeaveMinutes,
+      overtimeMinutes: 0,
+      deductionMinutes: 0,
+      isAbsent: false,
+      notes: incompletePunchDay().notes,
+    },
+    shift,
+  };
+}
+
+/**
+ * One-punch day: count late or early leave (whichever the punch is nearer),
+ * but never deduct time.
  */
 export function computeOnePunchRecord(
   session: PunchSession,
@@ -147,54 +350,54 @@ export function computeOnePunchRecord(
     return { computed: incompletePunchDay(), shift: null };
   }
 
-  if (preferredShift) {
+  const punchMinutes = timeToMinutes(punchTime);
+
+  // Preferred shift is ignored when the punch is after its expected end so we
+  // can rematch (e.g. 18:41 after morning end → night late check-in).
+  if (preferredShift && !punchIsAfterExpectedEnd(punchMinutes, preferredShift)) {
+    const { isCheckout } = classifyOnePunch(punchMinutes, preferredShift);
+    return onePunchResult(preferredShift, punchMinutes, isCheckout);
+  }
+
+  const resolved = resolveShiftForOnePunch(
+    punchMinutes,
+    session.shiftDate,
+    shifts,
+  );
+
+  if (!resolved) {
     return {
-      computed: onePunchComputedForShift(punchTime, preferredShift),
-      shift: preferredShift,
+      computed: {
+        shiftType: null,
+        expectedMinutes: null,
+        totalMinutes: null,
+        lateMinutes: 0,
+        earlyLeaveMinutes: 0,
+        overtimeMinutes: 0,
+        deductionMinutes: 0,
+        isAbsent: false,
+        notes: incompletePunchDay().notes,
+      },
+      shift: null,
     };
   }
 
-  const sessionForShift: PunchSession = {
-    ...session,
-    firstCheckIn: punchTime,
-  };
-  const shift = resolveShiftForSession(sessionForShift, shifts);
-
-  let lateMinutes = 0;
-  if (shift) {
-    const startExpected = timeToMinutes(shift.start_time.slice(0, 5));
-    const checkInMinutes = timeToMinutes(punchTime);
-    lateMinutes = Math.max(
-      0,
-      checkInMinutes - startExpected - shift.late_grace_minutes,
-    );
-  }
-
-  return {
-    computed: {
-      shiftType: shift?.name ?? null,
-      expectedMinutes: null,
-      totalMinutes: null,
-      lateMinutes,
-      earlyLeaveMinutes: 0,
-      overtimeMinutes: 0,
-      deductionMinutes: 0,
-      isAbsent: false,
-      notes: incompletePunchDay().notes,
-    },
-    shift,
-  };
+  return onePunchResult(resolved.shift, punchMinutes, resolved.isCheckout);
 }
 
 function onePunchComputedForShift(
   punchTime: string,
   shift: AttendanceShift,
 ): ComputedDay {
-  const startExpected = timeToMinutes(shift.start_time.slice(0, 5));
-  const checkInMinutes = timeToMinutes(punchTime);
-  const lateMinutes = Math.max(
-    0,
-    checkInMinutes - startExpected - shift.late_grace_minutes,
+  const punchMinutes = timeToMinutes(punchTime);
+  // After-end on an explicit shift → force check-in (never 0/0 early-leave checkout).
+  const isCheckout = punchIsAfterExpectedEnd(punchMinutes, shift)
+    ? false
+    : classifyOnePunch(punchMinutes, shift).isCheckout;
+  const { lateMinutes, earlyLeaveMinutes } = onePunchMinutesForShift(
+    punchMinutes,
+    shift,
+    isCheckout,
   );
 
   return {
@@ -202,7 +405,7 @@ function onePunchComputedForShift(
     expectedMinutes: null,
     totalMinutes: null,
     lateMinutes,
-    earlyLeaveMinutes: 0,
+    earlyLeaveMinutes,
     overtimeMinutes: 0,
     deductionMinutes: 0,
     isAbsent: false,
@@ -319,7 +522,7 @@ export function computeSessionRecord(
   if (totalMinutes >= fullTimeConfig.thresholdMinutes) {
     const shift = resolveShiftForSession(session, shifts);
     return {
-      computed: computeFullTimeRecord(session, fullTimeConfig, shift),
+      computed: computeFullTimeRecord(session, fullTimeConfig, shifts, shift),
       shift,
     };
   }

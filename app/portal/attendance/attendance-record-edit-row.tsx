@@ -472,10 +472,12 @@ export function AttendanceRecordTableRow({
   const hideTimes = hidesAttendanceTimes(dayStatus);
 
   const lateDeduction =
-    record.late_minutes > 0 || record.deduction_minutes > 0
+    record.late_minutes > 0 || record.early_leave_minutes > 0
       ? [
           record.late_minutes > 0 ? `ت${record.late_minutes}` : null,
-          record.deduction_minutes > 0 ? `خ${record.deduction_minutes}` : null,
+          record.early_leave_minutes > 0
+            ? `م${record.early_leave_minutes}`
+            : null,
         ]
           .filter(Boolean)
           .join(" ")
@@ -697,10 +699,12 @@ export function AttendanceRecordMobileCard({
   const hideTimes = hidesAttendanceTimes(dayStatus);
 
   const lateDeduction =
-    record.late_minutes > 0 || record.deduction_minutes > 0
+    record.late_minutes > 0 || record.early_leave_minutes > 0
       ? [
           record.late_minutes > 0 ? `تأخير ${record.late_minutes} د` : null,
-          record.deduction_minutes > 0 ? `خصم ${record.deduction_minutes} د` : null,
+          record.early_leave_minutes > 0
+            ? `خروج مبكر ${record.early_leave_minutes} د`
+            : null,
         ]
           .filter(Boolean)
           .join(" · ")

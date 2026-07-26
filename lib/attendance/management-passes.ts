@@ -4,6 +4,11 @@
  */
 import type { ComputedDay } from "@/lib/attendance/monthly-calculations";
 
+// Mirrors SHIFT_FULL from monthly-calculations.ts. Duplicated as a plain
+// string (not imported) because that module has `import "server-only"` and
+// this file is bundled into client components (attendance-record-edit-row).
+const SHIFT_FULL = "دوام كامل";
+
 export const WAIVE_LATE_KEY = "waive_late";
 export const WAIVE_EARLY_LEAVE_KEY = "waive_early_leave";
 
@@ -47,8 +52,9 @@ export function mergeManagementPassesIntoPayload(
 }
 
 /**
- * Zero waived late/early minutes and subtract them from deduction
- * (preserves full-time shortfall and one-punch deduction=0).
+ * Zero waived late/early minutes and subtract them from deduction for
+ * regular shifts. Full-time deduction is shortfall-only, so waivers must
+ * not reduce it (late/early are display-only there).
  */
 export function applyManagementPasses(
   computed: ComputedDay,
@@ -58,15 +64,15 @@ export function applyManagementPasses(
 
   const waivedLate = passes.waiveLate ? computed.lateMinutes : 0;
   const waivedEarly = passes.waiveEarlyLeave ? computed.earlyLeaveMinutes : 0;
+  const isFullTime = computed.shiftType === SHIFT_FULL;
 
   return {
     ...computed,
     lateMinutes: passes.waiveLate ? 0 : computed.lateMinutes,
     earlyLeaveMinutes: passes.waiveEarlyLeave ? 0 : computed.earlyLeaveMinutes,
-    deductionMinutes: Math.max(
-      0,
-      computed.deductionMinutes - waivedLate - waivedEarly,
-    ),
+    deductionMinutes: isFullTime
+      ? computed.deductionMinutes
+      : Math.max(0, computed.deductionMinutes - waivedLate - waivedEarly),
   };
 }
 

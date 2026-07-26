@@ -5,7 +5,10 @@ import {
   parseManagementPassesFromForm,
   readManagementPasses,
 } from "@/lib/attendance/management-passes";
-import type { ComputedDay } from "@/lib/attendance/monthly-calculations";
+import {
+  SHIFT_FULL,
+  type ComputedDay,
+} from "@/lib/attendance/monthly-calculations";
 import { buildRecalculatedRecordPatch } from "@/lib/attendance/recalculate-person-month";
 import type { AttendancePerson, AttendanceShift } from "@/types/db";
 
@@ -45,18 +48,34 @@ describe("applyManagementPasses", () => {
     expect(result.deductionMinutes).toBe(30);
   });
 
-  it("zeros both and keeps full-time shortfall in deduction", () => {
+  it("zeros late/early on full-time but leaves shortfall deduction unchanged", () => {
     const result = applyManagementPasses(
       makeComputed({
+        shiftType: SHIFT_FULL,
         lateMinutes: 15,
-        earlyLeaveMinutes: 0,
-        deductionMinutes: 45, // 15 late + 30 shortfall
+        earlyLeaveMinutes: 10,
+        deductionMinutes: 30, // shortfall only
       }),
       { waiveLate: true, waiveEarlyLeave: true },
     );
     expect(result.lateMinutes).toBe(0);
     expect(result.earlyLeaveMinutes).toBe(0);
     expect(result.deductionMinutes).toBe(30);
+  });
+
+  it("still subtracts waived late/early from regular-shift deduction", () => {
+    const result = applyManagementPasses(
+      makeComputed({
+        shiftType: "صباحي",
+        lateMinutes: 15,
+        earlyLeaveMinutes: 20,
+        deductionMinutes: 35,
+      }),
+      { waiveLate: true, waiveEarlyLeave: false },
+    );
+    expect(result.lateMinutes).toBe(0);
+    expect(result.earlyLeaveMinutes).toBe(20);
+    expect(result.deductionMinutes).toBe(20);
   });
 });
 

@@ -84,7 +84,7 @@ describe("computeSessionRecord full-time late", () => {
     expect(computed.lateMinutes).toBe(75);
   });
 
-  it("includes late minutes in full-time deduction total", () => {
+  it("uses shortfall alone for full-time deduction (not late + shortfall)", () => {
     const { computed } = computeSessionRecord(
       makeSession("10:00", "19:30"),
       [MORNING_SHIFT],
@@ -95,7 +95,8 @@ describe("computeSessionRecord full-time late", () => {
       0,
       DEFAULT_FULL_TIME_CONFIG.expectedMinutes - (computed.totalMinutes ?? 0),
     );
-    expect(computed.deductionMinutes).toBe(computed.lateMinutes + shortfall);
+    expect(computed.lateMinutes).toBeGreaterThan(0);
+    expect(computed.deductionMinutes).toBe(shortfall);
   });
 });
 
@@ -106,24 +107,49 @@ describe("computeSessionRecord full-time early leave", () => {
     expectedMinutes: 11 * 60,
   };
 
-  it("counts early leave when full-time checkout is before expected end", () => {
-    // Morning start 09:30 + 660 expected → end 20:30; checkout 19:58 → 32−15 grace = 17
-    const { computed } = computeSessionRecord(
-      makeSession("09:30", "19:58"),
-      [MORNING_SHIFT],
+  const NIGHT_SHIFT: AttendanceShift = {
+    ...MORNING_SHIFT,
+    id: "shift-night",
+    name: "ليلية",
+    start_time: "16:00",
+    end_time: "22:00",
+    expected_minutes: 360,
+  };
+
+  const TWO_SHIFTS = [MORNING_SHIFT, NIGHT_SHIFT];
+
+  it("matches check-in to morning and check-out to night independently", () => {
+    // 11:00 vs morning 09:30 → late 75; 21:00 vs night 22:00 → early 45
+    const { computed, shift } = computeSessionRecord(
+      makeSession("11:00", "21:00"),
+      TWO_SHIFTS,
       BRANCH_FULL_TIME,
     );
 
     expect(computed.shiftType).toBe("دوام كامل");
-    expect(computed.earlyLeaveMinutes).toBe(17);
+    expect(shift?.name).toBe("صباحي");
+    expect(computed.lateMinutes).toBe(75);
+    expect(computed.earlyLeaveMinutes).toBe(45);
+  });
+
+  it("counts early leave against nearest unpassed shift end (night)", () => {
+    // Morning end 16:00 already passed at 19:58 → night 22:00 − 19:58 − 15 = 107
+    const { computed } = computeSessionRecord(
+      makeSession("09:30", "19:58"),
+      TWO_SHIFTS,
+      BRANCH_FULL_TIME,
+    );
+
+    expect(computed.shiftType).toBe("دوام كامل");
+    expect(computed.earlyLeaveMinutes).toBe(107);
     expect(computed.totalMinutes).toBe(628);
   });
 
-  it("counts zero early leave when checkout meets or exceeds expected end", () => {
-    // 09:30 + 660 = 20:30; checkout 20:20 is within 15 grace → 0
+  it("counts zero early leave near night's own end", () => {
+    // 22:00 − 21:50 = 10 within 15 grace → 0
     const { computed } = computeSessionRecord(
-      makeSession("09:30", "20:20"),
-      [MORNING_SHIFT],
+      makeSession("09:30", "21:50"),
+      TWO_SHIFTS,
       BRANCH_FULL_TIME,
     );
 
@@ -131,10 +157,10 @@ describe("computeSessionRecord full-time early leave", () => {
     expect(computed.earlyLeaveMinutes).toBe(0);
   });
 
-  it("counts zero early leave on overtime full-time days", () => {
+  it("counts zero early leave when checkout is at/after every shift end", () => {
     const { computed } = computeSessionRecord(
       makeSession("09:30", "22:00"),
-      [MORNING_SHIFT],
+      TWO_SHIFTS,
       BRANCH_FULL_TIME,
     );
 
@@ -200,6 +226,118 @@ describe("computeSessionRecord one-punch late", () => {
 
     expect(computed.lateMinutes).toBe(45);
     expect(computed.deductionMinutes).toBe(0);
+    expect(computed.earlyLeaveMinutes).toBe(0);
+  });
+
+  it("treats a lone punch near shift end as early leave, not late", () => {
+    // بن عاشور ليلية 16:00–22:00; punch 20:02 is nearer end than start.
+    const nightShift: AttendanceShift = {
+      ...MORNING_SHIFT,
+      id: "shift-night",
+      name: "ليلية",
+      start_time: "16:00",
+      end_time: "22:00",
+      expected_minutes: 360,
+    };
+
+    const { computed, shift } = computeSessionRecord(
+      onePunchSession("20:02"),
+      [nightShift],
+    );
+
+    // expected end 22:00 − 20:02 = 118 − 15 grace = 103
+    expect(shift?.name).toBe("ليلية");
+    expect(computed.lateMinutes).toBe(0);
+    expect(computed.earlyLeaveMinutes).toBe(103);
+    expect(computed.deductionMinutes).toBe(0);
+  });
+
+  it("picks night shift by end proximity when morning start is farther", () => {
+    const nightShift: AttendanceShift = {
+      ...MORNING_SHIFT,
+      id: "shift-night",
+      name: "ليلية",
+      start_time: "16:00",
+      end_time: "22:00",
+      expected_minutes: 360,
+    };
+
+    const { computed, shift } = computeSessionRecord(
+      onePunchSession("20:02"),
+      [MORNING_SHIFT, nightShift],
+    );
+
+    expect(shift?.name).toBe("ليلية");
+    expect(computed.lateMinutes).toBe(0);
+    expect(computed.earlyLeaveMinutes).toBe(103);
+  });
+
+  it("treats after-end morning punch as night late check-in, not zero checkout", () => {
+    // بن عاشور: morning 10:30–16:00, night 16:00–22:00; punch 18:41 is after morning end.
+    const morningBanAshour: AttendanceShift = {
+      ...MORNING_SHIFT,
+      id: "shift-morning-ba",
+      start_time: "10:30",
+      end_time: "16:00",
+      expected_minutes: 330,
+    };
+    const nightShift: AttendanceShift = {
+      ...MORNING_SHIFT,
+      id: "shift-night",
+      name: "ليلية",
+      start_time: "16:00",
+      end_time: "22:00",
+      expected_minutes: 360,
+    };
+
+    const { computed, shift } = computeSessionRecord(
+      onePunchSession("18:41"),
+      [morningBanAshour, nightShift],
+    );
+
+    // 18:41 − 16:00 − 15 grace = 146
+    expect(shift?.name).toBe("ليلية");
+    expect(computed.lateMinutes).toBe(146);
+    expect(computed.earlyLeaveMinutes).toBe(0);
+    expect(computed.deductionMinutes).toBe(0);
+  });
+
+  it("ignores preferred morning when punch is after its end and rematches night", () => {
+    const morningBanAshour: AttendanceShift = {
+      ...MORNING_SHIFT,
+      id: "shift-morning-ba",
+      start_time: "10:30",
+      end_time: "16:00",
+      expected_minutes: 330,
+    };
+    const nightShift: AttendanceShift = {
+      ...MORNING_SHIFT,
+      id: "shift-night",
+      name: "ليلية",
+      start_time: "16:00",
+      end_time: "22:00",
+      expected_minutes: 360,
+    };
+
+    const { computed, shift } = computeOnePunchRecord(
+      onePunchSession("18:41"),
+      [morningBanAshour, nightShift],
+      morningBanAshour,
+    );
+
+    expect(shift?.name).toBe("ليلية");
+    expect(computed.lateMinutes).toBe(146);
+    expect(computed.earlyLeaveMinutes).toBe(0);
+  });
+
+  it("treats a lone punch near morning start as late, not early leave", () => {
+    const { computed, shift } = computeSessionRecord(
+      onePunchSession("10:00"),
+      [MORNING_SHIFT],
+    );
+
+    expect(shift?.name).toBe("صباحي");
+    expect(computed.lateMinutes).toBe(15);
     expect(computed.earlyLeaveMinutes).toBe(0);
   });
 });

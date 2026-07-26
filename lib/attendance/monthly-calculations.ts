@@ -164,8 +164,9 @@ export function computeDayRecord(
       lateMinutes = Math.max(0, checkInMinutes - startExpected - LATE_GRACE_MINUTES);
     }
     const overtimeMinutes = Math.max(0, totalMinutes - fullTimeRule.expectedMinutes);
+    // Shortfall alone — late is display-only; adding it would double-count.
     const shortfallMinutes = Math.max(0, fullTimeRule.expectedMinutes - totalMinutes);
-    const deductionMinutes = lateMinutes + shortfallMinutes;
+    const deductionMinutes = shortfallMinutes;
     return {
       shiftType,
       expectedMinutes: fullTimeRule.expectedMinutes,

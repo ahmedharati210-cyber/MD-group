@@ -122,4 +122,21 @@ describe("filterPersonMetricDays", () => {
     expect(rows[0]?.detailValue).toBe("يوم تأخير");
     expect(rows[0]?.detailLabel).toBe("التأخير");
   });
+
+  it("shows day-early-leave detail for one-punch checkout days", () => {
+    const onePunchEarly = [
+      makeRecord("2026-06-06", {
+        first_check_in: "20:02",
+        last_check_out: "20:02",
+        punch_count: 1,
+        late_minutes: 0,
+        early_leave_minutes: 103,
+        deduction_minutes: 0,
+      }),
+    ];
+    const rows = filterPersonMetricDays(month, onePunchEarly, "earlyLeaveDays");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.detailValue).toBe("يوم خروج مبكر");
+    expect(rows[0]?.detailLabel).toBe("الخروج المبكر");
+  });
 });

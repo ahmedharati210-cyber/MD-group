@@ -139,6 +139,9 @@ function detailForMetric(
           record && record.late_minutes > 0 ? `${record.late_minutes} د` : EMPTY,
       };
     case "earlyLeaveDays":
+      if (record && hasOnePunch(record) && record.early_leave_minutes > 0) {
+        return { detailLabel: "الخروج المبكر", detailValue: "يوم خروج مبكر" };
+      }
       return {
         detailLabel: "دقائق الخروج المبكر",
         detailValue:
