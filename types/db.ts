@@ -650,6 +650,7 @@ export type TaskWorkStatus = "in_progress" | null;
 export type QaProjectStatus = "active" | "done";
 export type QaTestResult = "pass" | "bug" | "improve";
 export type QaItemKind = "test" | "task";
+export type QaTestSeverity = "low" | "medium" | "high" | "critical";
 
 export interface QaProject {
   id: string;
@@ -696,6 +697,9 @@ export interface QaTestItem {
   item_kind: QaItemKind;
   result: QaTestResult | null;
   result_note: string | null;
+  severity: QaTestSeverity | null;
+  steps_to_reproduce: string | null;
+  expected_behavior: string | null;
   tested_by: string | null;
   tested_at: string | null;
   sort_order: number;
@@ -710,9 +714,43 @@ type QaTestItemInsert = {
   item_kind?: QaItemKind;
   result?: QaTestResult | null;
   result_note?: string | null;
+  severity?: QaTestSeverity | null;
+  steps_to_reproduce?: string | null;
+  expected_behavior?: string | null;
   tested_by?: string | null;
   tested_at?: string | null;
   sort_order?: number;
+  created_at?: string;
+};
+
+export interface QaTestAttempt {
+  id: string;
+  item_id: string;
+  project_id: string;
+  result: QaTestResult;
+  result_note: string | null;
+  severity: QaTestSeverity | null;
+  steps_to_reproduce: string | null;
+  expected_behavior: string | null;
+  tested_by: string | null;
+  tested_at: string | null;
+  reset_by: string | null;
+  reset_at: string;
+  created_at: string;
+}
+type QaTestAttemptInsert = {
+  id?: string;
+  item_id: string;
+  project_id: string;
+  result: QaTestResult;
+  result_note?: string | null;
+  severity?: QaTestSeverity | null;
+  steps_to_reproduce?: string | null;
+  expected_behavior?: string | null;
+  tested_by?: string | null;
+  tested_at?: string | null;
+  reset_by?: string | null;
+  reset_at?: string;
   created_at?: string;
 };
 
@@ -1052,6 +1090,7 @@ export interface Database {
       qa_projects: TableDef<QaProject, QaProjectInsert>;
       qa_sections: TableDef<QaSection, QaSectionInsert>;
       qa_test_items: TableDef<QaTestItem, QaTestItemInsert>;
+      qa_test_attempts: TableDef<QaTestAttempt, QaTestAttemptInsert>;
       engineer_reports: TableDef<EngineerReport, EngineerReportInsert>;
       engineer_requests: TableDef<EngineerRequest, EngineerRequestInsert>;
       manager_claims: TableDef<ManagerClaim, ManagerClaimInsert>;
@@ -1080,6 +1119,14 @@ export interface Database {
         Args: { p_invite_id: string };
         Returns: undefined;
       };
+      reset_qa_test_item: {
+        Args: { p_item_id: string };
+        Returns: undefined;
+      };
+      mark_qa_task_ready_for_test: {
+        Args: { p_item_id: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       user_role: UserRole;
@@ -1094,6 +1141,10 @@ export interface Database {
       request_type: RequestType;
       request_status: RequestStatus;
       trade_category: TradeCategory;
+      qa_project_status: QaProjectStatus;
+      qa_test_result: QaTestResult;
+      qa_item_kind: QaItemKind;
+      qa_test_severity: QaTestSeverity;
     };
     CompositeTypes: Record<string, never>;
   };

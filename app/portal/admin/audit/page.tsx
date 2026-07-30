@@ -65,6 +65,7 @@ const payloadKeyLabels: Record<string, string> = {
   item_kind: "النوع",
   ready_for_test: "جاهز للاختبار",
   result: "النتيجة",
+  severity: "درجة الخطورة",
   reset: "إعادة فتح",
   convert: "تحويل النوع",
   reorder: "إعادة ترتيب",
@@ -82,6 +83,10 @@ const payloadValueLabels: Record<string, string> = {
   task: "مهمة",
   active: "نشط",
   done: "منتهٍ",
+  low: "منخفض",
+  medium: "متوسط",
+  high: "عالٍ",
+  critical: "حرج",
 };
 
 function formatPayloadValue(value: unknown): string {

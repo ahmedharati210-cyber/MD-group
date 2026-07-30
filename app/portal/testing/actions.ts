@@ -11,7 +11,8 @@ import {
 } from "@/lib/itqan-testing";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
-import type { QaTestResult } from "@/types/db";
+import { validateQaResultSubmit } from "@/lib/qa-testing-format";
+import type { QaTestResult, QaTestSeverity } from "@/types/db";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -413,6 +414,9 @@ export async function submitQaTestResultAction(
   projectId: string,
   result: QaTestResult,
   resultNote: string,
+  severity?: QaTestSeverity | null,
+  stepsToReproduce?: string | null,
+  expectedBehavior?: string | null,
 ): Promise<ActionState> {
   const { error: interactError, current } = await assertCanInteract();
   if (interactError || !current) return { error: interactError ?? "غير مصرح" };
@@ -424,22 +428,41 @@ export async function submitQaTestResultAction(
   const parsedResult = z.enum(["pass", "bug", "improve"]).safeParse(result);
   if (!parsedResult.success) return { error: "نتيجة غير صالحة" };
 
+  const severityParsed =
+    severity == null
+      ? { success: true as const, data: null as QaTestSeverity | null }
+      : z.enum(["low", "medium", "high", "critical"]).safeParse(severity);
+  if (!severityParsed.success) return { error: "درجة الخطورة غير صالحة" };
+
   const note = resultNote.trim();
-  if (
-    (parsedResult.data === "bug" || parsedResult.data === "improve") &&
-    note.length < 1
-  ) {
-    return { error: "الملاحظة مطلوبة عند تسجيل خلل أو تحسين" };
-  }
+  const steps = (stepsToReproduce ?? "").trim();
+  const expected = (expectedBehavior ?? "").trim();
+
+  const validationError = validateQaResultSubmit({
+    result: parsedResult.data,
+    resultNote: note,
+    severity: severityParsed.data,
+    stepsToReproduce: steps,
+    expectedBehavior: expected,
+  });
+  if (validationError) return { error: validationError };
 
   const isManager = canManageTesting(current.profile);
   const supabase = await createSupabaseServerClient();
+
+  const nextSeverity =
+    parsedResult.data === "bug"
+      ? severityParsed.data
+      : severityParsed.data ?? null;
 
   let query = supabase
     .from("qa_test_items")
     .update({
       result: parsedResult.data,
       result_note: note || null,
+      severity: nextSeverity,
+      steps_to_reproduce: steps || null,
+      expected_behavior: expected || null,
       tested_by: current.userId,
       tested_at: new Date().toISOString(),
     })
@@ -462,6 +485,7 @@ export async function submitQaTestResultAction(
 
   void logAudit(current.userId, "update", "qa_test_item", itemId, {
     result: parsedResult.data,
+    ...(nextSeverity ? { severity: nextSeverity } : {}),
     project_id: projectId,
   });
 
@@ -481,15 +505,9 @@ export async function resetQaTestResultAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
-    .from("qa_test_items")
-    .update({
-      result: null,
-      result_note: null,
-      tested_by: null,
-      tested_at: null,
-    })
-    .eq("id", itemId);
+  const { error } = await supabase.rpc("reset_qa_test_item", {
+    p_item_id: itemId,
+  });
   if (error) return { error: error.message };
 
   void logAudit(current.userId, "update", "qa_test_item", itemId, {
@@ -518,6 +536,21 @@ export async function convertQaItemKindAction(
   if (!parsed.success) return { error: "نوع العنصر غير صالح" };
 
   const supabase = await createSupabaseServerClient();
+
+  // Archive any live result before flipping kind so history is preserved.
+  const { data: existing } = await supabase
+    .from("qa_test_items")
+    .select("result")
+    .eq("id", itemId)
+    .maybeSingle<{ result: QaTestResult | null }>();
+
+  if (existing?.result != null) {
+    const { error: resetError } = await supabase.rpc("reset_qa_test_item", {
+      p_item_id: itemId,
+    });
+    if (resetError) return { error: resetError.message };
+  }
+
   const { error } = await supabase
     .from("qa_test_items")
     .update({ item_kind: parsed.data })
@@ -545,22 +578,15 @@ export async function markQaTaskReadyForTestAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("qa_test_items")
-    .update({
-      item_kind: "test",
-      result: null,
-      result_note: null,
-      tested_by: null,
-      tested_at: null,
-    })
-    .eq("id", itemId)
-    .eq("item_kind", "task")
-    .select("id")
-    .maybeSingle<{ id: string }>();
-
-  if (error) return { error: error.message };
-  if (!data) return { error: "هذا الإجراء للمهام فقط" };
+  const { error } = await supabase.rpc("mark_qa_task_ready_for_test", {
+    p_item_id: itemId,
+  });
+  if (error) {
+    if (error.message.includes("tasks only")) {
+      return { error: "هذا الإجراء للمهام فقط" };
+    }
+    return { error: error.message };
+  }
 
   void logAudit(current.userId, "update", "qa_test_item", itemId, {
     ready_for_test: true,

@@ -4,6 +4,10 @@ import {
   canManageTesting,
   hasTestingAccess,
 } from "@/lib/itqan-testing";
+import {
+  QA_SEVERITY_META,
+  validateQaResultSubmit,
+} from "@/lib/qa-testing-format";
 import type { Profile } from "@/types/db";
 
 type AccessProfile = Pick<
@@ -145,5 +149,56 @@ describe("QA progress excludes tasks", () => {
     expect(stats.total).toBe(0);
     expect(stats.pct).toBe(0);
     expect(stats.taskCount).toBe(1);
+  });
+});
+
+describe("validateQaResultSubmit", () => {
+  it("allows pass without note or severity", () => {
+    expect(
+      validateQaResultSubmit({ result: "pass", resultNote: "" }),
+    ).toBeNull();
+  });
+
+  it("requires note for improve", () => {
+    expect(
+      validateQaResultSubmit({ result: "improve", resultNote: "  " }),
+    ).toBe("الملاحظة مطلوبة عند تسجيل خلل أو تحسين");
+    expect(
+      validateQaResultSubmit({
+        result: "improve",
+        resultNote: "يحتاج توضيح أكثر",
+      }),
+    ).toBeNull();
+  });
+
+  it("requires note, severity, and steps for bug", () => {
+    expect(
+      validateQaResultSubmit({ result: "bug", resultNote: "حدث خطأ" }),
+    ).toBe("درجة الخطورة مطلوبة عند تسجيل خلل");
+    expect(
+      validateQaResultSubmit({
+        result: "bug",
+        resultNote: "حدث خطأ",
+        severity: "high",
+      }),
+    ).toBe("خطوات إعادة الإنتاج مطلوبة عند تسجيل خلل");
+    expect(
+      validateQaResultSubmit({
+        result: "bug",
+        resultNote: "حدث خطأ",
+        severity: "high",
+        stepsToReproduce: "1. افتح الصفحة\n2. اضغط حفظ",
+        expectedBehavior: "يجب أن يحفظ",
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("QA_SEVERITY_META", () => {
+  it("covers all severities with Arabic labels", () => {
+    expect(QA_SEVERITY_META.low.label).toBe("منخفض");
+    expect(QA_SEVERITY_META.medium.label).toBe("متوسط");
+    expect(QA_SEVERITY_META.high.label).toBe("عالٍ");
+    expect(QA_SEVERITY_META.critical.label).toBe("حرج");
   });
 });

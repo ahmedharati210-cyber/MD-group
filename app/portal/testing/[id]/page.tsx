@@ -51,8 +51,15 @@ export default async function QaProjectDetailPage({
         `id, name, sort_order,
           items:qa_test_items(
             id, title, description, item_kind, result, result_note,
+            severity, steps_to_reproduce, expected_behavior,
             tested_by, tested_at, sort_order,
-            tester:tested_by(full_name)
+            tester:tested_by(full_name),
+            attempts:qa_test_attempts(
+              id, result, result_note, severity, steps_to_reproduce,
+              expected_behavior, tested_at, reset_at,
+              tester:tested_by(full_name),
+              resetter:reset_by(full_name)
+            )
           )`,
       )
       .eq("project_id", id)
@@ -65,7 +72,17 @@ export default async function QaProjectDetailPage({
   const sections = ((rawSections ?? []) as unknown as QaListSection[]).map(
     (sec) => ({
       ...sec,
-      items: [...(sec.items ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+      items: [...(sec.items ?? [])]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((item) => ({
+          ...item,
+          severity: item.severity ?? null,
+          steps_to_reproduce: item.steps_to_reproduce ?? null,
+          expected_behavior: item.expected_behavior ?? null,
+          attempts: [...(item.attempts ?? [])].sort((a, b) =>
+            b.reset_at.localeCompare(a.reset_at),
+          ),
+        })),
     }),
   );
 

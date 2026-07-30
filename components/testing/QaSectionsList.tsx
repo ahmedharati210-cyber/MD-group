@@ -37,8 +37,9 @@ import {
 } from "@/components/testing/EditQaTestItemButton";
 import { QaItemKindBadge } from "@/components/testing/QaItemKindBadge";
 import { QaSortableHandle } from "@/components/testing/QaSortableHandle";
+import type { QaAttemptHistoryEntry } from "@/components/testing/QaTestAttemptHistory";
 import { QaTestResultPanel } from "@/components/testing/QaTestResultPanel";
-import type { QaItemKind, QaTestResult } from "@/types/db";
+import type { QaItemKind, QaTestResult, QaTestSeverity } from "@/types/db";
 import { cn } from "@/lib/utils";
 
 export type QaListItem = {
@@ -48,10 +49,14 @@ export type QaListItem = {
   item_kind: QaItemKind;
   result: QaTestResult | null;
   result_note: string | null;
+  severity: QaTestSeverity | null;
+  steps_to_reproduce: string | null;
+  expected_behavior: string | null;
   tested_by: string | null;
   tested_at: string | null;
   sort_order: number;
   tester: { full_name: string } | null;
+  attempts: QaAttemptHistoryEntry[];
 };
 
 export type QaListSection = {
@@ -678,8 +683,12 @@ function ItemContent({
           itemKind={kind}
           result={item.result}
           resultNote={item.result_note}
+          severity={item.severity}
+          stepsToReproduce={item.steps_to_reproduce}
+          expectedBehavior={item.expected_behavior}
           testedAt={item.tested_at}
           testerName={item.tester?.full_name ?? null}
+          attempts={item.attempts ?? []}
           canManage={canManage}
           canInteract={canInteract}
           compact
