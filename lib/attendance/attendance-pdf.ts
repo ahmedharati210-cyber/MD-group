@@ -98,10 +98,10 @@ function buildEmployeeHeaderStats(row: PersonPayrollSummary): string {
 }
 
 function buildEmployeeFooterStats(row: PersonPayrollSummary): string {
-  const lines = buildEmployeeMonthFooterLines(row)
-    .map((line) => `<p class="stats-line">${escapeHtml(line)}</p>`)
+  const cells = buildEmployeeMonthFooterLines(row)
+    .map((line) => `<span class="footer-stat">${escapeHtml(line)}</span>`)
     .join("");
-  return `<div class="employee-footer">${lines}</div>`;
+  return `<div class="employee-footer">${cells}</div>`;
 }
 
 function buildEmployeeDailyTableHtml(
@@ -177,9 +177,14 @@ function pdfStyles(): string {
     .header-meta { text-align: left; font-size: 9pt; color: #666; flex-shrink: 0; }
     h2 { font-size: 13pt; margin: 0 0 10px; }
     h3 { font-size: 11pt; margin: 0 0 6px; }
-    .section { margin-bottom: 24px; }
+    .section { margin-bottom: 16px; }
     .details-section {
+      margin-bottom: 0;
+    }
+    .details-section > h2 {
       break-before: page;
+      break-after: avoid;
+      margin-bottom: 8px;
     }
     .employee-section {
       break-before: page;
@@ -188,14 +193,24 @@ function pdfStyles(): string {
       padding-top: 0;
     }
     .employee-section:first-of-type {
-      break-before: auto;
+      break-before: avoid;
     }
-    .employee-stats,
+    .employee-stats {
+      margin-bottom: 6px;
+      font-size: 8pt;
+      line-height: 1.4;
+    }
     .employee-footer {
-      margin-bottom: 8px;
-      font-size: 8.5pt;
-      line-height: 1.5;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px 16px;
+      margin-top: 6px;
+      margin-bottom: 0;
+      font-size: 8pt;
+      line-height: 1.35;
+      color: #444;
     }
+    .footer-stat { margin: 0; }
     .stats-line { margin: 0 0 2px; color: #444; }
     table {
       width: 100%;
@@ -209,8 +224,8 @@ function pdfStyles(): string {
     }
     .summary-table { font-size: 8pt; }
     .summary-table th, .summary-table td { padding: 4px 6px; }
-    .daily-table { font-size: 7pt; }
-    .daily-table th, .daily-table td { padding: 2px 3px; }
+    .daily-table { font-size: 6.5pt; }
+    .daily-table th, .daily-table td { padding: 1px 2px; }
     th { background: #f3f4f6; font-weight: 700; }
     tfoot td { background: #f9fafb; font-weight: 700; }
     .nowrap { white-space: nowrap; }

@@ -117,4 +117,20 @@ describe("buildAttendanceReportHtml", () => {
     expect(html).toContain(`${REPORT_LABELS.absentDays}: 29`);
     expect(html).toContain(`${REPORT_LABELS.totalDeductionHours}: 0:00`);
   });
+
+  it("keeps details heading with first employee and uses a footer grid", () => {
+    const html = buildAttendanceReportHtml(buildFixtureReport());
+
+    expect(html).toContain(REPORT_LABELS.employeeDetails);
+    expect(html).not.toMatch(/\.details-section\s*\{[^}]*break-before:\s*page/);
+    expect(html).toMatch(/\.details-section\s*>\s*h2\s*\{[^}]*break-before:\s*page/);
+    expect(html).toMatch(/\.employee-section:first-of-type\s*\{[^}]*break-before:\s*avoid/);
+    expect(html).toMatch(
+      /\.employee-footer\s*\{[^}]*grid-template-columns:\s*1fr 1fr/,
+    );
+    expect(html).toContain('class="footer-stat"');
+    expect(html).not.toMatch(
+      /<div class="employee-footer"><p class="stats-line">/,
+    );
+  });
 });
