@@ -7,15 +7,14 @@ import {
   canManageTesting,
   getItqanCompanyId,
 } from "@/lib/itqan-testing";
+import { computeQaProgress } from "@/lib/qa-testing-format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { DeleteQaProjectButton } from "@/components/testing/DeleteQaProjectButton";
 import { QaProjectStatusSelect } from "@/components/testing/QaProjectStatusSelect";
-import {
-  QaSectionsList,
-  type QaListSection,
-} from "@/components/testing/QaSectionsList";
-import type { QaItemKind, QaProjectStatus } from "@/types/db";
+import { QaProjectWorkspace } from "@/components/testing/QaProjectWorkspace";
+import type { QaListSection } from "@/components/testing/QaSectionsList";
+import type { QaProjectStatus } from "@/types/db";
 
 type ProjectRow = {
   id: string;
@@ -53,13 +52,7 @@ export default async function QaProjectDetailPage({
             id, title, description, item_kind, result, result_note,
             severity, steps_to_reproduce, expected_behavior,
             tested_by, tested_at, sort_order,
-            tester:tested_by(full_name),
-            attempts:qa_test_attempts(
-              id, result, result_note, severity, steps_to_reproduce,
-              expected_behavior, tested_at, reset_at,
-              tester:tested_by(full_name),
-              resetter:reset_by(full_name)
-            )
+            tester:tested_by(full_name)
           )`,
       )
       .eq("project_id", id)
@@ -79,27 +72,14 @@ export default async function QaProjectDetailPage({
           severity: item.severity ?? null,
           steps_to_reproduce: item.steps_to_reproduce ?? null,
           expected_behavior: item.expected_behavior ?? null,
-          attempts: [...(item.attempts ?? [])].sort((a, b) =>
-            b.reset_at.localeCompare(a.reset_at),
-          ),
         })),
     }),
   );
 
-  const allItems = sections.flatMap((s) => s.items);
-  const testItems = allItems.filter(
-    (i) => (i.item_kind as QaItemKind | undefined) !== "task",
-  );
-  const taskCount = allItems.length - testItems.length;
-  const total = testItems.length;
-  const tested = testItems.filter((i) => i.result != null).length;
-  const bugs = testItems.filter((i) => i.result === "bug").length;
-  const improves = testItems.filter((i) => i.result === "improve").length;
-  const passes = testItems.filter((i) => i.result === "pass").length;
-  const pct = total > 0 ? Math.round((tested / total) * 100) : 0;
+  const progress = computeQaProgress(sections.flatMap((s) => s.items));
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-6xl">
       <PageHeader
         title={project.name}
         description={project.description ?? undefined}
@@ -134,43 +114,36 @@ export default async function QaProjectDetailPage({
           </span>
         )}
         <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-          {tested}/{total} ({pct}%)
+          مختبر {progress.tested}/{progress.total} ({progress.pct}%)
         </span>
-        {taskCount > 0 ? (
+        {progress.taskCount > 0 ? (
           <span className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
-            {taskCount} مهام
+            {progress.taskCount} مهام
           </span>
         ) : null}
-        {passes > 0 ? (
-          <span className="text-[11px] font-medium text-emerald-600">
-            {passes} نجاح
-          </span>
-        ) : null}
-        {bugs > 0 ? (
-          <span className="text-[11px] font-medium text-red-600">{bugs} خلل</span>
-        ) : null}
-        {improves > 0 ? (
-          <span className="text-[11px] font-medium text-amber-600">
-            {improves} تحسين
-          </span>
-        ) : null}
+        <span className="text-[11px] font-medium text-emerald-600">
+          نجاح {progress.passes}
+        </span>
+        <span className="text-[11px] font-medium text-red-600">
+          خلل/تحسين {progress.open}
+        </span>
       </div>
 
       <div
         className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-4"
         role="progressbar"
-        aria-valuenow={pct}
+        aria-valuenow={progress.pct}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`تقدم الاختبار ${pct}%`}
+        aria-label={`مختبر ${progress.tested} من ${progress.total}`}
       >
         <div
           className="h-full bg-teal-500 rounded-full transition-all"
-          style={{ width: `${pct}%` }}
+          style={{ width: `${progress.pct}%` }}
         />
       </div>
 
-      <QaSectionsList
+      <QaProjectWorkspace
         projectId={id}
         sections={sections}
         canManage={canManage}

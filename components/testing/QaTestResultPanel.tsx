@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
+  getQaTestAttemptsAction,
   markQaTaskReadyForTestAction,
   resetQaTestResultAction,
   submitQaTestResultAction,
@@ -61,7 +62,6 @@ export function QaTestResultPanel({
   expectedBehavior,
   testedAt,
   testerName,
-  attempts = [],
   canManage,
   canInteract,
   compact = false,
@@ -76,7 +76,6 @@ export function QaTestResultPanel({
   expectedBehavior: string | null;
   testedAt: string | null;
   testerName: string | null;
-  attempts?: QaAttemptHistoryEntry[];
   canManage: boolean;
   canInteract: boolean;
   compact?: boolean;
@@ -88,6 +87,10 @@ export function QaTestResultPanel({
   const [steps, setSteps] = useState("");
   const [expected, setExpected] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [attempts, setAttempts] = useState<QaAttemptHistoryEntry[] | null>(
+    null,
+  );
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function clearForm() {
@@ -97,6 +100,49 @@ export function QaTestResultPanel({
     setSteps("");
     setExpected("");
   }
+
+  function toggleHistory() {
+    const next = !showHistory;
+    setShowHistory(next);
+    if (next && attempts == null && !historyLoading) {
+      setHistoryLoading(true);
+      void getQaTestAttemptsAction(itemId).then((res) => {
+        setHistoryLoading(false);
+        if (res.error) {
+          toast.error(res.error);
+          setAttempts([]);
+          return;
+        }
+        setAttempts((res.attempts ?? []) as QaAttemptHistoryEntry[]);
+      });
+    }
+  }
+
+  const historyToggle = (
+    <button
+      type="button"
+      onClick={toggleHistory}
+      aria-expanded={showHistory}
+      className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400"
+    >
+      <History className="w-3 h-3" />
+      {historyLoading
+        ? "السجل..."
+        : attempts != null
+          ? `السجل (${attempts.length})`
+          : "السجل"}
+    </button>
+  );
+
+  const historyBody =
+    showHistory &&
+    (historyLoading ? (
+      <p className="text-[11px] text-gray-400">جارٍ التحميل...</p>
+    ) : attempts != null && attempts.length > 0 ? (
+      <QaTestAttemptHistory attempts={attempts} />
+    ) : attempts != null ? (
+      <p className="text-[11px] text-gray-400">لا سجل سابق</p>
+    ) : null);
 
   function submit(selected: QaTestResult) {
     if (selected === "bug" || selected === "improve") {
@@ -155,19 +201,6 @@ export function QaTestResultPanel({
     });
   }
 
-  const historyToggle =
-    attempts.length > 0 ? (
-      <button
-        type="button"
-        onClick={() => setShowHistory((v) => !v)}
-        aria-expanded={showHistory}
-        className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400"
-      >
-        <History className="w-3 h-3" />
-        السجل ({attempts.length})
-      </button>
-    ) : null;
-
   if (itemKind === "task") {
     if (!canInteract) {
       return (
@@ -181,7 +214,7 @@ export function QaTestResultPanel({
             مهمة قيد التطوير
           </span>
           {historyToggle}
-          {showHistory ? <QaTestAttemptHistory attempts={attempts} /> : null}
+          {historyBody}
         </div>
       );
     }
@@ -202,7 +235,7 @@ export function QaTestResultPanel({
           {isPending ? "جارٍ..." : compact ? "جاهز للاختبار" : "تم وجاهز للاختبار"}
         </button>
         {historyToggle}
-        {showHistory ? <QaTestAttemptHistory attempts={attempts} /> : null}
+        {historyBody}
       </div>
     );
   }
@@ -301,7 +334,7 @@ export function QaTestResultPanel({
           </p>
         ) : null}
         {historyToggle}
-        {showHistory ? <QaTestAttemptHistory attempts={attempts} /> : null}
+        {historyBody}
       </div>
     );
   }
@@ -319,7 +352,7 @@ export function QaTestResultPanel({
           بانتظار الاختبار
         </span>
         {historyToggle}
-        {showHistory ? <QaTestAttemptHistory attempts={attempts} /> : null}
+        {historyBody}
       </div>
     );
   }
@@ -491,7 +524,7 @@ export function QaTestResultPanel({
       )}
 
       {historyToggle}
-      {showHistory ? <QaTestAttemptHistory attempts={attempts} /> : null}
+      {historyBody}
     </div>
   );
 }

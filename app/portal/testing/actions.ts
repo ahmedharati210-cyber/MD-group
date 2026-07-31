@@ -366,6 +366,27 @@ export async function updateQaTestItemAction(
   if (!kindParsed.success) return { error: "نوع العنصر غير صالح" };
 
   const supabase = await createSupabaseServerClient();
+
+  const { data: existing } = await supabase
+    .from("qa_test_items")
+    .select("item_kind, result")
+    .eq("id", itemId)
+    .eq("project_id", projectId)
+    .maybeSingle<{ item_kind: "test" | "task"; result: QaTestResult | null }>();
+
+  if (!existing) return { error: "عنصر الاختبار غير موجود" };
+
+  // Kind change with a live result: archive first (same as convert).
+  if (
+    existing.item_kind !== kindParsed.data &&
+    existing.result != null
+  ) {
+    const { error: resetError } = await supabase.rpc("reset_qa_test_item", {
+      p_item_id: itemId,
+    });
+    if (resetError) return { error: resetError.message };
+  }
+
   const { error } = await supabase
     .from("qa_test_items")
     .update({
@@ -373,7 +394,8 @@ export async function updateQaTestItemAction(
       description,
       item_kind: kindParsed.data,
     })
-    .eq("id", itemId);
+    .eq("id", itemId)
+    .eq("project_id", projectId);
   if (error) return { error: error.message };
 
   void logAudit(current.userId, "update", "qa_test_item", itemId, {
@@ -399,7 +421,8 @@ export async function deleteQaTestItemAction(
   const { error } = await supabase
     .from("qa_test_items")
     .delete()
-    .eq("id", itemId);
+    .eq("id", itemId)
+    .eq("project_id", projectId);
   if (error) return { error: error.message };
 
   void logAudit(current.userId, "delete", "qa_test_item", itemId, {
@@ -450,6 +473,26 @@ export async function submitQaTestResultAction(
   const isManager = canManageTesting(current.profile);
   const supabase = await createSupabaseServerClient();
 
+  const { data: existing } = await supabase
+    .from("qa_test_items")
+    .select("item_kind, result")
+    .eq("id", itemId)
+    .eq("project_id", projectId)
+    .maybeSingle<{ item_kind: "test" | "task"; result: QaTestResult | null }>();
+
+  if (!existing) return { error: "عنصر الاختبار غير موجود" };
+  if (existing.item_kind !== "test") {
+    return { error: "لا يمكن تسجيل نتيجة على مهمة — حوّلها إلى اختبار أولاً" };
+  }
+
+  // Managers replacing a result: archive via RPC first so reset_by is stamped.
+  if (isManager && existing.result != null) {
+    const { error: resetError } = await supabase.rpc("reset_qa_test_item", {
+      p_item_id: itemId,
+    });
+    if (resetError) return { error: resetError.message };
+  }
+
   const nextSeverity =
     parsedResult.data === "bug"
       ? severityParsed.data
@@ -466,7 +509,9 @@ export async function submitQaTestResultAction(
       tested_by: current.userId,
       tested_at: new Date().toISOString(),
     })
-    .eq("id", itemId);
+    .eq("id", itemId)
+    .eq("project_id", projectId)
+    .eq("item_kind", "test");
 
   // Non-managers may only set a result when none exists yet (atomic race guard).
   if (!isManager) {
@@ -491,6 +536,43 @@ export async function submitQaTestResultAction(
 
   revalidateTesting(projectId);
   return { ok: true };
+}
+
+export type QaAttemptRow = {
+  id: string;
+  result: QaTestResult;
+  result_note: string | null;
+  severity: QaTestSeverity | null;
+  steps_to_reproduce: string | null;
+  expected_behavior: string | null;
+  tested_at: string | null;
+  reset_at: string;
+  tester: { full_name: string } | null;
+  resetter: { full_name: string } | null;
+};
+
+/** Lazy-load attempt history for the السجل toggle (any testing-access user). */
+export async function getQaTestAttemptsAction(
+  itemId: string,
+): Promise<{ error?: string; attempts?: QaAttemptRow[] }> {
+  await requireTestingAccess();
+
+  if (!parseUuid(itemId)) return { error: "معرف غير صالح" };
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("qa_test_attempts")
+    .select(
+      `id, result, result_note, severity, steps_to_reproduce, expected_behavior,
+       tested_at, reset_at,
+       tester:tested_by(full_name),
+       resetter:reset_by(full_name)`,
+    )
+    .eq("item_id", itemId)
+    .order("reset_at", { ascending: false });
+
+  if (error) return { error: error.message };
+  return { attempts: (data ?? []) as unknown as QaAttemptRow[] };
 }
 
 export async function resetQaTestResultAction(
@@ -542,9 +624,12 @@ export async function convertQaItemKindAction(
     .from("qa_test_items")
     .select("result")
     .eq("id", itemId)
+    .eq("project_id", projectId)
     .maybeSingle<{ result: QaTestResult | null }>();
 
-  if (existing?.result != null) {
+  if (!existing) return { error: "عنصر الاختبار غير موجود" };
+
+  if (existing.result != null) {
     const { error: resetError } = await supabase.rpc("reset_qa_test_item", {
       p_item_id: itemId,
     });
@@ -554,7 +639,8 @@ export async function convertQaItemKindAction(
   const { error } = await supabase
     .from("qa_test_items")
     .update({ item_kind: parsed.data })
-    .eq("id", itemId);
+    .eq("id", itemId)
+    .eq("project_id", projectId);
   if (error) return { error: error.message };
 
   void logAudit(current.userId, "update", "qa_test_item", itemId, {

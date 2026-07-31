@@ -9,7 +9,7 @@ companies (slug = itqan)
   └── qa_projects          # platform / site
         ├── qa_sections    # groups of items
         └── qa_test_items  # test | task + optional live result
-              └── qa_test_attempts  # immutable history (on reset / reopen)
+              └── qa_test_attempts  # immutable history (on reset / change / clear)
 ```
 
 ### Enums
@@ -33,12 +33,40 @@ companies (slug = itqan)
 ### Item lifecycle
 
 1. Manager creates a **task** (dev work) or a **test** (ready for QA).
-2. Anyone with interact access can mark a task **جاهز للاختبار** → converts `task` → `test` and archives/clears any stale result via `mark_qa_task_ready_for_test`.
-3. Testers submit `pass` / `bug` / `improve`. Bugs require severity + steps to reproduce + note.
-4. Only managers can **reset** a result (`reset_qa_test_item`) — the live result is archived into `qa_test_attempts` first, then cleared so the item can be re-tested. History is never deleted.
+2. Interact users mark a task **جاهز للاختبار** via `mark_qa_task_ready_for_test` only (non-managers cannot flip `item_kind` with a direct UPDATE). That RPC archives any live result, then sets `task` → `test`.
+3. Testers submit `pass` / `bug` / `improve` on `item_kind = test` only. Bugs require severity + steps to reproduce + note. Testers cannot overwrite an existing result — managers reset first (or change result, which archives automatically).
+4. Managers can **reset** (`reset_qa_test_item`) or change/clear a live result; the previous result is always snapshotted into `qa_test_attempts` first. History is never deleted.
 5. Managers can flip kind either way via the badge; if a live result exists it is archived first.
 
-Progress `%` counts **tests only** — open tasks are shown separately and do not depress completion.
+### Progress metrics
+
+- Progress bar / `%` = **tested / total tests** (any submitted result). Open tasks are excluded from the denominator.
+- Chips: **نجاح** (pass count) and **خلل/تحسين** (bug + improve). Section headers and overview nav show `tested/total` and `· N خلل/تحسين` when open > 0.
+
+Helpers: `computeQaProgress`, `partitionQaItems`, `recentOpenQaItems`, `recentCompletedQaItems` in [`lib/qa-testing-format.ts`](../lib/qa-testing-format.ts).
+
+## Project detail UI (scale: 200+ items)
+
+Route: `/portal/testing/[id]` — container `max-w-6xl`.
+
+### Checklist (main column)
+
+- Each section shows **actionable** items first: **bugs**, then **improve**, then tasks/untested (sorted for attention).
+- Only **`pass`** moves into the collapsed-by-default **مكتمل (N)** group (sorted by `tested_at` descending). Bug/improve stay in the main list until fixed and re-passed.
+- Filters: الكل / غير مختبر / **خلل وتحسين** (bug|improve) / مهام. The Done group is only shown under «الكل».
+- Focusing an item from the overview forces filter to **الكل** so the target is in the DOM.
+- Default collapse is per section: the first two sections stay open; other sections with more than 12 items start collapsed (user can expand).
+- Drag-and-drop reorders the main-list items only (managers, filter=الكل, no active search).
+- Attempt history («السجل») is **lazy-loaded** via `getQaTestAttemptsAction` when opened — not nested in the initial detail query.
+
+### Overview panel (left on desktop / «نظرة عامة» tab on mobile)
+
+- Search across titles/descriptions (client-side).
+- Section navigator with `tested/total` (+ open count when relevant).
+- **خلل وتحسين** feed — up to ~20 bug/improve items, sorted by severity then `tested_at` desc.
+- **مكتمل مؤخراً** — last ~20 **pass** items; empty copy: «لا عناصر ناجحة بعد».
+
+Orchestrated by `QaProjectWorkspace` (desktop CSS grid + mobile tabs).
 
 ## Access model
 
@@ -52,17 +80,21 @@ Access is **per user** (`profiles.testing_access_enabled`), granted by a superad
 
 \*Manager = `md_admin` or `company_manager`.
 
+### Security constraints (DB)
+
+- `profiles_lock_privileged_columns` — only superadmins may change `testing_access_enabled` or `is_super_admin`.
+- `qa_test_items_restrict_tester_update` — non-managers: no result overwrite; `tested_by` forced to `auth.uid()`; `created_at` locked; kind change only when RPC sets `app.qa_rpc_kind_change`.
+- BEFORE UPDATE on items archives the live result whenever managers clear or change it (`_snapshot_qa_test_attempt`). Preferred UI path remains `reset_qa_test_item` (stamps `reset_by`).
+
 Helpers in [`lib/itqan-testing.ts`](../lib/itqan-testing.ts):
 
 - `hasTestingAccess` — may enter the module
 - `canInteractWithTesting` — may mutate results / convert tasks (owners excluded)
 - `canManageTesting` — may edit structure
 
-Shared labels / validation in [`lib/qa-testing-format.ts`](../lib/qa-testing-format.ts).
+RLS mirrors this: `current_has_testing_access`, `current_can_interact_testing`, `current_can_manage_testing`.
 
-RLS mirrors this: `current_has_testing_access`, `current_can_interact_testing`, `current_can_manage_testing`. Non-managers are further restricted by trigger `qa_test_items_restrict_tester_update` (structure locked; only `task`→`test` kind change allowed).
-
-`qa_test_attempts` is select-only for users with testing access; inserts happen only inside security-definer RPCs.
+`qa_test_attempts` is select-only for users with testing access; inserts happen inside security-definer helpers / RPCs.
 
 ## Key files
 
@@ -72,8 +104,12 @@ RLS mirrors this: `current_has_testing_access`, `current_can_interact_testing`, 
 | `supabase/migrations/0065_qa_item_kind.sql` | `item_kind` |
 | `supabase/migrations/0071_qa_testing_hardening.sql` | Drop `assigned_to`, interact helper, trigger fix |
 | `supabase/migrations/0072_qa_testing_history_and_severity.sql` | Severity fields, attempts history, reset RPCs |
+| `supabase/migrations/0073_qa_testing_security_hardening.sql` | Privilege column lock, tester trigger, archive-on-change |
 | `app/portal/testing/` | Pages + server actions |
-| `components/testing/` | UI (result panel, attempt history, …) |
+| `components/testing/QaProjectWorkspace.tsx` | Desktop grid + mobile tabs |
+| `components/testing/QaTestingOverviewPanel.tsx` | Search / nav / open + recent feeds |
+| `components/testing/QaSectionDoneGroup.tsx` | Per-section collapsed Done group |
+| `components/testing/QaSectionsList.tsx` | Checklist + filters + DnD |
 | `lib/itqan-testing.ts` | Access helpers + Itqan company id |
-| `lib/qa-testing-format.ts` | Severity labels + submit validation |
+| `lib/qa-testing-format.ts` | Labels, validation, progress/partition/search helpers |
 | `app/portal/admin/testing-access-toggle.tsx` | Superadmin grant UI |

@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -36,9 +36,16 @@ import {
   EditQaTestItemForm,
 } from "@/components/testing/EditQaTestItemButton";
 import { QaItemKindBadge } from "@/components/testing/QaItemKindBadge";
+import { QaSectionDoneGroup } from "@/components/testing/QaSectionDoneGroup";
 import { QaSortableHandle } from "@/components/testing/QaSortableHandle";
 import type { QaAttemptHistoryEntry } from "@/components/testing/QaTestAttemptHistory";
 import { QaTestResultPanel } from "@/components/testing/QaTestResultPanel";
+import {
+  computeQaProgress,
+  isQaItemDone,
+  matchesQaSearch,
+  partitionQaItems,
+} from "@/lib/qa-testing-format";
 import type { QaItemKind, QaTestResult, QaTestSeverity } from "@/types/db";
 import { cn } from "@/lib/utils";
 
@@ -56,7 +63,7 @@ export type QaListItem = {
   tested_at: string | null;
   sort_order: number;
   tester: { full_name: string } | null;
-  attempts: QaAttemptHistoryEntry[];
+  attempts?: QaAttemptHistoryEntry[];
 };
 
 export type QaListSection = {
@@ -66,10 +73,22 @@ export type QaListSection = {
   items: QaListItem[];
 };
 
-type Filter = "all" | "pending" | "tasks";
+type Filter = "all" | "pending" | "open" | "tasks";
 
 function sortByOrder<T extends { sort_order: number }>(rows: T[]): T[] {
   return [...rows].sort((a, b) => a.sort_order - b.sort_order);
+}
+
+function defaultCollapsedMap(
+  secs: QaListSection[],
+): Record<string, boolean> {
+  const ordered = sortByOrder(secs);
+  const init: Record<string, boolean> = {};
+  ordered.forEach((s, index) => {
+    if (index < 2) return; // first two always open
+    if ((s.items?.length ?? 0) > 12) init[s.id] = true;
+  });
+  return init;
 }
 
 export function QaSectionsList({
@@ -77,11 +96,19 @@ export function QaSectionsList({
   sections: initialSections,
   canManage,
   canInteract,
+  searchQuery = "",
+  focusItemId = null,
+  focusSectionId = null,
+  onFocusHandled,
 }: {
   projectId: string;
   sections: QaListSection[];
   canManage: boolean;
   canInteract: boolean;
+  searchQuery?: string;
+  focusItemId?: string | null;
+  focusSectionId?: string | null;
+  onFocusHandled?: () => void;
 }) {
   const router = useRouter();
   const [sections, setSections] = useState(() =>
@@ -90,11 +117,24 @@ export function QaSectionsList({
       items: sortByOrder(s.items ?? []),
     })),
   );
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() =>
+    defaultCollapsedMap(initialSections),
+  );
+  const [doneOpen, setDoneOpen] = useState<Record<string, boolean>>({});
   const [filter, setFilter] = useState<Filter>("all");
   const [addingItemFor, setAddingItemFor] = useState<string | null>(null);
   const [showAddSection, setShowAddSection] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [highlightItemId, setHighlightItemId] = useState<string | null>(null);
+  // dnd-kit assigns incremental aria-describedby ids; SSR vs client counters
+  // diverge and cause hydration mismatches. Enable DnD only after mount.
+  const [dndReady, setDndReady] = useState(false);
+  const sectionsRef = useRef(sections);
+  sectionsRef.current = sections;
+
+  useEffect(() => {
+    setDndReady(true);
+  }, []);
 
   useEffect(() => {
     setSections(
@@ -105,7 +145,66 @@ export function QaSectionsList({
     );
   }, [initialSections]);
 
-  const canReorder = canManage && filter === "all";
+  const trimmedQuery = searchQuery.trim();
+  const isSearching = trimmedQuery.length > 0;
+
+  // Expand sections / done groups and scroll when focus requests arrive.
+  useEffect(() => {
+    if (!focusItemId && !focusSectionId) return;
+
+    // Ensure the target is in the DOM (not hidden by خلل وتحسين/مهام filters).
+    setFilter("all");
+
+    let targetSectionId = focusSectionId;
+    let targetIsDone = false;
+
+    if (focusItemId) {
+      for (const sec of sectionsRef.current) {
+        const item = sec.items.find((i) => i.id === focusItemId);
+        if (item) {
+          targetSectionId = sec.id;
+          targetIsDone = isQaItemDone(item);
+          break;
+        }
+      }
+    }
+
+    if (targetSectionId) {
+      setCollapsed((prev) => ({ ...prev, [targetSectionId!]: false }));
+      if (targetIsDone) {
+        setDoneOpen((prev) => ({
+          ...prev,
+          [targetSectionId!]: true,
+        }));
+      }
+    }
+
+    const idToScroll = focusItemId
+      ? `qa-item-${focusItemId}`
+      : targetSectionId
+        ? `qa-section-${targetSectionId}`
+        : null;
+    const itemToHighlight = focusItemId;
+
+    // Let expand state commit, then scroll / highlight.
+    requestAnimationFrame(() => {
+      if (idToScroll) {
+        document
+          .getElementById(idToScroll)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      if (itemToHighlight) setHighlightItemId(itemToHighlight);
+      onFocusHandled?.();
+    });
+  }, [focusItemId, focusSectionId, onFocusHandled]);
+
+  useEffect(() => {
+    if (!highlightItemId) return;
+    const timer = setTimeout(() => setHighlightItemId(null), 2200);
+    return () => clearTimeout(timer);
+  }, [highlightItemId]);
+
+  const canReorder = dndReady && canManage && filter === "all" && !isSearching;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -122,16 +221,24 @@ export function QaSectionsList({
           items = items.filter(
             (i) => (i.item_kind ?? "test") !== "task" && i.result == null,
           );
+        } else if (filter === "open") {
+          items = items.filter(
+            (i) => i.result === "bug" || i.result === "improve",
+          );
         } else if (filter === "tasks") {
           items = items.filter((i) => (i.item_kind ?? "test") === "task");
+        }
+        if (isSearching) {
+          items = items.filter((i) => matchesQaSearch(i, trimmedQuery));
         }
         return { ...sec, items, sourceEmpty: sec.items.length === 0 };
       })
       .filter(
         (sec) =>
-          sec.items.length > 0 || (filter === "all" && sec.sourceEmpty),
+          sec.items.length > 0 ||
+          (filter === "all" && !isSearching && sec.sourceEmpty),
       );
-  }, [sections, filter]);
+  }, [sections, filter, isSearching, trimmedQuery]);
 
   async function onSectionDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -164,13 +271,20 @@ export function QaSectionsList({
     const section = sections.find((s) => s.id === sectionId);
     if (!section) return;
 
-    const oldIndex = section.items.findIndex((i) => i.id === active.id);
-    const newIndex = section.items.findIndex((i) => i.id === over.id);
+    const { pending, done } = partitionQaItems(section.items);
+    const oldIndex = pending.findIndex((i) => i.id === active.id);
+    const newIndex = pending.findIndex((i) => i.id === over.id);
     if (oldIndex < 0 || newIndex < 0) return;
 
-    const nextItems = arrayMove(section.items, oldIndex, newIndex).map(
-      (item, index) => ({ ...item, sort_order: index }),
-    );
+    const nextPending = arrayMove(pending, oldIndex, newIndex);
+    // Keep done items after pending in stable relative order for sort_order.
+    const nextItems = [
+      ...nextPending.map((item, index) => ({ ...item, sort_order: index })),
+      ...done.map((item, index) => ({
+        ...item,
+        sort_order: nextPending.length + index,
+      })),
+    ];
     setSections((prev) =>
       prev.map((s) => (s.id === sectionId ? { ...s, items: nextItems } : s)),
     );
@@ -202,6 +316,8 @@ export function QaSectionsList({
     </button>
   );
 
+  const showDoneGroup = filter === "all";
+
   const sectionsContent =
     filteredSections.length === 0 ? (
       <p className="text-sm text-gray-500 dark:text-gray-400 px-1 py-6 text-center">
@@ -212,27 +328,48 @@ export function QaSectionsList({
         {filteredSections.map((section) => {
           const original = sections.find((s) => s.id === section.id);
           const originalItems = original?.items ?? [];
-          const sTests = originalItems.filter(
-            (i) => (i.item_kind ?? "test") !== "task",
-          );
-          const sTested = sTests.filter((i) => i.result != null).length;
+          const sStats = computeQaProgress(originalItems);
+
+          const { pending, done } = partitionQaItems(section.items);
+          // When filter is pending/tasks, section.items is already filtered —
+          // partition still works: pending filter → all pending, tasks → all pending.
+          const pendingItems = showDoneGroup ? pending : section.items;
+          const doneItems = showDoneGroup ? done : [];
+
+          const forceDoneOpen =
+            isSearching ||
+            (focusItemId != null &&
+              doneItems.some((i) => i.id === focusItemId));
 
           return (
             <SectionCard
               key={section.id}
-              section={section}
+              section={{ ...section, items: pendingItems }}
+              doneItems={doneItems}
               projectId={projectId}
               canManage={canManage}
               canInteract={canInteract}
               canReorder={canReorder}
-              isCollapsed={collapsed[section.id] === true}
-              sTested={sTested}
-              sTotal={sTests.length}
+              isCollapsed={
+                isSearching ? false : collapsed[section.id] === true
+              }
+              sTested={sStats.tested}
+              sTotal={sStats.total}
+              sOpen={sStats.open}
               addingItemFor={addingItemFor}
               editingItemId={editingItemId}
+              highlightItemId={highlightItemId}
+              doneOpen={doneOpen[section.id] === true}
+              forceDoneOpen={forceDoneOpen}
               sensors={sensors}
               onToggle={() =>
                 setCollapsed((prev) => ({
+                  ...prev,
+                  [section.id]: !prev[section.id],
+                }))
+              }
+              onToggleDone={() =>
+                setDoneOpen((prev) => ({
                   ...prev,
                   [section.id]: !prev[section.id],
                 }))
@@ -264,12 +401,13 @@ export function QaSectionsList({
       >
         {chip("all", "الكل")}
         {chip("pending", "غير مختبر")}
+        {chip("open", "خلل وتحسين")}
         {chip("tasks", "مهام")}
       </div>
 
-      {canManage && filter !== "all" ? (
+      {canManage && dndReady && !canReorder ? (
         <p className="text-[11px] text-gray-400">
-          أعد الترتيب من تبويب «الكل»
+          أعد الترتيب من تبويب «الكل» بدون بحث
         </p>
       ) : null}
 
@@ -321,6 +459,7 @@ export function QaSectionsList({
 
 type SectionCardProps = {
   section: QaListSection;
+  doneItems: QaListItem[];
   projectId: string;
   canManage: boolean;
   canInteract: boolean;
@@ -328,10 +467,15 @@ type SectionCardProps = {
   isCollapsed: boolean;
   sTested: number;
   sTotal: number;
+  sOpen: number;
   addingItemFor: string | null;
   editingItemId: string | null;
+  highlightItemId: string | null;
+  doneOpen: boolean;
+  forceDoneOpen: boolean;
   sensors: ReturnType<typeof useSensors>;
   onToggle: () => void;
+  onToggleDone: () => void;
   onAddItemToggle: () => void;
   onCancelAddItem: () => void;
   onEditingChange: (id: string | null) => void;
@@ -353,6 +497,7 @@ function SectionChrome({
   isAdding,
   sTested,
   sTotal,
+  sOpen,
   onToggle,
   onAddItemToggle,
   handle,
@@ -367,6 +512,7 @@ function SectionChrome({
   isAdding: boolean;
   sTested: number;
   sTotal: number;
+  sOpen: number;
   onToggle: () => void;
   onAddItemToggle: () => void;
   handle?: React.ReactNode;
@@ -376,9 +522,10 @@ function SectionChrome({
 }) {
   return (
     <section
+      id={`qa-section-${section.id}`}
       ref={setNodeRef}
       style={style}
-      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden"
+      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden scroll-mt-20"
     >
       <div className="flex items-center gap-1 px-2.5 py-2 border-b border-gray-100 dark:border-gray-800">
         {handle}
@@ -399,6 +546,7 @@ function SectionChrome({
           </span>
           <span className="text-[11px] tabular-nums text-gray-400 shrink-0">
             {sTested}/{sTotal}
+            {sOpen > 0 ? ` · ${sOpen} خلل/تحسين` : ""}
           </span>
         </button>
         {canManage ? (
@@ -434,17 +582,64 @@ function SectionChrome({
   );
 }
 
+function renderDoneItem(
+  item: QaListItem,
+  {
+    projectId,
+    canManage,
+    canInteract,
+    editingItemId,
+    highlightItemId,
+    onEditingChange,
+  }: {
+    projectId: string;
+    canManage: boolean;
+    canInteract: boolean;
+    editingItemId: string | null;
+    highlightItemId: string | null;
+    onEditingChange: (id: string | null) => void;
+  },
+) {
+  const kind = item.item_kind ?? "test";
+  return (
+    <div
+      id={`qa-item-${item.id}`}
+      className={cn(
+        "px-2 py-1.5 scroll-mt-24 transition-colors",
+        highlightItemId === item.id &&
+          "bg-teal-50 dark:bg-teal-900/30 ring-1 ring-inset ring-teal-300 dark:ring-teal-700",
+      )}
+    >
+      <ItemContent
+        item={item}
+        kind={kind}
+        projectId={projectId}
+        canManage={canManage}
+        canInteract={canInteract}
+        isEditing={editingItemId === item.id}
+        onEditingChange={onEditingChange}
+      />
+    </div>
+  );
+}
+
 function StaticSectionCard({
   section,
+  doneItems,
   projectId,
   canManage,
   canInteract,
   isCollapsed,
   sTested,
   sTotal,
+  sOpen,
   addingItemFor,
   editingItemId,
+  highlightItemId,
+  doneOpen,
+  forceDoneOpen,
   onToggle,
+  onToggleDone,
   onAddItemToggle,
   onCancelAddItem,
   onEditingChange,
@@ -460,6 +655,7 @@ function StaticSectionCard({
       isAdding={isAdding}
       sTested={sTested}
       sTotal={sTotal}
+      sOpen={sOpen}
       onToggle={onToggle}
       onAddItemToggle={onAddItemToggle}
     >
@@ -468,11 +664,15 @@ function StaticSectionCard({
           <ul className="divide-y divide-gray-100 dark:divide-gray-800">
             {section.items.map((item) => {
               const kind = item.item_kind ?? "test";
-              const done = item.result != null;
               return (
                 <li
                   key={item.id}
-                  className={cn("px-2 py-1.5", done && "opacity-70")}
+                  id={`qa-item-${item.id}`}
+                  className={cn(
+                    "px-2 py-1.5 scroll-mt-24 transition-colors",
+                    highlightItemId === item.id &&
+                      "bg-teal-50 dark:bg-teal-900/30 ring-1 ring-inset ring-teal-300 dark:ring-teal-700",
+                  )}
                 >
                   <ItemContent
                     item={item}
@@ -496,6 +696,24 @@ function StaticSectionCard({
               />
             </div>
           ) : null}
+          <QaSectionDoneGroup
+            sectionId={section.id}
+            items={doneItems}
+            isOpen={doneOpen}
+            onToggle={onToggleDone}
+            forceOpen={forceDoneOpen}
+            focusItemId={highlightItemId}
+            renderItem={(item) =>
+              renderDoneItem(item, {
+                projectId,
+                canManage,
+                canInteract,
+                editingItemId,
+                highlightItemId,
+                onEditingChange,
+              })
+            }
+          />
         </>
       ) : null}
     </SectionChrome>
@@ -504,16 +722,22 @@ function StaticSectionCard({
 
 function SortableSectionCard({
   section,
+  doneItems,
   projectId,
   canManage,
   canInteract,
   isCollapsed,
   sTested,
   sTotal,
+  sOpen,
   addingItemFor,
   editingItemId,
+  highlightItemId,
+  doneOpen,
+  forceDoneOpen,
   sensors,
   onToggle,
+  onToggleDone,
   onAddItemToggle,
   onCancelAddItem,
   onEditingChange,
@@ -546,6 +770,7 @@ function SortableSectionCard({
       isAdding={isAdding}
       sTested={sTested}
       sTotal={sTotal}
+      sOpen={sOpen}
       onToggle={onToggle}
       onAddItemToggle={onAddItemToggle}
       setNodeRef={setNodeRef}
@@ -568,17 +793,16 @@ function SortableSectionCard({
               <ul className="divide-y divide-gray-100 dark:divide-gray-800">
                 {section.items.map((item) => {
                   const kind = item.item_kind ?? "test";
-                  const done = item.result != null;
                   return (
                     <SortableItemRow
                       key={item.id}
                       item={item}
                       kind={kind}
-                      done={done}
                       projectId={projectId}
                       canManage={canManage}
                       canInteract={canInteract}
                       isEditing={editingItemId === item.id}
+                      highlighted={highlightItemId === item.id}
                       onEditingChange={onEditingChange}
                     />
                   );
@@ -596,6 +820,25 @@ function SortableSectionCard({
               />
             </div>
           ) : null}
+
+          <QaSectionDoneGroup
+            sectionId={section.id}
+            items={doneItems}
+            isOpen={doneOpen}
+            onToggle={onToggleDone}
+            forceOpen={forceDoneOpen}
+            focusItemId={highlightItemId}
+            renderItem={(item) =>
+              renderDoneItem(item, {
+                projectId,
+                canManage,
+                canInteract,
+                editingItemId,
+                highlightItemId,
+                onEditingChange,
+              })
+            }
+          />
         </>
       ) : null}
     </SectionChrome>
@@ -635,7 +878,7 @@ function ItemContent({
           <p
             className={cn(
               "text-sm leading-snug truncate",
-              item.result != null
+              isQaItemDone(item)
                 ? "text-gray-500 dark:text-gray-400"
                 : "text-gray-900 dark:text-gray-100 font-medium",
             )}
@@ -688,7 +931,6 @@ function ItemContent({
           expectedBehavior={item.expected_behavior}
           testedAt={item.tested_at}
           testerName={item.tester?.full_name ?? null}
-          attempts={item.attempts ?? []}
           canManage={canManage}
           canInteract={canInteract}
           compact
@@ -701,20 +943,20 @@ function ItemContent({
 function SortableItemRow({
   item,
   kind,
-  done,
   projectId,
   canManage,
   canInteract,
   isEditing,
+  highlighted,
   onEditingChange,
 }: {
   item: QaListItem;
   kind: QaItemKind;
-  done: boolean;
   projectId: string;
   canManage: boolean;
   canInteract: boolean;
   isEditing: boolean;
+  highlighted: boolean;
   onEditingChange: (id: string | null) => void;
 }) {
   const {
@@ -735,11 +977,13 @@ function SortableItemRow({
 
   return (
     <li
+      id={`qa-item-${item.id}`}
       ref={setNodeRef}
       style={style}
       className={cn(
-        "px-2 py-1.5 bg-white dark:bg-gray-900",
-        done && "opacity-70",
+        "px-2 py-1.5 bg-white dark:bg-gray-900 scroll-mt-24 transition-colors",
+        highlighted &&
+          "bg-teal-50 dark:bg-teal-900/30 ring-1 ring-inset ring-teal-300 dark:ring-teal-700",
       )}
     >
       <ItemContent

@@ -6,6 +6,11 @@ import {
 } from "@/lib/itqan-testing";
 import {
   QA_SEVERITY_META,
+  computeQaProgress,
+  matchesQaSearch,
+  partitionQaItems,
+  recentCompletedQaItems,
+  recentOpenQaItems,
   validateQaResultSubmit,
 } from "@/lib/qa-testing-format";
 import type { Profile } from "@/types/db";
@@ -200,5 +205,140 @@ describe("QA_SEVERITY_META", () => {
     expect(QA_SEVERITY_META.medium.label).toBe("متوسط");
     expect(QA_SEVERITY_META.high.label).toBe("عالٍ");
     expect(QA_SEVERITY_META.critical.label).toBe("حرج");
+  });
+});
+
+describe("partitionQaItems", () => {
+  it("moves only pass to done; bugs/improve stay pending and sort first", () => {
+    const { pending, done } = partitionQaItems([
+      { id: "1", item_kind: "test", result: "pass", tested_at: "2026-07-01T10:00:00Z" },
+      { id: "2", item_kind: "task", result: null, tested_at: null },
+      { id: "3", item_kind: "test", result: null, tested_at: null },
+      { id: "4", item_kind: "test", result: "bug", tested_at: "2026-07-03T10:00:00Z" },
+      { id: "5", item_kind: "test", result: "improve", tested_at: "2026-07-02T10:00:00Z" },
+      { id: "6", item_kind: "test", result: "pass", tested_at: "2026-07-04T10:00:00Z" },
+    ]);
+    expect(done.map((i) => i.id)).toEqual(["6", "1"]);
+    // bugs → improve → tasks/untested (stable among same rank)
+    expect(pending.map((i) => i.id)).toEqual(["4", "5", "2", "3"]);
+  });
+});
+
+describe("matchesQaSearch", () => {
+  it("matches title or description case-insensitively", () => {
+    expect(
+      matchesQaSearch({ title: "Login flow", description: null }, "login"),
+    ).toBe(true);
+    expect(
+      matchesQaSearch(
+        { title: "Auth", description: "Wrong password error" },
+        "PASSWORD",
+      ),
+    ).toBe(true);
+    expect(
+      matchesQaSearch({ title: "Auth", description: null }, "xyz"),
+    ).toBe(false);
+  });
+
+  it("returns true for empty query", () => {
+    expect(matchesQaSearch({ title: "x", description: null }, "  ")).toBe(true);
+  });
+});
+
+describe("recentCompletedQaItems", () => {
+  it("returns newest pass items only (excludes bug/improve)", () => {
+    const recent = recentCompletedQaItems(
+      [
+        { id: "a", item_kind: "test", result: "pass", tested_at: "2026-07-01T10:00:00Z" },
+        { id: "b", item_kind: "task", result: null, tested_at: null },
+        { id: "c", item_kind: "test", result: "bug", tested_at: "2026-07-05T10:00:00Z" },
+        { id: "d", item_kind: "test", result: null, tested_at: null },
+        { id: "e", item_kind: "test", result: "improve", tested_at: "2026-07-04T10:00:00Z" },
+        { id: "f", item_kind: "test", result: "pass", tested_at: "2026-07-06T10:00:00Z" },
+      ],
+      2,
+    );
+    expect(recent.map((i) => i.id)).toEqual(["f", "a"]);
+  });
+});
+
+describe("recentOpenQaItems", () => {
+  it("sorts bugs by severity then improve, then tested_at desc", () => {
+    const open = recentOpenQaItems(
+      [
+        {
+          id: "low",
+          item_kind: "test",
+          result: "bug",
+          severity: "low",
+          tested_at: "2026-07-06T10:00:00Z",
+        },
+        {
+          id: "crit",
+          item_kind: "test",
+          result: "bug",
+          severity: "critical",
+          tested_at: "2026-07-01T10:00:00Z",
+        },
+        {
+          id: "imp",
+          item_kind: "test",
+          result: "improve",
+          severity: null,
+          tested_at: "2026-07-07T10:00:00Z",
+        },
+        {
+          id: "pass",
+          item_kind: "test",
+          result: "pass",
+          severity: null,
+          tested_at: "2026-07-08T10:00:00Z",
+        },
+        {
+          id: "high-new",
+          item_kind: "test",
+          result: "bug",
+          severity: "high",
+          tested_at: "2026-07-05T10:00:00Z",
+        },
+        {
+          id: "high-old",
+          item_kind: "test",
+          result: "bug",
+          severity: "high",
+          tested_at: "2026-07-02T10:00:00Z",
+        },
+      ],
+      10,
+    );
+    expect(open.map((i) => i.id)).toEqual([
+      "crit",
+      "high-new",
+      "high-old",
+      "low",
+      "imp",
+    ]);
+  });
+});
+
+describe("computeQaProgress", () => {
+  it("counts tests only and derives open = bugs + improves", () => {
+    const stats = computeQaProgress([
+      { item_kind: "test", result: "pass" },
+      { item_kind: "test", result: "bug" },
+      { item_kind: "test", result: "improve" },
+      { item_kind: "test", result: null },
+      { item_kind: "task", result: null },
+    ]);
+    expect(stats).toMatchObject({
+      total: 4,
+      tested: 3,
+      passes: 1,
+      bugs: 1,
+      improves: 1,
+      open: 2,
+      taskCount: 1,
+      pct: 75,
+    });
   });
 });
