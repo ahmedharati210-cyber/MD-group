@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { requireAttendanceAccess, requireRole } from "@/lib/auth";
+import { diffFields, logAudit } from "@/lib/audit";
 import { computeDayRecord } from "@/lib/attendance/monthly-calculations";
 import {
   fullTimeConfigFromBranch,
@@ -548,6 +549,9 @@ export async function saveAttendanceImportAction(
     },
   );
 
+  let savedImportId: string | null =
+    typeof rpcImportId === "string" ? rpcImportId : null;
+
   if (rpcError) {
     // Fallback path (migration not applied yet): wipe + chunked insert.
     if (existingImport?.id) {
@@ -585,6 +589,8 @@ export async function saveAttendanceImportAction(
       };
     }
 
+    savedImportId = importRow.id;
+
     const recordRows = recordPayload.map((r) => ({
       ...r,
       import_id: importRow.id,
@@ -619,6 +625,12 @@ export async function saveAttendanceImportAction(
       };
     }
   }
+
+  void logAudit(current.userId, "create", "attendance_import", savedImportId, {
+    month: monthDate,
+    file_name: typeof fileName === "string" ? fileName : null,
+    branch_id: branchId,
+  });
 
   revalidateAttendanceData();
   revalidatePath("/portal/attendance/branches");
@@ -876,6 +888,28 @@ export async function updateMonthlyRecordAction(
 
   if (error) return { error: error.message };
 
+  const recordDiff = diffFields(
+    {
+      first_check_in: existing.first_check_in,
+      last_check_out: existing.last_check_out,
+      leave_type: existing.leave_type,
+      is_holiday: existing.is_holiday,
+    },
+    {
+      first_check_in: firstCheckIn,
+      last_check_out: lastCheckOut,
+      leave_type: leaveType,
+      is_holiday: isHoliday,
+    },
+    ["first_check_in", "last_check_out", "leave_type", "is_holiday"],
+  );
+  if (Object.keys(recordDiff).length > 0) {
+    void logAudit(current.userId, "update", "attendance_record", existing.id, {
+      ...recordDiff,
+      date: existing.date,
+    });
+  }
+
   let warning: string | undefined;
   if (existing.attendance_person_id) {
     const balanceResult = await applyPersonLeaveBalanceDelta(
@@ -1004,6 +1038,13 @@ export async function recalculatePersonMonthAction(
     updatedCount += 1;
   }
 
+  void logAudit(current.userId, "update", "attendance_recalc", null, {
+    scope: "person",
+    count: updatedCount,
+    month: parsed.data.month,
+    attendance_person_id: parsed.data.attendance_person_id,
+  });
+
   revalidateAttendanceData();
   return {
     ok: true,
@@ -1119,6 +1160,13 @@ export async function recalculateBranchMonthAction(
     updatedCount += 1;
   }
 
+  void logAudit(current.userId, "update", "attendance_recalc", null, {
+    scope: "branch",
+    count: updatedCount,
+    month: parsed.data.month,
+    branch_id: parsed.data.branch_id,
+  });
+
   revalidateAttendanceData();
   return {
     ok: true,
@@ -1220,32 +1268,36 @@ export async function createLeaveRecordAction(
   const leaveType = isAbsentStatus ? null : statusValue;
   const isHoliday = leaveType === HOLIDAY_LEAVE_TYPE;
 
-  const { error } = await supabase.from("attendance_monthly_records").insert({
-    import_id: importRow.id,
-    company_id: parsed.data.company_id,
-    branch_id: parsed.data.branch_id,
-    attendance_person_id: person.id,
-    profile_id: null,
-    external_employee_number: person.external_employee_number,
-    employee_name: person.full_name,
-    date: parsed.data.date,
-    first_check_in: null,
-    last_check_out: null,
-    total_minutes: null,
-    shift_type: null,
-    expected_minutes: null,
-    late_minutes: 0,
-    early_leave_minutes: 0,
-    overtime_minutes: 0,
-    deduction_minutes: 0,
-    is_holiday: isHoliday,
-    is_absent: isAbsentStatus,
-    leave_type: leaveType,
-    notes: null,
-    shift_id: null,
-    punch_count: null,
-    raw_payload: isAbsentStatus ? { manual_absent: true } : { manual_leave: true },
-  });
+  const { data: createdLeave, error } = await supabase
+    .from("attendance_monthly_records")
+    .insert({
+      import_id: importRow.id,
+      company_id: parsed.data.company_id,
+      branch_id: parsed.data.branch_id,
+      attendance_person_id: person.id,
+      profile_id: null,
+      external_employee_number: person.external_employee_number,
+      employee_name: person.full_name,
+      date: parsed.data.date,
+      first_check_in: null,
+      last_check_out: null,
+      total_minutes: null,
+      shift_type: null,
+      expected_minutes: null,
+      late_minutes: 0,
+      early_leave_minutes: 0,
+      overtime_minutes: 0,
+      deduction_minutes: 0,
+      is_holiday: isHoliday,
+      is_absent: isAbsentStatus,
+      leave_type: leaveType,
+      notes: null,
+      shift_id: null,
+      punch_count: null,
+      raw_payload: isAbsentStatus ? { manual_absent: true } : { manual_leave: true },
+    })
+    .select("id")
+    .single<{ id: string }>();
 
   if (error) {
     if (error.code === "23505") {
@@ -1253,6 +1305,13 @@ export async function createLeaveRecordAction(
     }
     return { error: error.message };
   }
+
+  void logAudit(current.userId, "create", "attendance_record", createdLeave?.id ?? null, {
+    date: parsed.data.date,
+    leave_type: leaveType,
+    attendance_person_id: person.id,
+    employee_name: person.full_name,
+  });
 
   let warning: string | undefined;
   if (leaveType) {
@@ -1427,9 +1486,17 @@ export async function resetPersonLeaveBalanceAction(
   const supabase = await createSupabaseServerClient();
   const { data: person } = await supabase
     .from("attendance_people")
-    .select("id, company_id")
+    .select(
+      "id, company_id, full_name, annual_leave_remaining, sick_leave_remaining",
+    )
     .eq("id", parsed.data.attendance_person_id)
-    .maybeSingle<{ id: string; company_id: string }>();
+    .maybeSingle<{
+      id: string;
+      company_id: string;
+      full_name: string;
+      annual_leave_remaining: number | null;
+      sick_leave_remaining: number | null;
+    }>();
 
   if (!person) return { error: "الموظف غير موجود" };
 
@@ -1449,6 +1516,18 @@ export async function resetPersonLeaveBalanceAction(
     .eq("id", person.id);
 
   if (error) return { error: error.message };
+
+  void logAudit(current.userId, "update", "attendance_person", person.id, {
+    full_name: person.full_name,
+    annual_leave_remaining: {
+      before: person.annual_leave_remaining,
+      after: ANNUAL_LEAVE_ENTITLEMENT,
+    },
+    sick_leave_remaining: {
+      before: person.sick_leave_remaining,
+      after: SICK_LEAVE_ENTITLEMENT,
+    },
+  });
 
   revalidateAttendanceData();
   return {
@@ -1515,6 +1594,12 @@ export async function updateCompanyAttendanceMonthStartAction(
     .eq("id", parsed.data.company_id);
 
   if (error) return { error: error.message };
+
+  if (previousDay !== nextDay) {
+    void logAudit(current.userId, "update", "company", parsed.data.company_id, {
+      attendance_month_start_day: { before: previousDay, after: nextDay },
+    });
+  }
 
   revalidateAttendanceData();
   revalidatePath("/portal/companies");
@@ -1661,9 +1746,15 @@ export async function deleteAttendanceImportAction(
   const supabase = await createSupabaseServerClient();
   const { data: row } = await supabase
     .from("attendance_imports")
-    .select("id, company_id")
+    .select("id, company_id, month, file_name, branch_id")
     .eq("id", importId)
-    .maybeSingle<{ id: string; company_id: string }>();
+    .maybeSingle<{
+      id: string;
+      company_id: string;
+      month: string;
+      file_name: string | null;
+      branch_id: string | null;
+    }>();
 
   if (!row) return { error: "الاستيراد غير موجود" };
   if (
@@ -1689,6 +1780,12 @@ export async function deleteAttendanceImportAction(
   );
   if (restoreResult.error) return { error: restoreResult.error };
 
+  void logAudit(current.userId, "delete", "attendance_import", importId, {
+    month: row.month,
+    file_name: row.file_name,
+    branch_id: row.branch_id,
+  });
+
   revalidateAttendanceData();
   revalidatePath("/portal/attendance/branches");
   return { ok: true };
@@ -1709,13 +1806,18 @@ export async function deleteMonthlyRecordAction(
   const supabase = await createSupabaseServerClient();
   const { data: row } = await supabase
     .from("attendance_monthly_records")
-    .select("id, company_id, attendance_person_id, leave_type")
+    .select(
+      "id, company_id, attendance_person_id, leave_type, date, employee_name, external_employee_number",
+    )
     .eq("id", id)
     .maybeSingle<{
       id: string;
       company_id: string;
       attendance_person_id: string | null;
       leave_type: string | null;
+      date: string;
+      employee_name: string | null;
+      external_employee_number: string | null;
     }>();
 
   if (!row) return { error: "السجل غير موجود" };
@@ -1738,6 +1840,13 @@ export async function deleteMonthlyRecordAction(
     );
     if ("error" in balanceResult) return { error: balanceResult.error };
   }
+
+  void logAudit(current.userId, "delete", "attendance_record", id, {
+    date: row.date,
+    employee_name: row.employee_name,
+    external_employee_number: row.external_employee_number,
+    leave_type: row.leave_type,
+  });
 
   revalidateAttendanceData();
   return { ok: true };

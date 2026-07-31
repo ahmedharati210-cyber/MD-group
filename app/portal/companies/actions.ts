@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireSuperAdmin } from "@/lib/auth";
+import { diffFields, logAudit } from "@/lib/audit";
 import {
   isSlugUniqueViolation,
   resolveCompanySlug,
@@ -49,7 +50,7 @@ export async function createCompanyAction(
   _prev: ActionState | undefined,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireSuperAdmin();
+  const current = await requireSuperAdmin();
 
   const parsed = parseCompanyForm(formData);
   if (!parsed.success) {
@@ -84,6 +85,13 @@ export async function createCompanyAction(
   if (error) return { error: error.message };
   if (!data) return { error: "تعذر إنشاء الشركة" };
 
+  void logAudit(current.userId, "create", "company", data.id, {
+    name_ar: payload.name_ar,
+    name_en: payload.name_en,
+    slug: payload.slug,
+    active: payload.active,
+  });
+
   revalidatePath("/portal/companies");
   revalidatePath("/");
   revalidateTag("companies", "default");
@@ -96,7 +104,7 @@ export async function updateCompanyAction(
   _prev: ActionState | undefined,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireSuperAdmin();
+  const current = await requireSuperAdmin();
 
   const id = formData.get("id");
   if (typeof id !== "string") return { error: "معرّف مفقود" };
@@ -107,6 +115,20 @@ export async function updateCompanyAction(
   }
 
   const admin = createSupabaseAdminClient();
+  const { data: existing } = await admin
+    .from("companies")
+    .select("name_ar, name_en, slug, logo_url, active")
+    .eq("id", id)
+    .maybeSingle<{
+      name_ar: string;
+      name_en: string | null;
+      slug: string;
+      logo_url: string | null;
+      active: boolean;
+    }>();
+
+  if (!existing) return { error: "الشركة غير موجودة" };
+
   const payload = {
     name_ar: parsed.data.name_ar,
     name_en: parsed.data.name_en || null,
@@ -123,9 +145,25 @@ export async function updateCompanyAction(
       .update({ ...payload, slug: withSlugSuffix(payload.slug) })
       .eq("id", id);
     error = retry.error;
+    if (!error) payload.slug = withSlugSuffix(payload.slug);
   }
 
   if (error) return { error: error.message };
+
+  const diff = diffFields(
+    {
+      name_ar: existing.name_ar,
+      name_en: existing.name_en,
+      slug: existing.slug,
+      logo_url: existing.logo_url,
+      active: existing.active,
+    },
+    payload,
+    ["name_ar", "name_en", "slug", "logo_url", "active"],
+  );
+  if (Object.keys(diff).length > 0) {
+    void logAudit(current.userId, "update", "company", id, diff);
+  }
 
   revalidatePath("/portal/companies");
   revalidatePath(`/portal/companies/${id}`);
@@ -140,7 +178,7 @@ export async function updateCompanyAction(
 }
 
 export async function deleteCompanyAction(formData: FormData) {
-  await requireSuperAdmin();
+  const current = await requireSuperAdmin();
   const id = formData.get("id");
   if (typeof id !== "string") return;
 
@@ -160,12 +198,28 @@ export async function deleteCompanyAction(formData: FormData) {
     );
   }
 
+  const { data: existing } = await admin
+    .from("companies")
+    .select("name_ar, name_en, slug")
+    .eq("id", id)
+    .maybeSingle<{
+      name_ar: string;
+      name_en: string | null;
+      slug: string;
+    }>();
+
   const { error } = await admin.from("companies").delete().eq("id", id);
   if (error) {
     redirect(
       `/portal/companies/${id}?error=${encodeURIComponent(error.message)}`,
     );
   }
+
+  void logAudit(current.userId, "delete", "company", id, {
+    name_ar: existing?.name_ar ?? null,
+    name_en: existing?.name_en ?? null,
+    slug: existing?.slug ?? null,
+  });
 
   revalidatePath("/portal/companies");
   revalidatePath("/");

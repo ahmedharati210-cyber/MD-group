@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
+import { diffFields, logAudit } from "@/lib/audit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const mailSchema = z.object({
@@ -50,11 +51,21 @@ export async function createMailAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("mail").insert({
-    ...parsed.data,
-    created_by: current.userId,
-  });
+  const { data, error } = await supabase
+    .from("mail")
+    .insert({
+      ...parsed.data,
+      created_by: current.userId,
+    })
+    .select("id")
+    .single<{ id: string }>();
   if (error) return { error: error.message };
+
+  void logAudit(current.userId, "create", "mail", data?.id ?? null, {
+    subject: parsed.data.subject,
+    direction: parsed.data.direction,
+    status: parsed.data.status,
+  });
 
   revalidatePath("/portal/mail");
   revalidateTag("mail", "default");
@@ -82,12 +93,47 @@ export async function updateMailAction(
   }
 
   const supabase = await createSupabaseServerClient();
+  const { data: existing } = await supabase
+    .from("mail")
+    .select("subject, status, direction, to_name, from_name")
+    .eq("id", id)
+    .maybeSingle<{
+      subject: string;
+      status: string | null;
+      direction: string;
+      to_name: string | null;
+      from_name: string | null;
+    }>();
+
   const { error } = await supabase
     .from("mail")
     .update(parsed.data)
     .eq("id", id);
 
   if (error) return { error: error.message };
+
+  if (existing) {
+    const diff = diffFields(
+      {
+        subject: existing.subject,
+        status: existing.status,
+        direction: existing.direction,
+        to_name: existing.to_name,
+        from_name: existing.from_name,
+      },
+      {
+        subject: parsed.data.subject,
+        status: parsed.data.status ?? null,
+        direction: parsed.data.direction,
+        to_name: parsed.data.to_name ?? null,
+        from_name: parsed.data.from_name ?? null,
+      },
+      ["subject", "status", "direction", "to_name", "from_name"],
+    );
+    if (Object.keys(diff).length > 0) {
+      void logAudit(current.userId, "update", "mail", id, diff);
+    }
+  }
 
   revalidatePath("/portal/mail");
   revalidatePath(`/portal/mail/${id}`);
@@ -97,15 +143,25 @@ export async function updateMailAction(
 }
 
 export async function deleteMailAction(formData: FormData) {
-  await requireRole(["md_admin", "company_manager"]);
+  const current = await requireRole(["md_admin", "company_manager"]);
   const id = formData.get("id");
   if (typeof id !== "string") return;
 
   const supabase = await createSupabaseServerClient();
+  const { data: existing } = await supabase
+    .from("mail")
+    .select("subject")
+    .eq("id", id)
+    .maybeSingle<{ subject: string }>();
+
   const { error } = await supabase.from("mail").delete().eq("id", id);
   if (error) {
     redirect(`/portal/mail/${id}?error=${encodeURIComponent(error.message)}`);
   }
+
+  void logAudit(current.userId, "delete", "mail", id, {
+    subject: existing?.subject ?? null,
+  });
 
   revalidatePath("/portal/mail");
   revalidateTag("mail", "default");

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { DocumentCategory } from "@/types/db";
 import { requireUser, requireRole } from "@/lib/auth";
+import { diffFields } from "@/lib/audit";
 import { isPaperExpiryNeedsRenewal } from "@/lib/paper-expiry";
 import {
   createSupabaseAdminClient,
@@ -179,6 +180,26 @@ export async function updatePaperDatesAction(
     if (error) return { error: error.message };
   }
 
+  const diff = diffFields(
+    {
+      title: doc.title,
+      issued_on: doc.issued_on,
+      expires_on: doc.expires_on,
+    },
+    { title, issued_on, expires_on },
+    ["title", "issued_on", "expires_on"],
+  );
+  if (Object.keys(diff).length > 0) {
+    const admin = createSupabaseAdminClient();
+    await admin.from("audit_log").insert({
+      actor_id: userId,
+      action: "document.update",
+      entity: "documents",
+      entity_id: document_id,
+      payload: diff,
+    });
+  }
+
   revalidatePath(`/portal/papers/${document_id}`);
   revalidatePath("/portal/papers");
   if (doc.owner_profile_id) {
@@ -270,6 +291,17 @@ export async function setPaperRenewalInProgressAction(
       .update(payload)
       .eq("id", parsed.data.document_id);
     if (error) return { error: error.message };
+  }
+
+  {
+    const admin = createSupabaseAdminClient();
+    await admin.from("audit_log").insert({
+      actor_id: userId,
+      action: "document.update",
+      entity: "documents",
+      entity_id: parsed.data.document_id,
+      payload: { renewal_in_progress: parsed.data.renewal_in_progress },
+    });
   }
 
   revalidatePath(`/portal/papers/${parsed.data.document_id}`);

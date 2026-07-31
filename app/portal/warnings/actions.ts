@@ -198,10 +198,13 @@ export async function sendWarningAction(
 }
 
 export async function markWarningReadAction(id: string): Promise<ActionState> {
-  await requireUser();
+  const { userId } = await requireUser();
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("warnings").update({ is_read: true }).eq("id", id);
   if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "warning", id, { is_read: true });
+
   revalidateNotificationInbox();
   return { ok: true };
 }
@@ -214,6 +217,18 @@ export async function markAllWarningsReadAction(): Promise<ActionState> {
   }
 
   const supabase = await createSupabaseServerClient();
+
+  const countQuery = supabase
+    .from("warnings")
+    .select("id", { count: "exact", head: true })
+    .eq("is_read", false);
+
+  const { count } =
+    profile.role === "employee"
+      ? await countQuery.or(
+          `target_profile_id.eq.${userId},target_profile_id.is.null`,
+        )
+      : await countQuery.eq("target_profile_id", userId);
 
   const updateQuery = supabase
     .from("warnings")
@@ -228,6 +243,11 @@ export async function markAllWarningsReadAction(): Promise<ActionState> {
       : await updateQuery.eq("target_profile_id", userId);
 
   if (error) return { error: error.message };
+
+  void logAudit(userId, "update", "warning", null, {
+    marked_all_read: true,
+    count: count ?? 0,
+  });
 
   revalidateNotificationInbox();
   return { ok: true };

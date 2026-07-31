@@ -40,9 +40,17 @@ const payloadKeyLabels: Record<string, string> = {
   company_name: "الشركة",
   category_name: "المرحلة",
   name: "الاسم",
+  name_ar: "الاسم بالعربية",
+  name_en: "الاسم بالإنجليزية",
+  slug: "المعرّف",
+  active: "نشط",
   status: "الحالة",
   title: "العنوان",
   titles: "العناوين",
+  subject: "الموضوع",
+  direction: "الاتجاه",
+  from_name: "المرسل",
+  to_name: "المستلم",
   email: "البريد",
   recipients: "عدد المستلمين",
   removed_paths: "عدد الملفات المحذوفة",
@@ -60,6 +68,22 @@ const payloadKeyLabels: Record<string, string> = {
   changed: "الحقول المُعدَّلة",
   features: "الميزات المُفعَّلة",
   company_id_changed: "تغيير الشركة",
+  attendance_month_start_day: "بداية شهر الحضور",
+  leave_type: "نوع الإجازة",
+  first_check_in: "وقت الحضور",
+  last_check_out: "وقت الانصراف",
+  is_holiday: "عطلة",
+  renewal_in_progress: "قيد التجديد",
+  issued_on: "تاريخ الإصدار",
+  expires_on: "تاريخ الانتهاء",
+  marked_all_read: "تعليم الكل كمقروء",
+  is_read: "مقروء",
+  scope: "النطاق",
+  file_name: "اسم الملف",
+  month: "الشهر",
+  date: "التاريخ",
+  annual_leave_remaining: "رصيد الإجازة السنوية",
+  sick_leave_remaining: "رصيد الإجازة المرضية",
   // Al Itqan / QA testing
   testing_access_enabled: "صلاحية المنظومات والمواقع",
   item_kind: "النوع",
@@ -94,6 +118,19 @@ function formatPayloadValue(value: unknown): string {
     return value ? "نعم" : "لا";
   }
   if (value === null || value === undefined) return "—";
+  // Before/after diff objects from update audits.
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "before" in value &&
+    "after" in value
+  ) {
+    const diff = value as { before: unknown; after: unknown };
+    return `${formatPayloadValue(diff.before)} → ${formatPayloadValue(diff.after)}`;
+  }
+  if (Array.isArray(value)) {
+    return value.map((v) => formatPayloadValue(v)).join("، ");
+  }
   const raw = String(value);
   return payloadValueLabels[raw] ?? raw;
 }
@@ -144,6 +181,10 @@ const entityLabels: Record<string, string> = {
   profile:          "مستخدم",
   company:          "شركة",
   attendance:       "حضور",
+  attendance_import: "استيراد حضور",
+  attendance_record: "سجل حضور",
+  attendance_person: "موظف حضور",
+  attendance_recalc: "إعادة احتساب حضور",
   project:          "مشروع",
   project_task:     "مهمة",
   project_category: "مرحلة مشروع",
@@ -180,6 +221,10 @@ const KNOWN_ENTITIES: { value: string; label: string }[] = [
   { value: "contact",          label: "جهة اتصال" },
   { value: "mail",             label: "بريد" },
   { value: "attendance",       label: "حضور" },
+  { value: "attendance_import", label: "استيراد حضور" },
+  { value: "attendance_record", label: "سجل حضور" },
+  { value: "attendance_person", label: "موظف حضور" },
+  { value: "attendance_recalc", label: "إعادة احتساب حضور" },
   { value: "profile",          label: "مستخدم" },
   { value: "company",          label: "شركة" },
   { value: "document",         label: "وثيقة" },

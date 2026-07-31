@@ -25,3 +25,22 @@ export async function logAudit(
     // Audit failures must never break user-facing flows.
   }
 }
+
+/**
+ * Build a before/after diff for the listed fields. Only fields whose values
+ * actually changed are included. Callers should skip logging when the result
+ * is empty (no-op save).
+ */
+export function diffFields<T extends Record<string, unknown>>(
+  before: T,
+  after: Partial<T>,
+  fields: (keyof T)[],
+): Record<string, { before: unknown; after: unknown }> {
+  const changed: Record<string, { before: unknown; after: unknown }> = {};
+  for (const field of fields) {
+    const b = before[field];
+    const a = field in after ? after[field] : b;
+    if (a !== b) changed[field as string] = { before: b, after: a };
+  }
+  return changed;
+}
