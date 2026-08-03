@@ -84,7 +84,7 @@ export type ImportPreviewState = {
   newPeopleDetails?: Array<{ externalNumber: string; name: string }>;
   warnings?: string[];
   fileName?: string;
-  importFormat?: "per_day" | "raw_punch_log";
+  importFormat?: "per_day" | "raw_punch_log" | "hikvision_month_grid";
   monthMismatch?: {
     detectedMonth: string;
     selectedMonth: string;

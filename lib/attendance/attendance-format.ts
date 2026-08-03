@@ -1,48 +1,14 @@
 import "server-only";
 
-import ExcelJS from "exceljs";
+import { loadAttendanceSheetMatrix } from "@/lib/attendance/workbook-load";
 
-export type AttendanceFileFormat = "per_day" | "raw_punch_log" | "unknown";
+export type AttendanceFileFormat =
+  | "per_day"
+  | "raw_punch_log"
+  | "hikvision_month_grid"
+  | "unknown";
 
-function cellText(value: ExcelJS.CellValue): string {
-  if (value == null) return "";
-  if (typeof value === "string" || typeof value === "number") return String(value).trim();
-  if (value instanceof Date) return value.toISOString();
-  if (typeof value === "object" && "text" in value && value.text) {
-    return String(value.text).trim();
-  }
-  if (typeof value === "object" && "result" in value && value.result != null) {
-    return cellText(value.result as ExcelJS.CellValue);
-  }
-  if (typeof value === "object" && "richText" in value && Array.isArray(value.richText)) {
-    return value.richText.map((r) => r.text ?? "").join("").trim();
-  }
-  return String(value).trim();
-}
-
-/**
- * Detect biometric export format from workbook headers.
- */
-export async function detectAttendanceFileFormat(
-  buffer: ArrayBuffer,
-): Promise<AttendanceFileFormat> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
-  const sheet = workbook.worksheets[0];
-  if (!sheet) return "unknown";
-
-  let joined = "";
-  let rowCount = 0;
-  sheet.eachRow((row) => {
-    if (rowCount >= 25) return;
-    rowCount += 1;
-    const cells: string[] = [];
-    for (let c = 1; c <= 10; c++) {
-      cells.push(cellText(row.getCell(c).value));
-    }
-    joined += ` ${cells.join(" ")}`;
-  });
-
+export function detectFormatFromSheetText(joined: string): AttendanceFileFormat {
   if (
     joined.includes("أول تسجيل دخول") &&
     joined.includes("أخر تسجيل خروج")
@@ -58,5 +24,33 @@ export async function detectAttendanceFileFormat(
     return "raw_punch_log";
   }
 
+  const hasAttendanceRecord = /attendance\s*record/i.test(joined);
+  const hasEmployeeId = /employee\s*id/i.test(joined);
+  const hasMadeDate = /made\s*date\s*:/i.test(joined);
+  if (hasAttendanceRecord && hasEmployeeId) {
+    return "hikvision_month_grid";
+  }
+  if (hasEmployeeId && hasMadeDate) {
+    return "hikvision_month_grid";
+  }
+
   return "unknown";
+}
+
+/**
+ * Detect biometric export format from workbook headers.
+ */
+export async function detectAttendanceFileFormat(
+  buffer: ArrayBuffer,
+): Promise<AttendanceFileFormat> {
+  const matrix = await loadAttendanceSheetMatrix(buffer);
+  if (matrix.length === 0) return "unknown";
+
+  let joined = "";
+  for (let r = 0; r < Math.min(matrix.length, 25); r++) {
+    const row = matrix[r] ?? [];
+    joined += ` ${row.slice(0, 14).join(" ")}`;
+  }
+
+  return detectFormatFromSheetText(joined);
 }

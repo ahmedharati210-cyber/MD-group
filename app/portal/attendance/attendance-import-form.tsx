@@ -101,7 +101,7 @@ export function AttendanceImportForm({
               ref={fileInputRef}
               type="file"
               name="file"
-              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
               required
               onChange={onFileChange}
               className="flex-1 text-sm"
@@ -198,7 +198,13 @@ export function AttendanceImportForm({
             <div className="space-y-3">
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {preview.rows.length} سجل يومي
-                {preview.importFormat === "raw_punch_log" ? " (سجل بصمات خام)" : ""}
+                {preview.importFormat === "raw_punch_log"
+                  ? " (سجل بصمات خام)"
+                  : preview.importFormat === "hikvision_month_grid"
+                    ? " (Hikvision Attendance Record)"
+                    : preview.importFormat === "per_day"
+                      ? " (ملف يومي)"
+                      : ""}
                 {" — "}
                 {fileName ?? preview.fileName ?? ""}
               </p>

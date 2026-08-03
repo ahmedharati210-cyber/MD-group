@@ -6,6 +6,7 @@ import {
   highPunchCountWarning,
   type PunchSession,
 } from "@/lib/attendance/punch-sessions";
+import { parseHikvisionMonthGridWorkbook } from "@/lib/attendance/hikvision-month-grid-parser";
 import {
   parseRawPunchLogWorkbook,
   type RawPunchBlock,
@@ -124,6 +125,25 @@ export async function parseAndMatchPunchLogWorkbook(
   fullTimeConfig: FullTimeConfig,
 ): Promise<{ rows: MatchedImportRow[]; warnings: string[] }> {
   const parsed = await parseRawPunchLogWorkbook(buffer);
+  const matched = await matchPunchLogToAttendancePeople(
+    parsed.blocks,
+    peopleByExternal,
+    shifts,
+    fullTimeConfig,
+  );
+  return {
+    rows: matched.rows,
+    warnings: [...parsed.warnings, ...matched.warnings],
+  };
+}
+
+export async function parseAndMatchHikvisionMonthGridWorkbook(
+  buffer: ArrayBuffer,
+  peopleByExternal: Map<string, AttendancePerson>,
+  shifts: AttendanceShift[],
+  fullTimeConfig: FullTimeConfig,
+): Promise<{ rows: MatchedImportRow[]; warnings: string[] }> {
+  const parsed = await parseHikvisionMonthGridWorkbook(buffer);
   const matched = await matchPunchLogToAttendancePeople(
     parsed.blocks,
     peopleByExternal,
