@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   CheckCircle2,
   Bug,
@@ -20,6 +20,10 @@ import {
   QaTestAttemptHistory,
   type QaAttemptHistoryEntry,
 } from "@/components/testing/QaTestAttemptHistory";
+import {
+  QaScreenshotGallery,
+  type QaScreenshotMeta,
+} from "@/components/testing/QaScreenshotGallery";
 import { QA_SEVERITY_META } from "@/lib/qa-testing-format";
 import type { QaItemKind, QaTestResult, QaTestSeverity } from "@/types/db";
 import { formatDateTime } from "@/lib/utils";
@@ -62,6 +66,7 @@ export function QaTestResultPanel({
   expectedBehavior,
   testedAt,
   testerName,
+  resultAttachments = [],
   canManage,
   canInteract,
   compact = false,
@@ -76,6 +81,7 @@ export function QaTestResultPanel({
   expectedBehavior: string | null;
   testedAt: string | null;
   testerName: string | null;
+  resultAttachments?: QaScreenshotMeta[];
   canManage: boolean;
   canInteract: boolean;
   compact?: boolean;
@@ -92,6 +98,12 @@ export function QaTestResultPanel({
   );
   const [historyLoading, setHistoryLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [liveResultShots, setLiveResultShots] =
+    useState<QaScreenshotMeta[]>(resultAttachments);
+
+  useEffect(() => {
+    setLiveResultShots(resultAttachments);
+  }, [resultAttachments]);
 
   function clearForm() {
     setPendingResult(null);
@@ -333,6 +345,17 @@ export function QaTestResultPanel({
             {expectedBehavior}
           </p>
         ) : null}
+        {(result === "bug" || result === "improve") &&
+        (liveResultShots.length > 0 || canInteract || canManage) ? (
+          <QaScreenshotGallery
+            itemId={itemId}
+            projectId={projectId}
+            scope="result"
+            attachments={liveResultShots}
+            canEdit={canInteract || canManage}
+            compact
+          />
+        ) : null}
         {historyToggle}
         {historyBody}
       </div>
@@ -491,6 +514,14 @@ export function QaTestResultPanel({
                 rows={2}
                 placeholder="السلوك المتوقع (اختياري)"
                 className="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 outline-hidden focus:border-teal-500"
+              />
+              <QaScreenshotGallery
+                itemId={itemId}
+                projectId={projectId}
+                scope="result"
+                attachments={liveResultShots}
+                canEdit={canInteract || canManage}
+                compact
               />
             </>
           ) : null}

@@ -209,7 +209,7 @@ describe("QA_SEVERITY_META", () => {
 });
 
 describe("partitionQaItems", () => {
-  it("moves only pass to done; bugs/improve stay pending and sort first", () => {
+  it("moves only pass to done; tasks first, then bug → improve → untested", () => {
     const { pending, done } = partitionQaItems([
       { id: "1", item_kind: "test", result: "pass", tested_at: "2026-07-01T10:00:00Z" },
       { id: "2", item_kind: "task", result: null, tested_at: null },
@@ -219,8 +219,7 @@ describe("partitionQaItems", () => {
       { id: "6", item_kind: "test", result: "pass", tested_at: "2026-07-04T10:00:00Z" },
     ]);
     expect(done.map((i) => i.id)).toEqual(["6", "1"]);
-    // bugs → improve → tasks/untested (stable among same rank)
-    expect(pending.map((i) => i.id)).toEqual(["4", "5", "2", "3"]);
+    expect(pending.map((i) => i.id)).toEqual(["2", "4", "5", "3"]);
   });
 });
 

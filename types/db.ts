@@ -754,6 +754,35 @@ type QaTestAttemptInsert = {
   created_at?: string;
 };
 
+export type QaAttachmentScope = "item" | "result";
+
+export interface QaTestAttachment {
+  id: string;
+  item_id: string;
+  project_id: string;
+  scope: QaAttachmentScope;
+  attempt_id: string | null;
+  storage_path: string;
+  mime_type: string;
+  byte_size: number;
+  sort_order: number;
+  uploaded_by: string | null;
+  created_at: string;
+}
+type QaTestAttachmentInsert = {
+  id?: string;
+  item_id: string;
+  project_id: string;
+  scope: QaAttachmentScope;
+  attempt_id?: string | null;
+  storage_path: string;
+  mime_type: string;
+  byte_size: number;
+  sort_order?: number;
+  uploaded_by?: string | null;
+  created_at?: string;
+};
+
 export interface ProjectTask {
   id: string;
   category_id: string;
@@ -1091,6 +1120,7 @@ export interface Database {
       qa_sections: TableDef<QaSection, QaSectionInsert>;
       qa_test_items: TableDef<QaTestItem, QaTestItemInsert>;
       qa_test_attempts: TableDef<QaTestAttempt, QaTestAttemptInsert>;
+      qa_test_attachments: TableDef<QaTestAttachment, QaTestAttachmentInsert>;
       engineer_reports: TableDef<EngineerReport, EngineerReportInsert>;
       engineer_requests: TableDef<EngineerRequest, EngineerRequestInsert>;
       manager_claims: TableDef<ManagerClaim, ManagerClaimInsert>;

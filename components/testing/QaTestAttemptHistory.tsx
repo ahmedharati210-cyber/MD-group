@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { Bug, CheckCircle2, ChevronDown, Sparkles } from "lucide-react";
+import {
+  QaScreenshotThumbs,
+  type QaScreenshotMeta,
+} from "@/components/testing/QaScreenshotGallery";
 import { QA_SEVERITY_META } from "@/lib/qa-testing-format";
 import { formatDateTime, cn } from "@/lib/utils";
 import type { QaTestResult, QaTestSeverity } from "@/types/db";
@@ -38,6 +42,7 @@ export type QaAttemptHistoryEntry = {
   reset_at: string;
   tester: { full_name: string } | null;
   resetter: { full_name: string } | null;
+  attachments?: QaScreenshotMeta[];
 };
 
 export function QaTestAttemptHistory({
@@ -63,10 +68,12 @@ function AttemptEntry({ attempt }: { attempt: QaAttemptHistoryEntry }) {
   const severityMeta = attempt.severity
     ? QA_SEVERITY_META[attempt.severity]
     : null;
+  const shots = attempt.attachments ?? [];
   const hasDetails = Boolean(
     attempt.result_note ||
       attempt.steps_to_reproduce ||
-      attempt.expected_behavior,
+      attempt.expected_behavior ||
+      shots.length > 0,
   );
 
   return (
@@ -128,6 +135,7 @@ function AttemptEntry({ attempt }: { attempt: QaAttemptHistoryEntry }) {
               {attempt.expected_behavior}
             </p>
           ) : null}
+          {shots.length > 0 ? <QaScreenshotThumbs attachments={shots} /> : null}
           {attempt.resetter?.full_name || attempt.reset_at ? (
             <p className="text-gray-400">
               أُعيد فتحه

@@ -1,9 +1,13 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Pencil, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { updateQaTestItemAction } from "@/app/portal/testing/actions";
+import {
+  QaScreenshotGallery,
+  type QaScreenshotMeta,
+} from "@/components/testing/QaScreenshotGallery";
 import type { QaItemKind } from "@/types/db";
 
 type State = { error?: string; ok?: boolean };
@@ -42,6 +46,7 @@ export function EditQaTestItemForm({
   title,
   description,
   itemKind,
+  itemAttachments = [],
   onClose,
 }: {
   itemId: string;
@@ -49,10 +54,12 @@ export function EditQaTestItemForm({
   title: string;
   description: string | null;
   itemKind: QaItemKind;
+  itemAttachments?: QaScreenshotMeta[];
   onClose: () => void;
 }) {
   const action = updateQaTestItemAction.bind(null, itemId, projectId);
   const [state, formAction, isPending] = useActionState(action, init);
+  const [kind, setKind] = useState<QaItemKind>(itemKind);
 
   useEffect(() => {
     if (state?.ok) {
@@ -75,7 +82,8 @@ export function EditQaTestItemForm({
       <select
         id={`edit-kind-${itemId}`}
         name="item_kind"
-        defaultValue={itemKind}
+        value={kind}
+        onChange={(e) => setKind(e.target.value as QaItemKind)}
         className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900"
       >
         <option value="test">اختبار</option>
@@ -103,6 +111,20 @@ export function EditQaTestItemForm({
         placeholder="خطوات / رابط (اختياري)"
         className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900"
       />
+      {kind === "task" || itemAttachments.length > 0 ? (
+        <div>
+          <p className="text-[11px] font-medium text-gray-500 mb-1">
+            لقطات شاشة للمهمة
+          </p>
+          <QaScreenshotGallery
+            itemId={itemId}
+            projectId={projectId}
+            scope="item"
+            attachments={itemAttachments}
+            canEdit
+          />
+        </div>
+      ) : null}
       <div className="flex gap-2">
         <button
           type="submit"

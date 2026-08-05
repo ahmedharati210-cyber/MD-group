@@ -52,7 +52,10 @@ export default async function QaProjectDetailPage({
             id, title, description, item_kind, result, result_note,
             severity, steps_to_reproduce, expected_behavior,
             tested_by, tested_at, sort_order,
-            tester:tested_by(full_name)
+            tester:tested_by(full_name),
+            attachments:qa_test_attachments(
+              id, scope, mime_type, byte_size, sort_order, attempt_id
+            )
           )`,
       )
       .eq("project_id", id)
@@ -72,6 +75,9 @@ export default async function QaProjectDetailPage({
           severity: item.severity ?? null,
           steps_to_reproduce: item.steps_to_reproduce ?? null,
           expected_behavior: item.expected_behavior ?? null,
+          attachments: [...(item.attachments ?? [])]
+            .filter((a) => a.attempt_id == null)
+            .sort((a, b) => a.sort_order - b.sort_order),
         })),
     }),
   );

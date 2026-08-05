@@ -9,7 +9,8 @@ companies (slug = itqan)
   └── qa_projects          # platform / site
         ├── qa_sections    # groups of items
         └── qa_test_items  # test | task + optional live result
-              └── qa_test_attempts  # immutable history (on reset / change / clear)
+              ├── qa_test_attachments  # screenshots (item | result scope)
+              └── qa_test_attempts     # immutable history (on reset / change / clear)
 ```
 
 ### Enums
@@ -20,6 +21,14 @@ companies (slug = itqan)
 | `qa_test_result` | `pass`, `bug`, `improve` |
 | `qa_item_kind` | `test` (اختبار), `task` (مهمة) |
 | `qa_test_severity` | `low`, `medium`, `high`, `critical` |
+| `qa_attachment_scope` | `item` (task context), `result` (bug/improve evidence) |
+
+### Screenshots (`qa_test_attachments`)
+
+- Optional; up to **3** images per scope per item (`jpeg` / `png` / `webp`, max **5 MB** each).
+- **`item` scope:** attach when creating/editing a **مهمة**. Stays on the item across reset/convert.
+- **`result` scope:** attach when submitting **خلل** / **تحسين**. On archive, rows are stamped with `attempt_id` and shown in السجل.
+- Stored privately in the `documents` bucket under `qa-testing/{project_id}/{item_id}/…`; upload via signed URL (admin client).
 
 ### Structured bug fields (on `qa_test_items`)
 
@@ -51,7 +60,7 @@ Route: `/portal/testing/[id]` — container `max-w-6xl`.
 
 ### Checklist (main column)
 
-- Each section shows **actionable** items first: **bugs**, then **improve**, then tasks/untested (sorted for attention).
+- Each section shows **actionable** items first: **tasks**, then tests by attention (**bug** → **improve** → untested). The add-item form opens under the section header.
 - Only **`pass`** moves into the collapsed-by-default **مكتمل (N)** group (sorted by `tested_at` descending). Bug/improve stay in the main list until fixed and re-passed.
 - Filters: الكل / غير مختبر / **خلل وتحسين** (bug|improve) / مهام. The Done group is only shown under «الكل».
 - Focusing an item from the overview forces filter to **الكل** so the target is in the DOM.
@@ -105,11 +114,16 @@ RLS mirrors this: `current_has_testing_access`, `current_can_interact_testing`, 
 | `supabase/migrations/0071_qa_testing_hardening.sql` | Drop `assigned_to`, interact helper, trigger fix |
 | `supabase/migrations/0072_qa_testing_history_and_severity.sql` | Severity fields, attempts history, reset RPCs |
 | `supabase/migrations/0073_qa_testing_security_hardening.sql` | Privilege column lock, tester trigger, archive-on-change |
+| `supabase/migrations/0074_fix_archive_qa_row_count.sql` | Fix archive ROW_COUNT boolean bug |
+| `supabase/migrations/0075_qa_test_screenshots.sql` | Attachments table + stamp on archive |
 | `app/portal/testing/` | Pages + server actions |
+| `app/portal/testing/screenshot-actions.ts` | Signed upload / view / delete |
+| `components/testing/QaScreenshotGallery.tsx` | Thumbnail gallery + lightbox |
 | `components/testing/QaProjectWorkspace.tsx` | Desktop grid + mobile tabs |
 | `components/testing/QaTestingOverviewPanel.tsx` | Search / nav / open + recent feeds |
 | `components/testing/QaSectionDoneGroup.tsx` | Per-section collapsed Done group |
 | `components/testing/QaSectionsList.tsx` | Checklist + filters + DnD |
 | `lib/itqan-testing.ts` | Access helpers + Itqan company id |
 | `lib/qa-testing-format.ts` | Labels, validation, progress/partition/search helpers |
+| `lib/qa-screenshots.ts` | Mime/size limits |
 | `app/portal/admin/testing-access-toggle.tsx` | Superadmin grant UI |

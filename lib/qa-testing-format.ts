@@ -100,7 +100,7 @@ function attentionSortRank(result: QaTestResult | null | undefined): number {
 
 /**
  * Split items into pending (tasks, untested, bug, improve) and done (pass only).
- * Pending is sorted: bugs first, then improve, then the rest (stable by input order).
+ * Pending is sorted: tasks first, then tests by attention (bug → improve → untested).
  * Done is sorted by tested_at descending (most recent first).
  */
 export function partitionQaItems<T extends QaPartitionableItem>(items: T[]): {
@@ -119,10 +119,10 @@ export function partitionQaItems<T extends QaPartitionableItem>(items: T[]): {
   }
 
   pending.sort((a, b) => {
-    const rankDiff =
-      attentionSortRank(a.result) - attentionSortRank(b.result);
-    if (rankDiff !== 0) return rankDiff;
-    return 0;
+    const aTask = (a.item_kind ?? "test") === "task" ? 0 : 1;
+    const bTask = (b.item_kind ?? "test") === "task" ? 0 : 1;
+    if (aTask !== bTask) return aTask - bTask;
+    return attentionSortRank(a.result) - attentionSortRank(b.result);
   });
 
   done.sort((a, b) => {

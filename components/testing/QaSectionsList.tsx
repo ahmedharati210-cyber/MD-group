@@ -39,6 +39,8 @@ import { QaItemKindBadge } from "@/components/testing/QaItemKindBadge";
 import { QaSectionDoneGroup } from "@/components/testing/QaSectionDoneGroup";
 import { QaSortableHandle } from "@/components/testing/QaSortableHandle";
 import type { QaAttemptHistoryEntry } from "@/components/testing/QaTestAttemptHistory";
+import type { QaScreenshotMeta } from "@/components/testing/QaScreenshotGallery";
+import { QaScreenshotGallery } from "@/components/testing/QaScreenshotGallery";
 import { QaTestResultPanel } from "@/components/testing/QaTestResultPanel";
 import {
   computeQaProgress,
@@ -64,6 +66,7 @@ export type QaListItem = {
   sort_order: number;
   tester: { full_name: string } | null;
   attempts?: QaAttemptHistoryEntry[];
+  attachments?: QaScreenshotMeta[];
 };
 
 export type QaListSection = {
@@ -661,6 +664,18 @@ function StaticSectionCard({
     >
       {!isCollapsed ? (
         <>
+          {canManage && isAdding ? (
+            <div
+              id={`qa-add-${section.id}`}
+              className="px-2.5 pt-2 pb-1 scroll-mt-24"
+            >
+              <AddQaTestItemForm
+                sectionId={section.id}
+                projectId={projectId}
+                onCancel={onCancelAddItem}
+              />
+            </div>
+          ) : null}
           <ul className="divide-y divide-gray-100 dark:divide-gray-800">
             {section.items.map((item) => {
               const kind = item.item_kind ?? "test";
@@ -687,15 +702,6 @@ function StaticSectionCard({
               );
             })}
           </ul>
-          {canManage && isAdding ? (
-            <div className="px-2.5 pb-2.5">
-              <AddQaTestItemForm
-                sectionId={section.id}
-                projectId={projectId}
-                onCancel={onCancelAddItem}
-              />
-            </div>
-          ) : null}
           <QaSectionDoneGroup
             sectionId={section.id}
             items={doneItems}
@@ -781,6 +787,19 @@ function SortableSectionCard({
     >
       {!isCollapsed ? (
         <>
+          {canManage && isAdding ? (
+            <div
+              id={`qa-add-${section.id}`}
+              className="px-2.5 pt-2 pb-1 scroll-mt-24"
+            >
+              <AddQaTestItemForm
+                sectionId={section.id}
+                projectId={projectId}
+                onCancel={onCancelAddItem}
+              />
+            </div>
+          ) : null}
+
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -810,16 +829,6 @@ function SortableSectionCard({
               </ul>
             </SortableContext>
           </DndContext>
-
-          {canManage && isAdding ? (
-            <div className="px-2.5 pb-2.5">
-              <AddQaTestItemForm
-                sectionId={section.id}
-                projectId={projectId}
-                onCancel={onCancelAddItem}
-              />
-            </div>
-          ) : null}
 
           <QaSectionDoneGroup
             sectionId={section.id}
@@ -916,8 +925,27 @@ function ItemContent({
           title={item.title}
           description={item.description}
           itemKind={kind}
+          itemAttachments={(item.attachments ?? []).filter(
+            (a) => a.scope === "item",
+          )}
           onClose={() => onEditingChange(null)}
         />
+      ) : null}
+      {!isEditing &&
+      kind === "task" &&
+      (item.attachments ?? []).some((a) => a.scope === "item") ? (
+        <div className="mt-1">
+          <QaScreenshotGallery
+            itemId={item.id}
+            projectId={projectId}
+            scope="item"
+            attachments={(item.attachments ?? []).filter(
+              (a) => a.scope === "item",
+            )}
+            canEdit={false}
+            compact
+          />
+        </div>
       ) : null}
       <div className="mt-0.5 pr-0.5 flex justify-start sm:justify-end">
         <QaTestResultPanel
@@ -931,6 +959,9 @@ function ItemContent({
           expectedBehavior={item.expected_behavior}
           testedAt={item.tested_at}
           testerName={item.tester?.full_name ?? null}
+          resultAttachments={(item.attachments ?? []).filter(
+            (a) => a.scope === "result",
+          )}
           canManage={canManage}
           canInteract={canInteract}
           compact

@@ -14,7 +14,11 @@ import { logAudit } from "@/lib/audit";
 import { validateQaResultSubmit } from "@/lib/qa-testing-format";
 import type { QaTestResult, QaTestSeverity } from "@/types/db";
 
-export type ActionState = { error?: string; ok?: boolean };
+export type ActionState = {
+  error?: string;
+  ok?: boolean;
+  itemIds?: string[];
+};
 
 const uuidSchema = z.string().uuid("معرف غير صالح");
 
@@ -331,17 +335,22 @@ export async function createQaTestItemAction(
     sort_order: baseOrder + idx,
   }));
 
-  const { error } = await supabase.from("qa_test_items").insert(rows);
+  const { data: inserted, error } = await supabase
+    .from("qa_test_items")
+    .insert(rows)
+    .select("id");
   if (error) return { error: error.message };
 
-  void logAudit(current.userId, "create", "qa_test_item", null, {
+  const itemIds = (inserted ?? []).map((r) => (r as { id: string }).id);
+
+  void logAudit(current.userId, "create", "qa_test_item", itemIds[0] ?? null, {
     titles: titles.join(", "),
     item_kind,
     project_id: projectId,
   });
 
   revalidateTesting(projectId);
-  return { ok: true };
+  return { ok: true, itemIds };
 }
 
 export async function updateQaTestItemAction(
@@ -538,6 +547,15 @@ export async function submitQaTestResultAction(
   return { ok: true };
 }
 
+export type QaAttemptAttachmentRow = {
+  id: string;
+  scope: "item" | "result";
+  mime_type: string;
+  byte_size: number;
+  sort_order: number;
+  attempt_id: string | null;
+};
+
 export type QaAttemptRow = {
   id: string;
   result: QaTestResult;
@@ -549,6 +567,7 @@ export type QaAttemptRow = {
   reset_at: string;
   tester: { full_name: string } | null;
   resetter: { full_name: string } | null;
+  attachments?: QaAttemptAttachmentRow[];
 };
 
 /** Lazy-load attempt history for the السجل toggle (any testing-access user). */
@@ -566,13 +585,22 @@ export async function getQaTestAttemptsAction(
       `id, result, result_note, severity, steps_to_reproduce, expected_behavior,
        tested_at, reset_at,
        tester:tested_by(full_name),
-       resetter:reset_by(full_name)`,
+       resetter:reset_by(full_name),
+       attachments:qa_test_attachments(
+         id, scope, mime_type, byte_size, sort_order, attempt_id
+       )`,
     )
     .eq("item_id", itemId)
     .order("reset_at", { ascending: false });
 
   if (error) return { error: error.message };
-  return { attempts: (data ?? []) as unknown as QaAttemptRow[] };
+  const attempts = ((data ?? []) as unknown as QaAttemptRow[]).map((a) => ({
+    ...a,
+    attachments: [...(a.attachments ?? [])].sort(
+      (x, y) => x.sort_order - y.sort_order,
+    ),
+  }));
+  return { attempts };
 }
 
 export async function resetQaTestResultAction(
