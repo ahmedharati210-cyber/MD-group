@@ -174,8 +174,11 @@ export function NewEmployeeForm({
           <Field label="المسمى الوظيفي">
             <Input name="job_title" placeholder="محاسب، مهندس..." />
           </Field>
-          <Field label="القسم / الإدارة">
+          <Field label="الفرع / القسم">
             <Input name="department" />
+          </Field>
+          <Field label="رقم الموظف (خارجي) / البصمة">
+            <Input name="external_employee_number" dir="ltr" />
           </Field>
           <Field label="تاريخ التوظيف">
             <Input name="hired_at" type="date" />

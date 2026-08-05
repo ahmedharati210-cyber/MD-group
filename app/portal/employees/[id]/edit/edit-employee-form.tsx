@@ -169,11 +169,20 @@ export function EditEmployeeForm({
             />
           </Field>
 
-          <Field label="القسم / الإدارة">
+          <Field label="الفرع / القسم">
             <input
               name="department"
               defaultValue={profile.department ?? ""}
               className={inputClasses}
+            />
+          </Field>
+
+          <Field label="رقم الموظف (خارجي) / البصمة">
+            <input
+              name="external_employee_number"
+              defaultValue={profile.external_employee_number ?? ""}
+              className={inputClasses}
+              dir="ltr"
             />
           </Field>
 
