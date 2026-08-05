@@ -42,12 +42,58 @@ export function QaScreenshotGallery({
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
+  const dragDepthRef = useRef(0);
 
   useEffect(() => {
     setItems(initial);
   }, [initial]);
+
+  const canAcceptDrop =
+    canEdit && !uploading && items.length < QA_SCREENSHOT_MAX_COUNT;
+
+  function onDragEnter(e: React.DragEvent) {
+    if (!canEdit) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current += 1;
+    if (canAcceptDrop) setDragOver(true);
+  }
+
+  function onDragOver(e: React.DragEvent) {
+    if (!canEdit) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = canAcceptDrop ? "copy" : "none";
+  }
+
+  function onDragLeave(e: React.DragEvent) {
+    if (!canEdit) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current -= 1;
+    if (dragDepthRef.current <= 0) {
+      dragDepthRef.current = 0;
+      setDragOver(false);
+    }
+  }
+
+  function onDrop(e: React.DragEvent) {
+    if (!canEdit) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current = 0;
+    setDragOver(false);
+    if (!canAcceptDrop) {
+      if (items.length >= QA_SCREENSHOT_MAX_COUNT) {
+        toast.error(`حد أقصى ${QA_SCREENSHOT_MAX_COUNT} صور`);
+      }
+      return;
+    }
+    void onFilesSelected(e.dataTransfer.files);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -156,76 +202,107 @@ export function QaScreenshotGallery({
 
   if (items.length === 0 && !canEdit) return null;
 
+  const strip = (
+    <div className="flex flex-wrap gap-1.5 items-center">
+      {items.map((a) => {
+        const url = urls[a.id];
+        return (
+          <div
+            key={a.id}
+            className="relative group w-14 h-14 rounded-md overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 shrink-0"
+          >
+            {url ? (
+              <button
+                type="button"
+                onClick={() => setLightbox(url)}
+                className="block w-full h-full"
+                aria-label="عرض الصورة"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
+              </div>
+            )}
+            {canEdit ? (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => remove(a.id)}
+                className="absolute top-0.5 start-0.5 p-0.5 rounded bg-black/55 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                aria-label="حذف الصورة"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            ) : null}
+          </div>
+        );
+      })}
+
+      {canEdit && items.length < QA_SCREENSHOT_MAX_COUNT ? (
+        <>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            className="sr-only"
+            onChange={(e) => void onFilesSelected(e.target.files)}
+          />
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+            className="inline-flex items-center gap-1 px-2 py-1.5 text-[11px] font-medium rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 hover:border-teal-400 hover:text-teal-600 disabled:opacity-50"
+          >
+            {uploading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <ImagePlus className="w-3.5 h-3.5" />
+            )}
+            لقطة شاشة
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
+
   return (
     <div className={cn("space-y-1.5", compact && "mt-1")}>
-      <div className="flex flex-wrap gap-1.5 items-center">
-        {items.map((a) => {
-          const url = urls[a.id];
-          return (
-            <div
-              key={a.id}
-              className="relative group w-14 h-14 rounded-md overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 shrink-0"
-            >
-              {url ? (
-                <button
-                  type="button"
-                  onClick={() => setLightbox(url)}
-                  className="block w-full h-full"
-                  aria-label="عرض الصورة"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
-                </div>
-              )}
-              {canEdit ? (
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => remove(a.id)}
-                  className="absolute top-0.5 start-0.5 p-0.5 rounded bg-black/55 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                  aria-label="حذف الصورة"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              ) : null}
-            </div>
-          );
-        })}
-
-        {canEdit && items.length < QA_SCREENSHOT_MAX_COUNT ? (
-          <>
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              className="sr-only"
-              onChange={(e) => void onFilesSelected(e.target.files)}
-            />
-            <button
-              type="button"
-              disabled={uploading}
-              onClick={() => inputRef.current?.click()}
-              className="inline-flex items-center gap-1 px-2 py-1.5 text-[11px] font-medium rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 hover:border-teal-400 hover:text-teal-600 disabled:opacity-50"
-            >
-              {uploading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <ImagePlus className="w-3.5 h-3.5" />
-              )}
-              لقطة شاشة
-            </button>
-          </>
-        ) : null}
-      </div>
+      {canEdit ? (
+        <div
+          onDragEnter={onDragEnter}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+          className={cn(
+            "rounded-lg border border-dashed px-2 py-2 transition-colors",
+            dragOver
+              ? "border-teal-500 bg-teal-50/80 dark:bg-teal-900/20"
+              : "border-gray-200 dark:border-gray-700 bg-transparent",
+          )}
+        >
+          {strip}
+          <p
+            className={cn(
+              "mt-1.5 text-[10px] text-center",
+              dragOver
+                ? "text-teal-700 dark:text-teal-300 font-medium"
+                : "text-gray-400",
+            )}
+          >
+            اسحب الصور هنا أو اختر ملفاً
+          </p>
+        </div>
+      ) : (
+        strip
+      )}
 
       {lightbox ? (
         <div
