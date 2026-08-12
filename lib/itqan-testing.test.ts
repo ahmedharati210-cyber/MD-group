@@ -122,36 +122,38 @@ describe("canManageTesting", () => {
   });
 });
 
-/** Progress % excludes tasks — mirrors UI calculation. */
+/** Progress includes tasks in the total — mirrors computeQaProgress. */
 function computeTestProgress(
   items: { item_kind?: "test" | "task"; result: string | null }[],
 ) {
-  const testItems = items.filter((i) => (i.item_kind ?? "test") !== "task");
-  const total = testItems.length;
-  const tested = testItems.filter((i) => i.result != null).length;
+  const total = items.length;
+  const tested = items.filter((i) => i.result != null).length;
   const pct = total > 0 ? Math.round((tested / total) * 100) : 0;
-  return { total, tested, pct, taskCount: items.length - total };
+  const taskCount = items.filter((i) => (i.item_kind ?? "test") === "task")
+    .length;
+  return { total, tested, pct, taskCount };
 }
 
-describe("QA progress excludes tasks", () => {
-  it("ignores tasks when computing percent", () => {
+describe("QA progress includes tasks", () => {
+  it("includes tasks in total when computing percent", () => {
     const stats = computeTestProgress([
       { item_kind: "test", result: "pass" },
       { item_kind: "test", result: null },
       { item_kind: "task", result: null },
       { item_kind: "task", result: null },
     ]);
-    expect(stats.total).toBe(2);
+    expect(stats.total).toBe(4);
     expect(stats.tested).toBe(1);
-    expect(stats.pct).toBe(50);
+    expect(stats.pct).toBe(25);
     expect(stats.taskCount).toBe(2);
   });
 
-  it("returns 0% with only tasks", () => {
+  it("shows 0% with only untested tasks but non-zero total", () => {
     const stats = computeTestProgress([
       { item_kind: "task", result: null },
     ]);
-    expect(stats.total).toBe(0);
+    expect(stats.total).toBe(1);
+    expect(stats.tested).toBe(0);
     expect(stats.pct).toBe(0);
     expect(stats.taskCount).toBe(1);
   });
@@ -321,7 +323,7 @@ describe("recentOpenQaItems", () => {
 });
 
 describe("computeQaProgress", () => {
-  it("counts tests only and derives open = bugs + improves", () => {
+  it("counts all items including tasks; open = bugs + improves", () => {
     const stats = computeQaProgress([
       { item_kind: "test", result: "pass" },
       { item_kind: "test", result: "bug" },
@@ -330,14 +332,14 @@ describe("computeQaProgress", () => {
       { item_kind: "task", result: null },
     ]);
     expect(stats).toMatchObject({
-      total: 4,
+      total: 5,
       tested: 3,
       passes: 1,
       bugs: 1,
       improves: 1,
       open: 2,
       taskCount: 1,
-      pct: 75,
+      pct: 60,
     });
   });
 });

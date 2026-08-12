@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AppWindow, Check, ChevronDown } from "lucide-react";
+import { computeQaProgress } from "@/lib/qa-testing-format";
 import type { QaItemKind, QaProjectStatus, QaTestResult } from "@/types/db";
 import { QaProjectStatusSelect } from "./QaProjectStatusSelect";
 
@@ -56,14 +57,8 @@ export function QaProjectsGrid({
         const allItems = sortedSections.flatMap((s) =>
           [...s.items].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
         );
-        const testItems = allItems.filter(
-          (i) => (i.item_kind ?? "test") !== "task",
-        );
-        const taskCount = allItems.length - testItems.length;
-        const total = testItems.length;
-        const tested = testItems.filter((i) => i.result != null).length;
-        const bugs = testItems.filter((i) => i.result === "bug").length;
-        const pct = total > 0 ? Math.round((tested / total) * 100) : 0;
+        const { total, tested, taskCount, bugs, pct } =
+          computeQaProgress(allItems);
         const isExpanded = expandedId === p.id;
 
         return (

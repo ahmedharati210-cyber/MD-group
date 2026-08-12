@@ -209,17 +209,17 @@ export type QaProgressStats = {
   pct: number;
 };
 
-/** Shared progress stats for detail header / overview (tests only for %). */
+/** Shared progress stats — all items (tests + tasks) count toward total. */
 export function computeQaProgress(
   items: { item_kind?: "test" | "task" | null; result: QaTestResult | null }[],
 ): QaProgressStats {
-  const testItems = items.filter((i) => (i.item_kind ?? "test") !== "task");
-  const taskCount = items.length - testItems.length;
-  const total = testItems.length;
-  const tested = testItems.filter((i) => i.result != null).length;
-  const passes = testItems.filter((i) => i.result === "pass").length;
-  const bugs = testItems.filter((i) => i.result === "bug").length;
-  const improves = testItems.filter((i) => i.result === "improve").length;
+  const total = items.length;
+  const taskCount = items.filter((i) => (i.item_kind ?? "test") === "task")
+    .length;
+  const tested = items.filter((i) => i.result != null).length;
+  const passes = items.filter((i) => i.result === "pass").length;
+  const bugs = items.filter((i) => i.result === "bug").length;
+  const improves = items.filter((i) => i.result === "improve").length;
   const open = bugs + improves;
   const pct = total > 0 ? Math.round((tested / total) * 100) : 0;
   return { total, tested, passes, bugs, improves, open, taskCount, pct };

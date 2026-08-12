@@ -49,8 +49,8 @@ companies (slug = itqan)
 
 ### Progress metrics
 
-- Progress bar / `%` = **tested / total tests** (any submitted result). Open tasks are excluded from the denominator.
-- Chips: **نجاح** (pass count) and **خلل/تحسين** (bug + improve). Section headers and overview nav show `tested/total` and `· N خلل/تحسين` when open > 0.
+- Progress bar / `%` = **tested / total items** (tests **and** tasks). An item counts as tested when it has any submitted result.
+- Chips: **نجاح** (pass count), **خلل/تحسين** (bug + improve), and **مهام** when taskCount > 0. Section headers and overview nav show `tested/total` and `· N خلل/تحسين` when open > 0.
 
 Helpers: `computeQaProgress`, `partitionQaItems`, `recentOpenQaItems`, `recentCompletedQaItems` in [`lib/qa-testing-format.ts`](../lib/qa-testing-format.ts).
 
