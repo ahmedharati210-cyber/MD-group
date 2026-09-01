@@ -21,6 +21,10 @@ import {
   personToSyntheticShift,
 } from "@/lib/attendance/person-schedule";
 import { type MatchedImportRow } from "@/lib/attendance/raw-excel-parser";
+import {
+  rosterEntriesFromBlocks,
+  type ImportRosterEntry,
+} from "@/lib/attendance/import-roster";
 
 function sessionToDayRow(
   block: RawPunchBlock,
@@ -78,9 +82,14 @@ export async function matchPunchLogToAttendancePeople(
   peopleByExternal: Map<string, AttendancePerson>,
   shifts: AttendanceShift[],
   fullTimeConfig: FullTimeConfig,
-): Promise<{ rows: MatchedImportRow[]; warnings: string[] }> {
+): Promise<{
+  rows: MatchedImportRow[];
+  warnings: string[];
+  rosterEntries: ImportRosterEntry[];
+}> {
   const rows: MatchedImportRow[] = [];
   const warnings: string[] = [];
+  const rosterEntries = rosterEntriesFromBlocks(blocks, peopleByExternal);
 
   for (const block of blocks) {
     const ext = block.externalEmployeeNumber?.trim();
@@ -115,7 +124,7 @@ export async function matchPunchLogToAttendancePeople(
     }
   }
 
-  return { rows, warnings };
+  return { rows, warnings, rosterEntries };
 }
 
 export async function parseAndMatchPunchLogWorkbook(
@@ -123,7 +132,11 @@ export async function parseAndMatchPunchLogWorkbook(
   peopleByExternal: Map<string, AttendancePerson>,
   shifts: AttendanceShift[],
   fullTimeConfig: FullTimeConfig,
-): Promise<{ rows: MatchedImportRow[]; warnings: string[] }> {
+): Promise<{
+  rows: MatchedImportRow[];
+  warnings: string[];
+  rosterEntries: ImportRosterEntry[];
+}> {
   const parsed = await parseRawPunchLogWorkbook(buffer);
   const matched = await matchPunchLogToAttendancePeople(
     parsed.blocks,
@@ -134,6 +147,7 @@ export async function parseAndMatchPunchLogWorkbook(
   return {
     rows: matched.rows,
     warnings: [...parsed.warnings, ...matched.warnings],
+    rosterEntries: matched.rosterEntries,
   };
 }
 
@@ -142,7 +156,11 @@ export async function parseAndMatchHikvisionMonthGridWorkbook(
   peopleByExternal: Map<string, AttendancePerson>,
   shifts: AttendanceShift[],
   fullTimeConfig: FullTimeConfig,
-): Promise<{ rows: MatchedImportRow[]; warnings: string[] }> {
+): Promise<{
+  rows: MatchedImportRow[];
+  warnings: string[];
+  rosterEntries: ImportRosterEntry[];
+}> {
   const parsed = await parseHikvisionMonthGridWorkbook(buffer);
   const matched = await matchPunchLogToAttendancePeople(
     parsed.blocks,
@@ -153,6 +171,7 @@ export async function parseAndMatchHikvisionMonthGridWorkbook(
   return {
     rows: matched.rows,
     warnings: [...parsed.warnings, ...matched.warnings],
+    rosterEntries: matched.rosterEntries,
   };
 }
 

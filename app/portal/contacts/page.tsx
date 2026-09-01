@@ -16,6 +16,11 @@ import { Pagination } from "@/components/portal/Pagination";
 import { DeleteButton } from "@/components/portal/DeleteButton";
 import { deleteContactAction } from "./actions";
 import type { TradeCategory } from "@/types/db";
+import {
+  PersistListFiltersForm,
+  RestoreListFilters,
+} from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 
 export const metadata = { title: "جهات الاتصال" };
 
@@ -95,7 +100,12 @@ export default async function ContactsPage({ searchParams }: { searchParams: Sea
         }
       />
 
-      <form className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-5" method="get">
+      <RestoreListFilters path="/portal/contacts" keys={LIST_FILTER_KEYS.contacts} />
+      <PersistListFiltersForm
+        path="/portal/contacts"
+        keys={LIST_FILTER_KEYS.contacts}
+        className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-5"
+      >
         <input
           type="text"
           name="q"
@@ -128,7 +138,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Sea
         <button type="submit" className="px-5 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-semibold text-sm hover:bg-gray-800 dark:hover:bg-white">
           بحث
         </button>
-      </form>
+      </PersistListFiltersForm>
 
       {contacts.length === 0 ? (
         <EmptyState icon={ContactIcon} title="لا توجد جهات" description={canEdit ? "أضف جهة اتصال جديدة للبدء." : "لا توجد جهات معتمدة بعد."} />

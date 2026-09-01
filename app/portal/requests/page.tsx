@@ -8,6 +8,9 @@ import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { RequestsFilter } from "@/components/requests/RequestsFilter";
 import type { RequestType, RequestStatus } from "@/types/db";
+import { getFilterCompanies } from "@/lib/data/companies";
+import { RestoreListFilters } from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 
 export const metadata = { title: "الطلبات" };
 
@@ -57,13 +60,20 @@ export default async function RequestsPage({
       ? scopeId ?? undefined
       : companyIdParam || undefined;
 
-  const requests = await getRequestsData({
-    profileId: profile.id ?? "",
-    isManager,
-    filterStatus: filterStatus || undefined,
-    filterType: filterType || undefined,
-    filterCompanyId,
-  });
+  const showCompanyPicker =
+    isManager &&
+    (Boolean(profile.is_super_admin) || profile.role === "md_admin");
+
+  const [requests, companies] = await Promise.all([
+    getRequestsData({
+      profileId: profile.id ?? "",
+      isManager,
+      filterStatus: filterStatus || undefined,
+      filterType: filterType || undefined,
+      filterCompanyId,
+    }),
+    showCompanyPicker ? getFilterCompanies() : Promise.resolve([]),
+  ]);
 
   return (
     <div>
@@ -80,11 +90,14 @@ export default async function RequestsPage({
         }
       />
 
+      <RestoreListFilters path="/portal/requests" keys={LIST_FILTER_KEYS.requests} />
       <RequestsFilter
         isManager={isManager}
+        companies={companies}
         currentStatus={filterStatus}
         currentType={filterType}
         currentCompanyId={companyIdParam}
+        showCompanyPicker={showCompanyPicker}
       />
 
       {requests.length === 0 ? (

@@ -9,6 +9,9 @@ import { EmptyState } from "@/components/portal/EmptyState";
 import { DeleteClaimButton } from "@/components/claims/DeleteClaimButton";
 import { ClaimsFilter } from "@/components/claims/ClaimsFilter";
 import { formatDate } from "@/lib/utils";
+import { getFilterCompanies } from "@/lib/data/companies";
+import { RestoreListFilters } from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 
 export const metadata = { title: "المطالبات" };
 
@@ -43,11 +46,17 @@ export default async function ClaimsPage({
       ? scopeId ?? undefined
       : companyIdParam || undefined;
 
-  const { claims, projects } = await getClaimsData({
-    filterQuery: filterQuery || undefined,
-    filterProjectId: filterProjectId || undefined,
-    companyId: filterCompanyId,
-  });
+  const showCompanyPicker =
+    Boolean(profile.is_super_admin) || profile.role === "md_admin";
+
+  const [{ claims, projects }, companies] = await Promise.all([
+    getClaimsData({
+      filterQuery: filterQuery || undefined,
+      filterProjectId: filterProjectId || undefined,
+      companyId: filterCompanyId,
+    }),
+    showCompanyPicker ? getFilterCompanies() : Promise.resolve([]),
+  ]);
 
   const hasFilter = !!filterQuery || !!filterProjectId || !!companyIdParam;
 
@@ -64,11 +73,14 @@ export default async function ClaimsPage({
         }
       />
 
+      <RestoreListFilters path="/portal/claims" keys={LIST_FILTER_KEYS.claims} />
       <ClaimsFilter
         projects={projects}
+        companies={companies}
         currentQuery={filterQuery}
         currentProjectId={filterProjectId}
         currentCompanyId={companyIdParam}
+        showCompanyPicker={showCompanyPicker}
       />
 
       {claims.length === 0 ? (

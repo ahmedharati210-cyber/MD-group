@@ -32,6 +32,8 @@ import {
   PersonListSkeleton,
 } from "./attendance-section-skeletons";
 import { buildBranchAttendanceHref } from "./attendance-navigation";
+import { RestoreListFilters } from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 
 export const metadata = { title: "الحضور الشهري" };
 
@@ -80,9 +82,20 @@ export default async function AttendancePage({
   const branches = companyId ? await getAttendanceBranches(companyId) : [];
   const branchId = resolveAttendanceBranchId(params.branchId, branches);
 
+  const hasClientFilterParams = Boolean(
+    params.companyId ||
+      params.branchId ||
+      params.month ||
+      searchQuery ||
+      rawSelectedDay ||
+      selectedPersonId,
+  );
+
   // Keep URL in sync with resolved company/branch/month so back links land correctly.
+  // Skip when the URL is empty so the client can restore last-used filters.
   // Also drop invalid out-of-period ?day= values.
   if (
+    hasClientFilterParams &&
     companyId &&
     branchId &&
     (params.companyId !== companyId ||
@@ -127,6 +140,15 @@ export default async function AttendancePage({
 
   return (
     <div>
+      <RestoreListFilters
+        path="/portal/attendance"
+        keys={LIST_FILTER_KEYS.attendance}
+        fallback={{
+          ...(companyId ? { companyId } : {}),
+          ...(branchId ? { branchId } : {}),
+          ...(month ? { month } : {}),
+        }}
+      />
       <PageHeader
         title="الحضور الشهري"
         description="تقويم شهري، ملخص، واستيراد/تصدير الحضور."
@@ -162,12 +184,12 @@ export default async function AttendancePage({
         periodLabel={periodLabel}
       />
 
-      {companyId && branchId ? (
+      {showExportHint ? (
         <AttendanceExportActions
           pdfHref={exportPdfHref}
           excelHref={exportHref}
-          canExport={canExport}
-          showHint={showExportHint}
+          canExport={false}
+          showHint
         />
       ) : null}
 

@@ -23,6 +23,8 @@ import { AttendanceExportActions } from "../attendance-export-actions";
 import { AttendancePayrollSummary } from "../attendance-payroll-summary";
 import { buildBranchAttendanceHref } from "../attendance-navigation";
 import { resolveAttendancePeriod } from "@/lib/attendance/attendance-period";
+import { RestoreListFilters } from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 
 export const metadata = { title: "ملخص الحضور والخصومات" };
 
@@ -94,6 +96,15 @@ export default async function AttendanceSummaryPage({
 
   return (
     <div>
+      <RestoreListFilters
+        path="/portal/attendance/summary"
+        keys={LIST_FILTER_KEYS.attendanceSummary}
+        fallback={{
+          ...(companyId ? { companyId } : {}),
+          ...(branchId ? { branchId } : {}),
+          ...(month ? { month } : {}),
+        }}
+      />
       <Link
         href={
           companyId && branchId
@@ -148,12 +159,12 @@ export default async function AttendanceSummaryPage({
         periodLabel={monthStartDay !== 1 ? (period?.label ?? null) : null}
       />
 
-      {companyId && branchId ? (
+      {showExportHint ? (
         <AttendanceExportActions
           pdfHref={exportPdfHref}
           excelHref={exportHref}
-          canExport={canExport}
-          showHint={showExportHint}
+          canExport={false}
+          showHint
         />
       ) : null}
 

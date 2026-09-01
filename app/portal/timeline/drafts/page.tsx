@@ -5,6 +5,13 @@ import { PageHeader } from "@/components/portal/PageHeader";
 import { PersonalDraftsCreateForm } from "@/components/timeline/PersonalDraftsCreateForm";
 import { PersonalDraftRow } from "@/components/timeline/PersonalDraftRow";
 import type { ProjectPersonalDraft } from "@/types/db";
+import { getFilterCompanies } from "@/lib/data/companies";
+import { CompanyFilterSelect } from "@/components/portal/CompanyFilterSelect";
+import {
+  PersistListFiltersForm,
+  RestoreListFilters,
+} from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 
 export const metadata = { title: "مسوداتي — المشاريع" };
 
@@ -56,6 +63,11 @@ export default async function PersonalDraftsPage({
   const supabase = await createSupabaseServerClient();
   const isSuper = profile.is_super_admin ?? false;
   const showCreate = profile.role === "md_admin";
+  const showCompanyPicker =
+    Boolean(profile.is_super_admin) || profile.role === "md_admin";
+  const companiesForFilter = showCompanyPicker
+    ? await getFilterCompanies()
+    : [];
 
   let projectQuery = supabase
     .from("projects")
@@ -134,6 +146,30 @@ export default async function PersonalDraftsPage({
             : "ملاحظات خاصة بك على مشاريع إعمار مرتبطة بالمشروع والمرحلة. لا يراها أحد غيرك ومشرف النظام."
         }
       />
+
+      <RestoreListFilters
+        path="/portal/timeline/drafts"
+        keys={LIST_FILTER_KEYS.timelineDrafts}
+      />
+      {showCompanyPicker && companiesForFilter.length > 0 ? (
+        <PersistListFiltersForm
+          path="/portal/timeline/drafts"
+          keys={LIST_FILTER_KEYS.timelineDrafts}
+          className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 mt-4"
+        >
+          <CompanyFilterSelect
+            companies={companiesForFilter}
+            value={companyIdParam ?? ""}
+            className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-hidden flex-1 min-w-48"
+          />
+          <button
+            type="submit"
+            className="px-5 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-semibold text-sm hover:bg-gray-800 dark:hover:bg-white"
+          >
+            تصفية
+          </button>
+        </PersistListFiltersForm>
+      ) : null}
 
       <div className="space-y-8 mt-6">
         {showCreate ? <PersonalDraftsCreateForm projects={projectsForForm} /> : null}

@@ -281,7 +281,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             const catPct = catTotal > 0 ? Math.round((catDone / catTotal) * 100) : 0;
 
             return (
-              <div key={cat.id} id={`cat-${cat.id}`} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
+              <div key={cat.id} id={`cat-${cat.id}`} className="scroll-mt-[calc(7.5rem+env(safe-area-inset-top))] md:scroll-mt-16 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
                 {/* Category header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-2 min-w-0">

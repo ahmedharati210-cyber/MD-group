@@ -7,6 +7,12 @@ import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
 import { formatDate } from "@/lib/utils";
+import {
+  PersistListFiltersForm,
+  RestoreListFilters,
+} from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
+import { EmployeesExportDialog } from "./employees-export-dialog";
 
 export const metadata = { title: "الموظفون" };
 
@@ -50,19 +56,31 @@ export default async function EmployeesPage({
         title="الموظفون"
         description="إدارة الموظفين والمدراء ضمن صلاحياتك."
         action={
-          current.profile.role !== "owner" ? (
-            <Link
-              href="/portal/employees/new"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm shadow-md hover:bg-primary-700 transition-colors w-full sm:w-auto justify-center"
-            >
-              <Plus className="w-4 h-4" />
-              إضافة موظف
-            </Link>
-          ) : null
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <EmployeesExportDialog
+              companies={companies ?? []}
+              canPickCompany={current.profile.role !== "company_manager"}
+              defaultCompanyId={companyId ?? ""}
+            />
+            {current.profile.role !== "owner" ? (
+              <Link
+                href="/portal/employees/new"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm shadow-md hover:bg-primary-700 transition-colors w-full sm:w-auto justify-center"
+              >
+                <Plus className="w-4 h-4" />
+                إضافة موظف
+              </Link>
+            ) : null}
+          </div>
         }
       />
 
-      <form className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-5">
+      <RestoreListFilters path="/portal/employees" keys={LIST_FILTER_KEYS.employees} />
+      <PersistListFiltersForm
+        path="/portal/employees"
+        keys={LIST_FILTER_KEYS.employees}
+        className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-5"
+      >
         <input
           type="text"
           name="q"
@@ -88,7 +106,7 @@ export default async function EmployeesPage({
         >
           تصفية
         </button>
-      </form>
+      </PersistListFiltersForm>
 
       {!employees || employees.length === 0 ? (
         <EmptyState

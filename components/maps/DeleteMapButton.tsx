@@ -19,7 +19,7 @@ export function DeleteMapButton({ mapId }: { mapId: string }) {
   }
 
   return (
-    <button onClick={handleDelete} disabled={isPending} className="p-2 text-red-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-60 transition-colors" aria-label="حذف">
+    <button onClick={handleDelete} disabled={isPending} className="inline-flex min-h-11 min-w-11 items-center justify-center text-red-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-60 transition-colors" aria-label="حذف">
       <Trash2 className="w-4 h-4" />
     </button>
   );

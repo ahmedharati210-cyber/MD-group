@@ -90,7 +90,7 @@ export function AttendanceDayPanel({
         سجلات {date} ({entries.length}
         {absentCount > 0 ? ` — ${absentCount} غياب` : ""})
       </h3>
-      <div className="max-h-[480px] overflow-y-auto overflow-x-auto">
+      <div className="overflow-x-auto md:max-h-[480px] md:overflow-y-auto">
         <div
           className="hidden md:grid md:min-w-[40rem] w-full"
           style={DAY_PANEL_GRID_STYLE}

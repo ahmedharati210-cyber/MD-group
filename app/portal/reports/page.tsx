@@ -9,6 +9,12 @@ import { formatTime } from "@/lib/utils";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
+import {
+  ClearListFiltersLink,
+  PersistListFiltersForm,
+  RestoreListFilters,
+} from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 
 export const metadata = { title: "التقارير" };
 
@@ -79,16 +85,19 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
       />
 
       {/* Filters */}
+      <RestoreListFilters path="/portal/reports" keys={LIST_FILTER_KEYS.reports} />
       <div className="flex flex-wrap gap-3 mb-6">
-        <form method="get" className="flex flex-wrap gap-3">
-          {sp.projectId ? (
+        <PersistListFiltersForm
+          path="/portal/reports"
+          keys={LIST_FILTER_KEYS.reports}
+          className="flex flex-wrap gap-3"
+        >
+          {sp.projectId && projects.length === 0 ? (
             <input type="hidden" name="projectId" value={sp.projectId} />
           ) : null}
-          {sp.authorId ? (
+          {sp.authorId && !(isManager && engineers) ? (
             <input type="hidden" name="authorId" value={sp.authorId} />
           ) : null}
-          {sp.from ? <input type="hidden" name="from" value={sp.from} /> : null}
-          {sp.to ? <input type="hidden" name="to" value={sp.to} /> : null}
           {companiesForFilter.length > 0 ? (
             <select
               name="companyId"
@@ -115,17 +124,21 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
               {engineers.map((e) => <option key={e.id} value={e.id}>{e.full_name}</option>)}
             </select>
           ) : null}
-          <input type="date" name="from" defaultValue={sp.from ?? ""} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-hidden" />
-          <input type="date" name="to" defaultValue={sp.to ?? ""} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-hidden" />
+          <input type="date" name="from" defaultValue={sp.from ?? ""} className="w-full min-w-0 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-hidden" />
+          <input type="date" name="to" defaultValue={sp.to ?? ""} className="w-full min-w-0 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-hidden" />
           <button type="submit" className="px-4 py-2 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 text-sm font-semibold rounded-xl hover:bg-gray-700 dark:hover:bg-gray-300 transition-colors">
             تصفية
           </button>
           {(sp.projectId || sp.authorId || sp.from || sp.to || companyIdParam) ? (
-            <Link href="/portal/reports" className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-sm rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            <ClearListFiltersLink
+              path="/portal/reports"
+              href="/portal/reports"
+              className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-sm rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
               مسح
-            </Link>
+            </ClearListFiltersLink>
           ) : null}
-        </form>
+        </PersistListFiltersForm>
       </div>
 
       {reports.length === 0 ? (

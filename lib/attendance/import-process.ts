@@ -28,9 +28,14 @@ import {
 } from "@/lib/data/monthly-attendance";
 import type { AttendanceBranch, AttendancePerson } from "@/types/db";
 import type { AttendanceFileFormat } from "@/lib/attendance/attendance-format";
+import {
+  unionRosterEntries,
+  type ImportRosterEntry,
+} from "@/lib/attendance/import-roster";
 
 export type ProcessedImport = {
   rows: MatchedImportRow[];
+  rosterEntries: ImportRosterEntry[];
   warnings: string[];
   format: AttendanceFileFormat;
   monthMismatch: ReturnType<typeof detectImportMonthMismatch>;
@@ -66,6 +71,7 @@ export async function processAttendanceImportFile(
 
   let rows: MatchedImportRow[] = [];
   let warnings: string[] = [];
+  let rosterEntries: ImportRosterEntry[] = [];
 
   if (format === "raw_punch_log") {
     const matched = await parseAndMatchPunchLogWorkbook(
@@ -76,6 +82,7 @@ export async function processAttendanceImportFile(
     );
     rows = matched.rows;
     warnings = matched.warnings;
+    rosterEntries = matched.rosterEntries;
   } else if (format === "per_day") {
     const parsed = await parseRawAttendanceWorkbook(buffer);
     const matched = matchBlocksToAttendancePeople(
@@ -86,6 +93,7 @@ export async function processAttendanceImportFile(
     );
     rows = matched.rows;
     warnings = [...parsed.warnings, ...matched.warnings];
+    rosterEntries = matched.rosterEntries;
   } else if (format === "hikvision_month_grid") {
     const matched = await parseAndMatchHikvisionMonthGridWorkbook(
       buffer,
@@ -95,6 +103,7 @@ export async function processAttendanceImportFile(
     );
     rows = matched.rows;
     warnings = matched.warnings;
+    rosterEntries = matched.rosterEntries;
   } else {
     return {
       error:
@@ -125,8 +134,9 @@ export async function processAttendanceImportFile(
   }
 
   rows = dedupeMatchedImportRows(rows, shifts, fullTimeConfig, people);
+  rosterEntries = unionRosterEntries(rosterEntries, rows);
 
-  return { rows, warnings, format, monthMismatch };
+  return { rows, rosterEntries, warnings, format, monthMismatch };
 }
 
 export function buildPeopleMap(

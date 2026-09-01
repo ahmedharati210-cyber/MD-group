@@ -47,7 +47,7 @@ export function AttendanceMetricDrilldownModal({
       aria-label={title}
     >
       <div
-        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-3xl border border-gray-200 dark:border-gray-800 overflow-hidden max-h-[85vh] flex flex-col"
+        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-3xl border border-gray-200 dark:border-gray-800 overflow-hidden max-h-[90vh] flex flex-col"
         dir="rtl"
       >
         <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
@@ -64,7 +64,7 @@ export function AttendanceMetricDrilldownModal({
           </button>
         </div>
 
-        <div className="overflow-auto flex-1">
+        <div className="overflow-y-auto flex-1">
           {rows.length === 0 ? (
             <p className="px-5 py-8 text-sm text-gray-500 text-center">
               {emptyMessage}

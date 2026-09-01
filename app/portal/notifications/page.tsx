@@ -18,6 +18,11 @@ import { MarkReadButton } from "@/components/warnings/MarkReadButton";
 import { MarkAllReadButton } from "@/components/warnings/MarkAllReadButton";
 import { DeleteWarningButton } from "@/components/warnings/DeleteWarningButton";
 import { formatDate, cn } from "@/lib/utils";
+import {
+  PersistListFiltersForm,
+  RestoreListFilters,
+} from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 
 export const metadata = { title: "مركز الإشعارات" };
 
@@ -225,6 +230,11 @@ export default async function NotificationsPage({
         }
       />
 
+      <RestoreListFilters
+        path="/portal/notifications"
+        keys={LIST_FILTER_KEYS.notifications}
+      />
+
       {canReceiveInbox ? (
         <div className="flex gap-2 mb-6 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 w-full sm:w-auto">
           <Link
@@ -260,10 +270,12 @@ export default async function NotificationsPage({
       ) : null}
 
       {showCompanyFilter && (companies?.length ?? 0) > 0 ? (
-        <form
-          method="get"
-          className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 mb-6"
-        >
+        <div>
+          <PersistListFiltersForm
+            path="/portal/notifications"
+            keys={LIST_FILTER_KEYS.notifications}
+            className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 mb-6"
+          >
           <input type="hidden" name="tab" value="manage" />
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 sm:mr-2">
             <Building2 className="w-4 h-4" />
@@ -287,7 +299,8 @@ export default async function NotificationsPage({
           >
             تصفية
           </button>
-        </form>
+          </PersistListFiltersForm>
+        </div>
       ) : null}
 
       {isManager && activeTab === "manage" ? (

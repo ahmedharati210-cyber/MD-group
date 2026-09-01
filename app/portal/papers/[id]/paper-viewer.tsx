@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, CircleAlert } from "lucide-react";
+import { Download, CircleAlert, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
 
 type Props = {
@@ -37,15 +37,26 @@ export function PaperViewer({ signedUrl, mimeType, error }: Props) {
         <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
           رابط صالح لمدة 5 دقائق فقط
         </span>
-        <a
-          href={signedUrl}
-          download
-          onClick={() => toast.success("بدء التنزيل")}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 shrink-0"
-        >
-          <Download className="w-3.5 h-3.5" />
-          تنزيل
-        </a>
+        <div className="flex shrink-0 items-center gap-2">
+          <a
+            href={signedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            فتح
+          </a>
+          <a
+            href={signedUrl}
+            download
+            onClick={() => toast.success("بدء التنزيل")}
+            className="inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            <Download className="w-3.5 h-3.5" />
+            تنزيل
+          </a>
+        </div>
       </div>
       {isPdf ? (
         <iframe
@@ -69,7 +80,7 @@ export function PaperViewer({ signedUrl, mimeType, error }: Props) {
           <a
             href={signedUrl}
             download
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl font-semibold text-sm"
+            className="inline-flex min-h-11 items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl font-semibold text-sm"
           >
             <Download className="w-4 h-4" />
             تنزيل الملف

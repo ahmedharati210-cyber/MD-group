@@ -6,6 +6,12 @@ import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
 import { formatDateTime } from "@/lib/utils";
+import {
+  ClearListFiltersLink,
+  PersistListFiltersForm,
+  RestoreListFilters,
+} from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -295,7 +301,8 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Sea
         }
       />
 
-      <form method="get" className="flex flex-wrap gap-3 mb-6">
+      <RestoreListFilters path="/portal/admin/audit" keys={LIST_FILTER_KEYS.audit} />
+      <PersistListFiltersForm path="/portal/admin/audit" keys={LIST_FILTER_KEYS.audit} className="flex flex-wrap gap-3 mb-6">
         {/* Action filter — hardcoded, always shows all known actions */}
         <select name="action" defaultValue={sp.action ?? ""} className={selectCls}>
           <option value="">كل الإجراءات</option>
@@ -327,14 +334,15 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Sea
           تصفية
         </button>
         {(sp.entity || sp.action || sp.actorId) ? (
-          <Link
+          <ClearListFiltersLink
+            path="/portal/admin/audit"
             href="/portal/admin/audit"
             className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-sm rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700"
           >
             مسح
-          </Link>
+          </ClearListFiltersLink>
         ) : null}
-      </form>
+      </PersistListFiltersForm>
 
       {rows.length === 0 ? (
         <EmptyState icon={ScrollText} title="لا توجد سجلات" description="لم تُجرَ أي عمليات مطابقة بعد." />

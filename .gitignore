@@ -47,3 +47,10 @@ next-env.d.ts
 *.jpeg
 *.jpg
 
+# Downloaded/exported spreadsheets (keep local, don't commit — may contain PII)
+*.xlsx
+!app/api/attendance/export.xlsx/
+!app/api/attendance/export.xlsx/**
+!app/api/employees/export.xlsx/
+!app/api/employees/export.xlsx/**
+

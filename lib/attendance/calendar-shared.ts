@@ -29,6 +29,17 @@ export const AR_WEEKDAY_LABELS = [
   "سبت",
 ] as const;
 
+/** Single-letter weekday headers for narrow calendar cells. */
+export const AR_WEEKDAY_SHORT_LABELS = [
+  "ح",
+  "ن",
+  "ث",
+  "ر",
+  "خ",
+  "ج",
+  "س",
+] as const;
+
 export function weekdayLabelAr(date: string): string {
   return AR_WEEKDAY_LABELS[new Date(`${date}T12:00:00`).getDay()];
 }

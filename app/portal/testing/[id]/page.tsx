@@ -14,6 +14,7 @@ import { DeleteQaProjectButton } from "@/components/testing/DeleteQaProjectButto
 import { QaProjectStatusSelect } from "@/components/testing/QaProjectStatusSelect";
 import { QaProjectWorkspace } from "@/components/testing/QaProjectWorkspace";
 import type { QaListSection } from "@/components/testing/QaSectionsList";
+import { parseQaFilter } from "@/lib/portal-list-filters";
 import type { QaProjectStatus } from "@/types/db";
 
 type ProjectRow = {
@@ -25,10 +26,13 @@ type ProjectRow = {
 
 export default async function QaProjectDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ filter?: string; q?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   const { profile } = await requireTestingAccess();
   const canManage = canManageTesting(profile);
   const canInteract = canInteractWithTesting(profile);
@@ -154,6 +158,8 @@ export default async function QaProjectDetailPage({
         sections={sections}
         canManage={canManage}
         canInteract={canInteract}
+        initialFilter={parseQaFilter(sp.filter)}
+        initialQuery={typeof sp.q === "string" ? sp.q : ""}
       />
     </div>
   );

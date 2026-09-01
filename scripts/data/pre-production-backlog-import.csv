@@ -1,0 +1,71 @@
+category,tag,title
+Sales,GATE,Arabic terminology + keyboard POS walkthrough sign-off (grocery)
+Sales,GATE,Physical POS hardware certification — scanner cash drawer customer display (grocery)
+Sales,INCOMPLETE,POS lot/serial selection UX — modal slows scan path (grocery)
+Sales,INCOMPLETE,Retail shell deepening beyond MVP (warranties / customer history thin)
+Sales,INCOMPLETE,Wholesale order-to-cash UI deepening beyond friction log
+Sales,INCOMPLETE,Fast-food shell deepening beyond friction log (KDS/recipes live; UX depth open)
+Sales,MISSING,Promotions engine with deterministic priority rules (grocery / retail)
+Sales,MISSING,Loyalty program (grocery / retail)
+Sales,MISSING,Direct card terminal integration
+Sales,MISSING,Retail quotations / layaway
+Sales,MISSING,Fast-food reservations
+Sales,MISSING,Fast-food delivery-marketplace integration
+Sales,MISSING,Fast-food full MRP
+Sales,MISSING,Wholesale full commission / payroll engine
+Sales,MISSING,Gold / jewelry production sales workflows (teller item identity custody)
+Sales,MISSING,Currency-exchange production teller workflows
+Purchases,INCOMPLETE,Harden purchase-order create UX
+Purchases,INCOMPLETE,Supplier-return UI (API exists; UI polish open)
+Purchases,INCOMPLETE,Landed-cost UI (API exists; UI polish open)
+Purchases,INCOMPLETE,Wholesale purchase-requisition UX depth beyond MVP
+Purchases,MISSING,Supplier bank-detail change approval workflow
+Purchases,MISSING,Landed-cost allocation rules UI beyond basic post path
+Purchases,MISSING,Gold purchasing / refining / customer-owned material intake (discovery-gated)
+Purchases,MISSING,FX vault / denomination purchase and custody intake (discovery-gated)
+Inventory,INCOMPLETE,Physical scale integration certification (simulators only today)
+Inventory,INCOMPLETE,Near-expiry alerts and recall reporting UI depth (grocery)
+Inventory,INCOMPLETE,Wholesale consignment stock UI depth beyond MVP
+Inventory,INCOMPLETE,Wholesale batch picking / packing / dispatch / POD deepening
+Inventory,MISSING,FIFO valuation method (WAC is default; FIFO not shipped)
+Inventory,MISSING,Full MRP / production planning (beyond fast-food recipe consume)
+Inventory,MISSING,Gold high-precision weight / purity / component valuation stock model (discovery-gated)
+Inventory,MISSING,FX multi-currency cash-position inventory / denomination counts (discovery-gated)
+Accounting,GATE,Libyan accountant posting-map review and sign-off — blocks live GL
+Accounting,GATE,Accountant production sign-off on COA + TB / BS / IS for pilot entity
+Accounting,INCOMPLETE,Fixed-asset impairment / write-off / disposal full UI
+Accounting,INCOMPLETE,Full bank-reconciliation UI depth
+Accounting,INCOMPLETE,Cash-flow statement mapping validation (preview exists; not statutory-complete)
+Accounting,INCOMPLETE,Multi-currency FX realized/unrealized postings beyond foundation
+Accounting,INCOMPLETE,Wholesale credit-limit / aging / statements UX depth beyond MVP
+Accounting,MISSING,Budgets module
+Accounting,MISSING,Payroll (needed for wholesale commission engine)
+Accounting,MISSING,Gold / jewelry production accounting (commodity valuation custody)
+Accounting,MISSING,Currency-exchange production accounting (positions rate approvals AML hooks)
+Reports and Printing,GATE,Physical receipt printer certification
+Reports and Printing,GATE,Label printer certification (shelf/price labels — grocery / retail)
+Reports and Printing,INCOMPLETE,Cash-flow report finish mapping so it is pilot-critical / statutory-ready
+Reports and Printing,INCOMPLETE,Report PDF/Excel edge cases under Arabic RTL after accountant review
+Reports and Printing,INCOMPLETE,Wholesale account statements / aging export polish beyond MVP
+Reports and Printing,INCOMPLETE,Fast-food kitchen / station printer routing depth beyond MVP
+Reports and Printing,MISSING,Tax reports activation path (Libya zero-tax today; dormant model only)
+Reports and Printing,MISSING,Gold operational / custody / valuation reports (discovery-gated)
+Reports and Printing,MISSING,FX compliance / position / rate reports (discovery-gated)
+Platform / Pilot,GATE,Name grocery pilot customer
+Platform / Pilot,GATE,Threat-model lite + data-classification sign-off
+Platform / Pilot,GATE,Complete one full business day without integrity incidents
+Platform / Pilot,GATE,Local server minimum specification document
+Platform / Pilot,GATE,Formal performance targets beyond interim benches
+Platform / Pilot,GATE,Gold discovery go/no-go with named customer (blocks gold production)
+Platform / Pilot,GATE,Currency-exchange discovery + Libya regulatory / AML go/no-go (blocks FX production)
+Platform / Pilot,INCOMPLETE,Wire frontend/env.mjs into runtime imports
+Platform / Pilot,INCOMPLETE,Business groups API (table exists; no API; FK not composite-tenant-safe)
+Platform / Pilot,INCOMPLETE,Offline local-stack proof as CI gate
+Platform / Pilot,INCOMPLETE,Cloud PostgreSQL (Supabase) parity proof vs local Postgres
+Platform / Pilot,INCOMPLETE,Replace platform MFA stub with real TOTP for operators
+Platform / Pilot,MISSING,Live Vercel / Railway / Supabase production project wiring
+Platform / Pilot,MISSING,Supabase Auth cloud provider adapter
+Platform / Pilot,MISSING,Cloud service plan selection
+Platform / Pilot,MISSING,Native mobile apps
+Platform / Pilot,MISSING,E-commerce channel
+Platform / Pilot,MISSING,Payment gateway for platform billing (offline invoices only today)

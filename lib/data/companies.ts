@@ -1,10 +1,25 @@
 import "server-only";
 
 import { cacheTag, cacheLife } from "next/cache";
-import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import {
+  createSupabaseAdminClient,
+  createSupabaseServerClient,
+} from "@/lib/supabase/server";
 import type { Company } from "@/types/db";
 
 export type CompanyWithCount = Company & { employeeCount: number };
+
+export type FilterCompanyOption = { id: string; name_ar: string };
+
+/** Compact company list for md_admin / owner / super-admin filter dropdowns. */
+export async function getFilterCompanies(): Promise<FilterCompanyOption[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("companies")
+    .select("id, name_ar")
+    .order("name_ar");
+  return (data ?? []) as FilterCompanyOption[];
+}
 
 /**
  * All companies with per-company employee counts.

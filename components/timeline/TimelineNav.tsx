@@ -57,7 +57,7 @@ export function TimelineNav({ categories }: Props) {
   return (
     <nav
       aria-label="التنقل بين الفئات"
-      className="sticky top-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 mb-5 print:hidden"
+      className="sticky z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 mb-5 print:hidden top-[calc(3.5rem+env(safe-area-inset-top))] md:top-0"
     >
       <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-2.5">
         {categories.map((cat) => {

@@ -250,7 +250,7 @@ export function AttendancePersonSummaryCards({
                 <p
                   className={
                     compact
-                      ? "text-[10px] text-gray-500 dark:text-gray-400 truncate"
+                      ? "text-[10px] text-gray-500 dark:text-gray-400 leading-snug break-words"
                       : "text-xs text-gray-500 dark:text-gray-400 mt-1"
                   }
                 >

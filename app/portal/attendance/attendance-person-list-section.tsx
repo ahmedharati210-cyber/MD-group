@@ -63,6 +63,7 @@ export async function AttendancePersonListSection({
       people={peopleWithCounts}
       selectedPersonId={personId}
       hasSearch={hasSearch}
+      searchQuery={searchQuery}
       navContext={{
         companyId,
         branchId,

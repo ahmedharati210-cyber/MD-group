@@ -4,7 +4,7 @@ import { PortalLink } from "@/components/portal/PortalLink";
 import { useSearchParams } from "next/navigation";
 import { LinkPendingSpinner } from "@/components/portal/LinkPendingSpinner";
 import type { DaySummary } from "@/lib/attendance/calendar-shared";
-import { AR_WEEKDAY_LABELS } from "@/lib/attendance/calendar-shared";
+import { AR_WEEKDAY_LABELS, AR_WEEKDAY_SHORT_LABELS } from "@/lib/attendance/calendar-shared";
 import { ABSENT_STATUS } from "@/lib/attendance/leave-types";
 
 function dayHasActivity(day: DaySummary): boolean {
@@ -118,9 +118,10 @@ export function AttendanceCalendar({
         </div>
       ) : null}
       <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-2">
-        {AR_WEEKDAY_LABELS.map((d) => (
-          <div key={d} className="py-1 font-semibold">
-            {d}
+        {AR_WEEKDAY_LABELS.map((d, i) => (
+          <div key={d} className="py-1 font-semibold truncate">
+            <span className="sm:hidden">{AR_WEEKDAY_SHORT_LABELS[i]}</span>
+            <span className="hidden sm:inline">{d}</span>
           </div>
         ))}
       </div>
@@ -152,7 +153,7 @@ export function AttendanceCalendar({
               </span>
               {personMode ? (
                 <span
-                  className={`mt-1 block text-[9px] sm:text-[10px] font-semibold ${
+                  className={`mt-1 block truncate overflow-hidden text-[9px] sm:text-[10px] font-semibold ${
                     day.leave > 0
                       ? "text-teal-700 dark:text-teal-300"
                       : day.missingPunch > 0
@@ -169,7 +170,12 @@ export function AttendanceCalendar({
                   {day.leave > 0
                     ? day.leaveLabel ?? "إجازة"
                     : day.missingPunch > 0
-                    ? "بصمة واحدة"
+                    ? (
+                      <>
+                        <span className="sm:hidden">بصمة</span>
+                        <span className="hidden sm:inline">بصمة واحدة</span>
+                      </>
+                    )
                     : day.absent > 0
                       ? ABSENT_STATUS
                       : day.present > 0
@@ -177,49 +183,54 @@ export function AttendanceCalendar({
                         : day.off > 0
                           ? "راحة"
                           : ""}
-                  {day.late > 0 ? " · تأخير" : ""}
+                  {day.late > 0 ? (
+                    <>
+                      <span className="sm:hidden"> · ت</span>
+                      <span className="hidden sm:inline"> · تأخير</span>
+                    </>
+                  ) : null}
                 </span>
               ) : hasData ? (
-                <div className="mt-1 space-y-0.5 text-[9px] sm:text-[10px] leading-tight">
+                <div className="mt-1 space-y-0.5 overflow-hidden text-[9px] sm:text-[10px] leading-tight">
                   {day.leave > 0 ? (
-                    <span className="block text-teal-600">
+                    <span className="block truncate overflow-hidden text-teal-600">
                       <span className="sm:hidden">إ{day.leave}</span>
                       <span className="hidden sm:inline">إ {day.leave}</span>
                     </span>
                   ) : null}
                   {day.present > 0 ? (
-                    <span className="block text-emerald-600">
+                    <span className="block truncate overflow-hidden text-emerald-600">
                       <span className="sm:hidden">ح{day.present}</span>
                       <span className="hidden sm:inline">ح {day.present}</span>
                     </span>
                   ) : null}
                   {day.absent > 0 ? (
-                    <span className="block text-red-600">
+                    <span className="block truncate overflow-hidden text-red-600">
                       <span className="sm:hidden">غ{day.absent}</span>
                       <span className="hidden sm:inline">غ {day.absent}</span>
                     </span>
                   ) : null}
                   {day.late > 0 ? (
-                    <span className="block text-amber-600">
+                    <span className="block truncate overflow-hidden text-amber-600">
                       <span className="sm:hidden">ت{day.late}</span>
                       <span className="hidden sm:inline">ت {day.late}</span>
                     </span>
                   ) : null}
                   {day.missingPunch > 0 ? (
-                    <span className="block text-orange-600">
+                    <span className="block truncate overflow-hidden text-orange-600">
                       <span className="sm:hidden">ب{day.missingPunch}</span>
                       <span className="hidden sm:inline">بصمة {day.missingPunch}</span>
                     </span>
                   ) : null}
                   {day.off > 0 ? (
-                    <span className="block text-slate-500">
+                    <span className="block truncate overflow-hidden text-slate-500">
                       <span className="sm:hidden">ر{day.off}</span>
                       <span className="hidden sm:inline">ر {day.off}</span>
                     </span>
                   ) : null}
                 </div>
               ) : day.off > 0 ? (
-                <span className="mt-1 block text-[9px] sm:text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+                <span className="mt-1 block truncate overflow-hidden text-[9px] sm:text-[10px] font-semibold text-slate-600 dark:text-slate-300">
                   راحة
                 </span>
               ) : null}

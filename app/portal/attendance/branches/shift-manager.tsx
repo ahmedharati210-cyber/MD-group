@@ -434,7 +434,7 @@ function ShiftRow({
           {WEEKDAY_OPTIONS.map((day) => (
             <label
               key={day.value}
-              className="inline-flex items-center gap-0.5 text-[10px] text-gray-600 dark:text-gray-300"
+              className="inline-flex min-h-11 items-center gap-1 text-xs px-2 py-1.5 text-gray-600 dark:text-gray-300"
             >
               <input
                 form={formId}
@@ -506,7 +506,7 @@ function ShiftRow({
           />
           <button
             type="submit"
-            className={`text-xs px-2 py-1 rounded-full font-semibold ${
+            className={`min-h-11 px-3 py-1.5 text-xs rounded-full font-semibold ${
               shift.active
                 ? "bg-emerald-50 text-emerald-700"
                 : "bg-gray-100 text-gray-600"
@@ -525,7 +525,7 @@ function ShiftRow({
               crosses_midnight: crossesMidnight ? "true" : "false",
             })
           }
-          className="text-xs px-2 py-1 bg-primary-600 text-white rounded-lg disabled:opacity-60"
+          className="min-h-11 px-3 py-1.5 text-xs bg-primary-600 text-white rounded-lg disabled:opacity-60"
         >
           {pending ? "..." : "حفظ"}
         </button>

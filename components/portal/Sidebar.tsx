@@ -336,8 +336,9 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "fixed right-0 top-0 h-screen w-72 md:w-64 bg-white dark:bg-gray-900",
+          "fixed right-0 top-0 h-dvh w-72 md:w-64 bg-white dark:bg-gray-900",
           "border-l border-gray-200 dark:border-gray-800 flex flex-col z-50",
+          "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
           "transition-transform duration-300",
           "md:translate-x-0",
           isOpen ? "translate-x-0" : "translate-x-full md:translate-x-0",

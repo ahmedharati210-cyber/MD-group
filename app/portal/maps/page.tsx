@@ -8,6 +8,11 @@ import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { DeleteMapButton } from "@/components/maps/DeleteMapButton";
 import { MapsFilter } from "@/components/maps/MapsFilter";
+import {
+  PersistListFiltersForm,
+  RestoreListFilters,
+} from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 
 export const metadata = { title: "الخرائط" };
 
@@ -79,9 +84,12 @@ export default async function MapsPage({
         }
       />
 
+      <RestoreListFilters path="/portal/maps" keys={LIST_FILTER_KEYS.maps} />
+
       {companiesForFilter.length > 0 ? (
-        <form
-          method="get"
+        <PersistListFiltersForm
+          path="/portal/maps"
+          keys={LIST_FILTER_KEYS.maps}
           className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 mb-4"
         >
           {filterProjectId ? (
@@ -110,7 +118,7 @@ export default async function MapsPage({
           >
             تصفية
           </button>
-        </form>
+        </PersistListFiltersForm>
       ) : null}
 
       <MapsFilter
@@ -135,7 +143,7 @@ export default async function MapsPage({
                 </div>
                 {canManage ? (
                   <div className="flex gap-1 shrink-0">
-                    <Link href={`/portal/maps/${m.id}/edit`} className="p-2 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="تعديل">
+                    <Link href={`/portal/maps/${m.id}/edit`} className="inline-flex min-h-11 min-w-11 items-center justify-center text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="تعديل">
                       <Pencil className="w-4 h-4" />
                     </Link>
                     <DeleteMapButton mapId={m.id} />

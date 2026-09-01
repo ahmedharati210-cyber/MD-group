@@ -6,7 +6,11 @@ export type AttendanceNavContext = {
 
 export function buildBranchAttendanceHref(
   context: AttendanceNavContext,
-  overrides?: { day?: string | null; personId?: string | null; q?: string | null },
+  overrides?: {
+    day?: string | null;
+    personId?: string | null;
+    q?: string | null;
+  },
 ): string {
   const params = new URLSearchParams();
   params.set("companyId", context.companyId);
@@ -23,11 +27,13 @@ export function buildBranchPersonHref(
   context: AttendanceNavContext,
   personId: string,
   selectedPersonId: string | null,
+  q?: string | null,
 ): string {
   const togglingOff = selectedPersonId === personId;
   return buildBranchAttendanceHref(context, {
     personId: togglingOff ? null : personId,
     day: null,
+    q: q || null,
   });
 }
 

@@ -1,11 +1,18 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   QaSectionsList,
   type QaListSection,
 } from "@/components/testing/QaSectionsList";
 import { QaTestingOverviewPanel } from "@/components/testing/QaTestingOverviewPanel";
+import { RestoreListFilters } from "@/components/portal/list-filters";
+import {
+  LIST_FILTER_KEYS,
+  saveListFilters,
+  type QaFilterChip,
+} from "@/lib/portal-list-filters";
 import { cn } from "@/lib/utils";
 
 type MobileTab = "list" | "overview";
@@ -15,16 +22,48 @@ export function QaProjectWorkspace({
   sections,
   canManage,
   canInteract,
+  initialFilter = "all",
+  initialQuery = "",
 }: {
   projectId: string;
   sections: QaListSection[];
   canManage: boolean;
   canInteract: boolean;
+  initialFilter?: QaFilterChip;
+  initialQuery?: string;
 }) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
+  const path = `/portal/testing/${projectId}`;
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [filter, setFilter] = useState<QaFilterChip>(initialFilter);
   const [focusItemId, setFocusItemId] = useState<string | null>(null);
   const [focusSectionId, setFocusSectionId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("list");
+
+  useEffect(() => {
+    setSearchQuery(initialQuery);
+    setFilter(initialFilter);
+  }, [initialFilter, initialQuery]);
+
+  function writeUrl(nextFilter: QaFilterChip, nextQuery: string) {
+    const params = new URLSearchParams();
+    if (nextFilter !== "all") params.set("filter", nextFilter);
+    const trimmed = nextQuery.trim();
+    if (trimmed) params.set("q", trimmed);
+    saveListFilters(path, params, LIST_FILTER_KEYS.testing);
+    const qs = params.toString();
+    router.replace(qs ? `${path}?${qs}` : path, { scroll: false });
+  }
+
+  function onFilterChange(next: QaFilterChip) {
+    setFilter(next);
+    writeUrl(next, searchQuery);
+  }
+
+  function onSearchChange(value: string) {
+    setSearchQuery(value);
+    writeUrl(filter, value);
+  }
 
   const handleFocusHandled = useCallback(() => {
     setFocusItemId(null);
@@ -59,6 +98,7 @@ export function QaProjectWorkspace({
 
   return (
     <div className="space-y-3">
+      <RestoreListFilters path={path} keys={LIST_FILTER_KEYS.testing} />
       <div
         className="flex gap-2 lg:hidden"
         role="tablist"
@@ -81,6 +121,8 @@ export function QaProjectWorkspace({
             canManage={canManage}
             canInteract={canInteract}
             searchQuery={searchQuery}
+            filter={filter}
+            onFilterChange={onFilterChange}
             focusItemId={focusItemId}
             focusSectionId={focusSectionId}
             onFocusHandled={handleFocusHandled}
@@ -96,7 +138,7 @@ export function QaProjectWorkspace({
           <QaTestingOverviewPanel
             sections={sections}
             searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
+            onSearchChange={onSearchChange}
             onSelectSection={selectSection}
             onSelectItem={selectItem}
           />
@@ -105,3 +147,4 @@ export function QaProjectWorkspace({
     </div>
   );
 }
+

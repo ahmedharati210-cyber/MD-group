@@ -7,6 +7,13 @@ import { PageHeader } from "@/components/portal/PageHeader";
 import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
 import { ProjectsGrid, type ProjectCardData } from "@/components/timeline/ProjectsGrid";
+import { getFilterCompanies } from "@/lib/data/companies";
+import { CompanyFilterSelect } from "@/components/portal/CompanyFilterSelect";
+import {
+  PersistListFiltersForm,
+  RestoreListFilters,
+} from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 
 export const metadata = { title: " المشاريع" };
 
@@ -88,6 +95,14 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
 
   const hasNoProjects = activeProjects.length === 0 && doneProjects.length === 0;
 
+  const showCompanyPicker =
+    Boolean(profile.is_super_admin) ||
+    profile.role === "md_admin" ||
+    profile.role === "owner";
+  const companiesForFilter = showCompanyPicker
+    ? await getFilterCompanies()
+    : [];
+
   return (
     <div>
       <PageHeader
@@ -105,6 +120,27 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
           ) : null
         }
       />
+
+      <RestoreListFilters path="/portal/timeline" keys={LIST_FILTER_KEYS.timeline} />
+      {showCompanyPicker && companiesForFilter.length > 0 ? (
+        <PersistListFiltersForm
+          path="/portal/timeline"
+          keys={LIST_FILTER_KEYS.timeline}
+          className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 mb-6"
+        >
+          <CompanyFilterSelect
+            companies={companiesForFilter}
+            value={companyIdParam ?? ""}
+            className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-hidden flex-1 min-w-48"
+          />
+          <button
+            type="submit"
+            className="px-5 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-semibold text-sm hover:bg-gray-800 dark:hover:bg-white"
+          >
+            تصفية
+          </button>
+        </PersistListFiltersForm>
+      ) : null}
 
       {hasNoProjects ? (
         <EmptyState

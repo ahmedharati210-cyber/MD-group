@@ -97,7 +97,7 @@ export function UserEditForm({
         {!isSelf ? (
           <button
             onClick={() => setIsOpen(true)}
-            className="p-1.5 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
             aria-label="تعديل"
           >
             <Pencil className="w-3.5 h-3.5" />

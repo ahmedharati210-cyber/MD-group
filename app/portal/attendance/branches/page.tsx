@@ -22,10 +22,17 @@ import { BranchFilters } from "./branch-filters";
 import { BranchFullTimeSettings } from "./branch-full-time-settings";
 import { CompanyMonthStartSettings } from "./company-month-start-settings";
 import { buildBranchAttendanceHref } from "../attendance-navigation";
+import { RestoreListFilters } from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 
 export const metadata = { title: "فروع الحضور" };
 
-type SearchParams = Promise<{ companyId?: string; branchId?: string; q?: string }>;
+type SearchParams = Promise<{
+  companyId?: string;
+  branchId?: string;
+  q?: string;
+  month?: string;
+}>;
 
 export default async function AttendanceBranchesPage({
   searchParams,
@@ -57,10 +64,16 @@ export default async function AttendanceBranchesPage({
   const selectedCompany = companies.find((c) => c.id === companyId) ?? null;
   const canEditMonthStart =
     profile.is_super_admin || profile.role === "md_admin";
-  const month = getDefaultAttendanceMonth(
-    new Date(),
-    selectedCompany?.attendance_month_start_day ?? 1,
-  );
+  const monthFromParams =
+    typeof params.month === "string" && /^\d{4}-\d{2}$/.test(params.month)
+      ? params.month
+      : null;
+  const month =
+    monthFromParams ??
+    getDefaultAttendanceMonth(
+      new Date(),
+      selectedCompany?.attendance_month_start_day ?? 1,
+    );
   const backHref =
     companyId && selectedBranchId
       ? buildBranchAttendanceHref({
@@ -74,6 +87,14 @@ export default async function AttendanceBranchesPage({
 
   return (
     <div>
+      <RestoreListFilters
+        path="/portal/attendance/branches"
+        keys={LIST_FILTER_KEYS.attendanceBranches}
+        fallback={{
+          ...(companyId ? { companyId } : {}),
+          ...(selectedBranchId ? { branchId: selectedBranchId } : {}),
+        }}
+      />
       <Link
         href={backHref}
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-3"
@@ -116,7 +137,7 @@ export default async function AttendanceBranchesPage({
           />
           {selectedBranch ? (
             <>
-              <div id="shifts" className="mb-8 scroll-mt-4">
+              <div id="shifts" className="mb-8 scroll-mt-24">
                 {canEditMonthStart && selectedCompany ? (
                   <CompanyMonthStartSettings
                     companyId={companyId}

@@ -116,12 +116,19 @@ export function BranchManager({
           </form>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-4">
+        <div
+          id="add-person"
+          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-4 scroll-mt-24"
+        >
           <h3 className="font-bold">إضافة شخص حضور</h3>
           <p className="text-sm text-gray-500">
             قائمة منفصلة عن موظفي البوابة — للحضور والبصمة فقط.
           </p>
-          <form action={withPreservedScroll(personAction)} className="grid sm:grid-cols-2 gap-3">
+          <form
+            key={defaultBranchId}
+            action={withPreservedScroll(personAction)}
+            className="grid sm:grid-cols-2 gap-3"
+          >
             <input type="hidden" name="company_id" value={companyId} />
             <select
               name="branch_id"
@@ -170,7 +177,8 @@ export function BranchManager({
         <h3 className="px-4 py-3 font-bold border-b border-gray-100 dark:border-gray-800">
           الفروع
         </h3>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[32rem]">
           <thead className="bg-gray-50 dark:bg-gray-800/60">
             <tr className="text-right">
               <th className="px-4 py-3">الفرع</th>
@@ -203,7 +211,7 @@ export function BranchManager({
                     />
                     <button
                       type="submit"
-                      className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                      className={`min-h-11 px-3 py-1.5 text-xs rounded-full font-semibold ${
                         b.active
                           ? "bg-emerald-50 text-emerald-700"
                           : "bg-gray-100 text-gray-600"
@@ -222,6 +230,7 @@ export function BranchManager({
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
@@ -386,7 +395,7 @@ function PersonRow({
           {WEEKDAY_OPTIONS.map((day) => (
             <label
               key={day.value}
-              className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700"
+              className="inline-flex min-h-11 items-center gap-1 text-xs px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700"
             >
               <input
                 form={formId}
@@ -427,7 +436,7 @@ function PersonRow({
           />
           <button
             type="submit"
-            className={`text-xs px-2 py-1 rounded-full font-semibold ${
+            className={`min-h-11 px-3 py-1.5 text-xs rounded-full font-semibold ${
               person.active
                 ? "bg-emerald-50 text-emerald-700"
                 : "bg-gray-100 text-gray-600"
@@ -442,7 +451,7 @@ function PersonRow({
           type="button"
           disabled={pending}
           onClick={() => submitAssociatedForm(formId, action)}
-          className="text-xs px-2 py-1 bg-primary-600 text-white rounded-lg disabled:opacity-60"
+          className="min-h-11 px-3 py-1.5 text-xs bg-primary-600 text-white rounded-lg disabled:opacity-60"
         >
           {pending ? "..." : "حفظ"}
         </button>

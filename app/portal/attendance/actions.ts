@@ -11,6 +11,12 @@ import {
 } from "@/lib/attendance/import-process";
 import type { MatchedImportRow } from "@/lib/attendance/raw-excel-parser";
 import {
+  newPeoplePreviewFromRoster,
+  resolveRosterUpsertIdentity,
+  unionRosterEntries,
+  type ImportRosterEntry,
+} from "@/lib/attendance/import-roster";
+import {
   computeDayRecordWithShift,
   computeSessionRecord,
 } from "@/lib/attendance/shift-matching";
@@ -278,18 +284,21 @@ export async function previewAttendanceImportAction(
   if (!(file instanceof File) || file.size === 0) {
     return { error: "اختر ملف Excel صالح" };
   }
+  const uploadedFileName = file.name;
   if (typeof branchId !== "string" || !branchId) {
-    return { error: "اختر الفرع" };
+    return { error: "اختر الفرع", fileName: uploadedFileName };
   }
   if (typeof month !== "string" || !monthSchema.safeParse(`${month}-01`).success) {
-    return { error: "اختر شهراً صالحاً" };
+    return { error: "اختر شهراً صالحاً", fileName: uploadedFileName };
   }
 
   const scope = await resolveCompanyScope(companyId, current.profile);
-  if ("error" in scope) return { error: scope.error };
+  if ("error" in scope) return { error: scope.error, fileName: uploadedFileName };
 
   const branchCheck = await assertBranchBelongsToCompany(scope.companyId, branchId);
-  if ("error" in branchCheck) return { error: branchCheck.error };
+  if ("error" in branchCheck) {
+    return { error: branchCheck.error, fileName: uploadedFileName };
+  }
 
   const buffer = await file.arrayBuffer();
   const processed = await processAttendanceImportFile(
@@ -298,24 +307,16 @@ export async function previewAttendanceImportAction(
     branchId,
     month,
   );
-  if ("error" in processed) return { error: processed.error };
+  if ("error" in processed) {
+    return { error: processed.error, fileName: uploadedFileName };
+  }
 
-  const matched = { rows: processed.rows, warnings: processed.warnings };
-
-  const newPeopleDetails = [
-    ...new Map(
-      matched.rows
-        .filter((r) => r.isNewPerson)
-        .map((r) => [
-          r.externalEmployeeNumber,
-          { externalNumber: r.externalEmployeeNumber, name: r.employeeName },
-        ]),
-    ).values(),
-  ];
-
+  const newPeopleDetails = newPeoplePreviewFromRoster(processed.rosterEntries);
   const newPeople = newPeopleDetails.map(
     (p) => `${p.name} (${p.externalNumber})`,
   );
+
+  const matched = { rows: processed.rows, warnings: processed.warnings };
 
   const monthDate = `${month}-01`;
   const supabase = await createSupabaseServerClient();
@@ -359,6 +360,7 @@ async function upsertAttendancePeople(
   companyId: string,
   branchId: string,
   rows: MatchedImportRow[],
+  rosterEntries: ImportRosterEntry[] = [],
 ): Promise<Map<string, string>> {
   const existingPeople = await getAttendancePeopleByExternalNumbers(companyId, branchId);
 
@@ -366,23 +368,23 @@ async function upsertAttendancePeople(
     string,
     { full_name: string; raw_department_hint: string | null }
   >();
-  for (const row of rows) {
-    if (!byExt.has(row.externalEmployeeNumber)) {
-      byExt.set(row.externalEmployeeNumber, {
-        full_name: row.employeeName,
-        raw_department_hint: row.departmentHint,
-      });
-    }
+  const peopleToUpsert = unionRosterEntries(rosterEntries, rows);
+  for (const entry of peopleToUpsert) {
+    byExt.set(entry.externalEmployeeNumber, {
+      full_name: entry.employeeName,
+      raw_department_hint: entry.departmentHint,
+    });
   }
 
   const now = new Date().toISOString();
   const upsertRows = [...byExt.entries()].map(([ext, meta]) => {
     const existing = existingPeople.get(ext);
+    const identity = resolveRosterUpsertIdentity(meta.full_name, existing);
     return {
       company_id: companyId,
       branch_id: branchId,
       external_employee_number: ext,
-      full_name: meta.full_name,
+      full_name: identity.full_name,
       raw_department_hint: meta.raw_department_hint,
       shift_id: existing?.shift_id ?? null,
       custom_start_time: existing?.custom_start_time ?? null,
@@ -392,7 +394,7 @@ async function upsertAttendancePeople(
       custom_early_leave_grace_minutes:
         existing?.custom_early_leave_grace_minutes ?? 15,
       custom_work_days: existing?.custom_work_days ?? null,
-      active: true,
+      active: identity.active,
       last_seen_at: now,
     };
   });
@@ -404,10 +406,17 @@ async function upsertAttendancePeople(
     if (error) throw new Error(error.message);
   }
 
-  const people = await getAttendancePeopleByExternalNumbers(companyId, branchId);
+  // Bypass React cache() on getAttendancePeople — same-request reload would miss inserts.
+  const { data: reloaded, error: reloadError } = await supabase
+    .from("attendance_people")
+    .select("id, external_employee_number")
+    .eq("company_id", companyId)
+    .eq("branch_id", branchId);
+  if (reloadError) throw new Error(reloadError.message);
+
   const idMap = new Map<string, string>();
-  for (const [ext, person] of people) {
-    idMap.set(ext, person.id);
+  for (const person of reloaded ?? []) {
+    idMap.set(person.external_employee_number.trim(), person.id);
   }
   return idMap;
 }
@@ -467,17 +476,18 @@ export async function saveAttendanceImportAction(
       scope.companyId,
       branchId,
       rows,
+      processed.rosterEntries,
     );
   } catch (e) {
     return { error: e instanceof Error ? e.message : "تعذر حفظ قائمة الحضور" };
   }
 
-  const existingCount = new Set(
-    rows.filter((r) => !r.isNewPerson).map((r) => r.externalEmployeeNumber),
-  ).size;
-  const newCount = new Set(
-    rows.filter((r) => r.isNewPerson).map((r) => r.externalEmployeeNumber),
-  ).size;
+  const existingCount = processed.rosterEntries.filter(
+    (entry) => !entry.isNewPerson,
+  ).length;
+  const newCount = processed.rosterEntries.filter(
+    (entry) => entry.isNewPerson,
+  ).length;
 
   const { data: existingImport } = await supabase
     .from("attendance_imports")
@@ -1461,9 +1471,14 @@ export async function createAttendancePersonAction(
     notes: parsed.data.notes,
     active: true,
   });
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "رقم البصمة موجود مسبقاً في هذا الفرع." };
+    }
+    return { error: error.message };
+  }
 
-  revalidatePath("/portal/attendance/branches");
+  revalidateAttendanceData();
   return { ok: true };
 }
 

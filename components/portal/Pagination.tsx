@@ -51,11 +51,11 @@ export function Pagination({
   }
 
   return (
-    <nav aria-label="التنقل بين الصفحات" className="flex items-center justify-between gap-3 mt-6">
+    <nav aria-label="التنقل بين الصفحات" className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="text-sm text-gray-500 dark:text-gray-400">
         الصفحة {page} من {totalPages} ({totalCount} نتيجة)
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         {hasPrev ? (
           <Link href={buildHref(page - 1)} className={cn(btnBase, inactiveBtn)}>
             <ChevronRight className="w-4 h-4" />

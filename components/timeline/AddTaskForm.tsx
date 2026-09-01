@@ -116,13 +116,13 @@ export function AddTaskForm({
       </div>
 
       {/* Due date shared for all tasks in this batch */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <label className="text-xs text-gray-500 dark:text-gray-400 shrink-0">تاريخ ووقت الاستحقاق:</label>
         <input
           type="datetime-local"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
-          className={`${inputCls} flex-1`}
+          className={`${inputCls} w-full min-w-0 sm:flex-1`}
         />
         {dueDate ? (
           <button

@@ -4,6 +4,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import toast from "react-hot-toast";
 import { setPortalActiveCompanyAction } from "@/app/portal/companies/active-company-actions";
+import {
+  LIST_FILTER_KEYS,
+  saveListFilters,
+} from "@/lib/portal-list-filters";
 
 type Company = { id: string; name_ar: string };
 type Branch = { id: string; name: string };
@@ -55,6 +59,12 @@ export function BranchFilters({
     const q = searchQuery || params.get("q");
     if (q) params.set("q", q);
     else params.delete("q");
+
+    saveListFilters(
+      "/portal/attendance/branches",
+      params,
+      LIST_FILTER_KEYS.attendanceBranches,
+    );
 
     startTransition(() => {
       router.push(`/portal/attendance/branches?${params.toString()}`, {

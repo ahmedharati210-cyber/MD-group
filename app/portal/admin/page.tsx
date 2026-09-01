@@ -316,8 +316,8 @@ export default async function AdminPage() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-x-auto">
+            <table className="w-full min-w-[36rem] text-sm">
               <thead className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">
                 <tr className="text-right text-gray-600 dark:text-gray-400">
                   <th className="px-5 py-3 font-semibold">الاسم</th>

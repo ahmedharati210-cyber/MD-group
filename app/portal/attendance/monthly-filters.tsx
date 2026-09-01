@@ -5,6 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import toast from "react-hot-toast";
 import { setPortalActiveCompanyAction } from "@/app/portal/companies/active-company-actions";
+import {
+  LIST_FILTER_KEYS,
+  saveListFilters,
+} from "@/lib/portal-list-filters";
 
 type Company = {
   id: string;
@@ -72,14 +76,36 @@ export function MonthlyFilters({
 
     if (nextMonth) params.set("month", nextMonth);
     params.delete("day");
-    if (preservePersonId) {
+
+    const keepPerson =
+      Boolean(preservePersonId) &&
+      nextCompanyId === (companyId ?? "") &&
+      nextBranchId === (branchId ?? "");
+    if (keepPerson && preservePersonId) {
       params.set("personId", preservePersonId);
     } else {
       params.delete("personId");
     }
 
+    const nextPath =
+      !keepPerson && basePath === "/portal/attendance/person"
+        ? "/portal/attendance"
+        : basePath;
+
+    const persistPath =
+      nextPath === "/portal/attendance/person"
+        ? "/portal/attendance"
+        : nextPath;
+    saveListFilters(
+      persistPath,
+      params,
+      persistPath === "/portal/attendance/summary"
+        ? LIST_FILTER_KEYS.attendanceSummary
+        : LIST_FILTER_KEYS.attendance,
+    );
+
     startTransition(() => {
-      router.push(`${basePath}?${params.toString()}`, { scroll: false });
+      router.push(`${nextPath}?${params.toString()}`, { scroll: false });
     });
   }
 
@@ -106,6 +132,21 @@ export function MonthlyFilters({
   }
 
   const filtersDisabled = isPending || isSettingCompany;
+
+  function branchesHref(
+    companyIdValue: string,
+    branchIdValue: string,
+    monthValue: string,
+  ): string {
+    const params = new URLSearchParams();
+    if (companyIdValue) params.set("companyId", companyIdValue);
+    if (branchIdValue) params.set("branchId", branchIdValue);
+    if (monthValue) params.set("month", monthValue);
+    const qs = params.toString();
+    return qs
+      ? `/portal/attendance/branches?${qs}`
+      : "/portal/attendance/branches";
+  }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -189,7 +230,7 @@ export function MonthlyFilters({
         </button>
         {selectedCompanyId ? (
           <Link
-            href={`/portal/attendance/branches?companyId=${selectedCompanyId}${selectedBranchId ? `&branchId=${selectedBranchId}` : ""}`}
+            href={branchesHref(selectedCompanyId, selectedBranchId, selectedMonth)}
             className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold text-center"
           >
             الفروع
@@ -204,7 +245,7 @@ export function MonthlyFilters({
         )}
         {selectedBranchId ? (
           <Link
-            href={`/portal/attendance/branches?companyId=${selectedCompanyId}&branchId=${selectedBranchId}#shifts`}
+            href={`${branchesHref(selectedCompanyId, selectedBranchId, selectedMonth)}#shifts`}
             className="w-full sm:w-auto px-4 py-2.5 border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 rounded-xl text-sm font-semibold text-center"
           >
             إدارة الورديات

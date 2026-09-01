@@ -16,6 +16,10 @@ import {
   personToSyntheticShift,
 } from "@/lib/attendance/person-schedule";
 import type { AttendancePerson, AttendanceShift } from "@/types/db";
+import {
+  rosterEntriesFromBlocks,
+  type ImportRosterEntry,
+} from "@/lib/attendance/import-roster";
 
 export type RawEmployeeBlock = {
   externalEmployeeNumber: string;
@@ -272,9 +276,14 @@ export function matchBlocksToAttendancePeople(
   peopleByExternal: Map<string, AttendancePerson | { id: string; full_name: string }>,
   shifts: AttendanceShift[] = [],
   fullTimeConfig?: FullTimeConfig,
-): { rows: MatchedImportRow[]; warnings: string[] } {
+): {
+  rows: MatchedImportRow[];
+  warnings: string[];
+  rosterEntries: ImportRosterEntry[];
+} {
   const rows: MatchedImportRow[] = [];
   const warnings: string[] = [];
+  const rosterEntries = rosterEntriesFromBlocks(blocks, peopleByExternal);
 
   for (const block of blocks) {
     const ext = block.externalEmployeeNumber?.trim();
@@ -364,7 +373,7 @@ export function matchBlocksToAttendancePeople(
     }
   }
 
-  return { rows, warnings };
+  return { rows, warnings, rosterEntries };
 }
 
 /** @deprecated Use matchBlocksToAttendancePeople */

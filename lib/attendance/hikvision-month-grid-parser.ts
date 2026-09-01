@@ -91,10 +91,13 @@ function isSeparatorRow(
   employeeId: string,
   name: string,
   department: string,
+  hasPunches: boolean,
 ): boolean {
   if (!employeeId) return true;
-  if (department.trim().toLowerCase() === "company") return true;
   if (!name.trim()) return true;
+  // Hikvision org-tree nodes use Department "Company" with no punches.
+  // Real staff can also be tagged Company — keep them when they punched.
+  if (department.trim().toLowerCase() === "company" && !hasPunches) return true;
   return false;
 }
 
@@ -193,16 +196,23 @@ export function parseHikvisionMonthGridMatrix(
     const department =
       deptCol >= 0 ? String(row[deptCol] ?? "").trim() : "";
 
-    if (isSeparatorRow(employeeId, employeeName, department)) {
-      continue;
-    }
-
     const punches: RawPunch[] = [];
     for (const dayCol of dayColumns) {
       const cell = String(row[dayCol.col] ?? "");
       for (const time of parseTimesFromDayCell(cell)) {
         punches.push({ date: dayCol.date, time });
       }
+    }
+
+    if (
+      isSeparatorRow(
+        employeeId,
+        employeeName,
+        department,
+        punches.length > 0,
+      )
+    ) {
+      continue;
     }
 
     if (punches.length === 0) {

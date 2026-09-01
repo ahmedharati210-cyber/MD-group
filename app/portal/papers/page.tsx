@@ -17,6 +17,11 @@ import {
   paperExpiryVisualState,
   type PaperExpiryVisualState,
 } from "@/lib/paper-expiry";
+import {
+  PersistListFiltersForm,
+  RestoreListFilters,
+} from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 export const metadata = { title: "الأوراق الرسمية" };
 
 function papersFilterHref(params: {
@@ -203,7 +208,12 @@ export default async function PapersPage({
         })}
       </div>
 
-      <form className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-5">
+      <RestoreListFilters path="/portal/papers" keys={LIST_FILTER_KEYS.papers} />
+      <PersistListFiltersForm
+        path="/portal/papers"
+        keys={LIST_FILTER_KEYS.papers}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-5"
+      >
         <input
           type="text"
           name="q"
@@ -254,7 +264,7 @@ export default async function PapersPage({
         >
           تصفية
         </button>
-      </form>
+      </PersistListFiltersForm>
 
       {docs.length === 0 ? (
         <EmptyState

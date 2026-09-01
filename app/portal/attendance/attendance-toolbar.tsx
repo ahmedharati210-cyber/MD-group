@@ -24,11 +24,13 @@ export function AttendanceToolbar({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 mb-4 text-sm text-gray-600 dark:text-gray-400">
-      <p>
+      <p className="min-w-0">
         {importRow ? (
           <>
             آخر استيراد:{" "}
-            <span className="font-semibold">{importRow.file_name ?? "—"}</span>
+            <span className="font-semibold break-all">
+              {importRow.file_name ?? "—"}
+            </span>
             {" · "}
             موجودون {importRow.matched_count} / جدد {importRow.unmatched_count}
           </>
@@ -37,7 +39,7 @@ export function AttendanceToolbar({
         )}
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        {companyId && branchId && month ? (
+        {importRow && companyId && branchId && month ? (
           <RecalculateBranchMonthButton
             companyId={companyId}
             branchId={branchId}

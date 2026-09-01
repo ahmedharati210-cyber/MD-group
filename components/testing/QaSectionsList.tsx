@@ -50,6 +50,7 @@ import {
 } from "@/lib/qa-testing-format";
 import type { QaItemKind, QaTestResult, QaTestSeverity } from "@/types/db";
 import { cn } from "@/lib/utils";
+import type { QaFilterChip } from "@/lib/portal-list-filters";
 
 export type QaListItem = {
   id: string;
@@ -76,7 +77,7 @@ export type QaListSection = {
   items: QaListItem[];
 };
 
-type Filter = "all" | "pending" | "open" | "tasks";
+type Filter = QaFilterChip;
 
 function sortByOrder<T extends { sort_order: number }>(rows: T[]): T[] {
   return [...rows].sort((a, b) => a.sort_order - b.sort_order);
@@ -100,6 +101,8 @@ export function QaSectionsList({
   canManage,
   canInteract,
   searchQuery = "",
+  filter = "all",
+  onFilterChange,
   focusItemId = null,
   focusSectionId = null,
   onFocusHandled,
@@ -109,6 +112,8 @@ export function QaSectionsList({
   canManage: boolean;
   canInteract: boolean;
   searchQuery?: string;
+  filter?: Filter;
+  onFilterChange?: (filter: Filter) => void;
   focusItemId?: string | null;
   focusSectionId?: string | null;
   onFocusHandled?: () => void;
@@ -124,7 +129,6 @@ export function QaSectionsList({
     defaultCollapsedMap(initialSections),
   );
   const [doneOpen, setDoneOpen] = useState<Record<string, boolean>>({});
-  const [filter, setFilter] = useState<Filter>("all");
   const [addingItemFor, setAddingItemFor] = useState<string | null>(null);
   const [showAddSection, setShowAddSection] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -156,7 +160,7 @@ export function QaSectionsList({
     if (!focusItemId && !focusSectionId) return;
 
     // Ensure the target is in the DOM (not hidden by خلل وتحسين/مهام filters).
-    setFilter("all");
+    onFilterChange?.("all");
 
     let targetSectionId = focusSectionId;
     let targetIsDone = false;
@@ -306,7 +310,7 @@ export function QaSectionsList({
   const chip = (id: Filter, label: string) => (
     <button
       type="button"
-      onClick={() => setFilter(id)}
+      onClick={() => onFilterChange?.(id)}
       aria-pressed={filter === id}
       className={cn(
         "px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors",

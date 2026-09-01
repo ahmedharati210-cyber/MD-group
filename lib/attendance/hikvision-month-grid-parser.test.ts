@@ -60,6 +60,42 @@ describe("parseHikvisionMonthGridMatrix", () => {
     ["2", "", "Company", ...Array(31).fill("")],
   ];
 
+  it("imports Company-department rows that have punches, skips empty group headers", () => {
+    const dayCells = Array.from({ length: 31 }, () => "");
+    dayCells[4] = "14:15\n23:05\n";
+    dayCells[5] = "08:00\n17:00\n";
+    const dayCells098 = Array.from({ length: 31 }, () => "");
+    dayCells098[8] = "16:00\n";
+
+    const parsed = parseHikvisionMonthGridMatrix([
+      ...matrix,
+      ["Cafe", "محمد ميلاد", "Company", ...dayCells],
+      ["098", "مالك بن جابر", "Company", ...dayCells098],
+    ]);
+
+    expect(parsed.blocks.find((b) => b.externalEmployeeNumber === "1")).toBeUndefined();
+    expect(parsed.blocks.find((b) => b.externalEmployeeNumber === "2")).toBeUndefined();
+
+    const milad = parsed.blocks.find((b) => b.externalEmployeeNumber === "Cafe");
+    expect(milad?.employeeName).toBe("محمد ميلاد");
+    expect(milad?.punches).toEqual(
+      expect.arrayContaining([
+        { date: "2026-07-05", time: "14:15" },
+        { date: "2026-07-05", time: "23:05" },
+        { date: "2026-07-06", time: "08:00" },
+        { date: "2026-07-06", time: "17:00" },
+      ]),
+    );
+
+    const malekJaber = parsed.blocks.find(
+      (b) => b.externalEmployeeNumber === "098",
+    );
+    expect(malekJaber?.employeeName).toBe("مالك بن جابر");
+    expect(malekJaber?.punches).toEqual([
+      { date: "2026-07-09", time: "16:00" },
+    ]);
+  });
+
   it("skips Company separator rows and expands day cells into punches", () => {
     const parsed = parseHikvisionMonthGridMatrix(matrix);
     expect(parsed.periodStart).toBe("2026-07-01");

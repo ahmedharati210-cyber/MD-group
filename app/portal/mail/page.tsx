@@ -17,6 +17,11 @@ import { EmptyState } from "@/components/portal/EmptyState";
 import { Pagination } from "@/components/portal/Pagination";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import {
+  PersistListFiltersForm,
+  RestoreListFilters,
+} from "@/components/portal/list-filters";
+import { LIST_FILTER_KEYS } from "@/lib/portal-list-filters";
 
 export const metadata = { title: "البريد" };
 
@@ -136,7 +141,12 @@ export default async function MailPage({
         })}
       </div>
 
-      <form className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-5">
+      <RestoreListFilters path="/portal/mail" keys={LIST_FILTER_KEYS.mail} />
+      <PersistListFiltersForm
+        path="/portal/mail"
+        keys={LIST_FILTER_KEYS.mail}
+        className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-5"
+      >
         {tab !== "all" ? (
           <input type="hidden" name="direction" value={tab} />
         ) : null}
@@ -167,7 +177,7 @@ export default async function MailPage({
         >
           تصفية
         </button>
-      </form>
+      </PersistListFiltersForm>
 
       {mails.length === 0 ? (
         <EmptyState

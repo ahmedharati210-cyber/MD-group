@@ -3,11 +3,19 @@
 import { useRouter, usePathname } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { useRef } from "react";
+import {
+  LIST_FILTER_KEYS,
+  clearListFilters,
+  saveListFilters,
+} from "@/lib/portal-list-filters";
 
 type ProjectOption = { id: string; name: string };
 
 const selectCls =
   "px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-hidden";
+
+const PATH = "/portal/maps";
+const KEYS = LIST_FILTER_KEYS.maps;
 
 export function MapsFilter({
   projects,
@@ -32,22 +40,31 @@ export function MapsFilter({
       ...overrides,
     };
     const next = new URLSearchParams();
-    Object.entries(merged).forEach(([k, v]) => { if (v) next.set(k, v); });
-    return next.toString();
+    Object.entries(merged).forEach(([k, v]) => {
+      if (v) next.set(k, v);
+    });
+    return next;
+  }
+
+  function navigate(params: URLSearchParams) {
+    saveListFilters(PATH, params, KEYS);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
   function updateProject(value: string) {
-    router.replace(`${pathname}?${buildParams({ project_id: value })}`, { scroll: false });
+    navigate(buildParams({ project_id: value }));
   }
 
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
     const q = inputRef.current?.value.trim() ?? "";
-    router.replace(`${pathname}?${buildParams({ q })}`, { scroll: false });
+    navigate(buildParams({ q }));
   }
 
   function clearAll() {
     if (inputRef.current) inputRef.current.value = "";
+    clearListFilters(PATH);
     router.replace(pathname, { scroll: false });
   }
 
@@ -55,7 +72,6 @@ export function MapsFilter({
 
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4">
-      {/* Project filter */}
       {projects.length > 0 ? (
         <select value={currentProjectId} onChange={(e) => updateProject(e.target.value)} className={selectCls}>
           <option value="">كل المشاريع</option>
@@ -65,7 +81,6 @@ export function MapsFilter({
         </select>
       ) : null}
 
-      {/* Name search */}
       <form onSubmit={submitSearch} className="flex items-center gap-2">
         <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />

@@ -18,6 +18,7 @@ type Props = {
   selectedPersonId: string | null;
   hasSearch: boolean;
   navContext: AttendanceNavContext;
+  searchQuery?: string;
 };
 
 export function AttendancePersonList({
@@ -25,6 +26,7 @@ export function AttendancePersonList({
   selectedPersonId,
   hasSearch,
   navContext,
+  searchQuery = "",
 }: Props) {
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
@@ -38,13 +40,18 @@ export function AttendancePersonList({
             : "لا يوجد أشخاص في قائمة الحضور لهذا الفرع."}
         </p>
       ) : (
-        <ul className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[420px] overflow-y-auto">
+        <ul className="divide-y divide-gray-100 dark:divide-gray-800 md:max-h-[420px] md:overflow-y-auto">
           {people.map((person) => {
             const isSelected = selectedPersonId === person.id;
             return (
               <li key={person.id} className="flex items-stretch">
                 <PortalLink
-                  href={buildBranchPersonHref(navContext, person.id, selectedPersonId)}
+                  href={buildBranchPersonHref(
+                    navContext,
+                    person.id,
+                    selectedPersonId,
+                    searchQuery,
+                  )}
                   className={`relative flex-1 min-w-0 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
                     isSelected ? "bg-primary-50 dark:bg-primary-900/20" : ""
                   }`}
@@ -65,7 +72,7 @@ export function AttendancePersonList({
                   href={buildPersonMonthHref(navContext, person.id)}
                   title="فتح شهر الموظف للتعديل"
                   aria-label={`فتح شهر ${person.full_name} للتعديل`}
-                  className="relative z-10 shrink-0 px-3 my-2 ml-2 rounded-lg text-gray-500 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="relative z-10 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center my-2 ml-2 rounded-lg text-gray-500 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <LinkPendingSpinner className="absolute top-1 left-1" />
                   <Eye className="w-4 h-4" />

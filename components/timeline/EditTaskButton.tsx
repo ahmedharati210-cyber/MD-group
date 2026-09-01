@@ -94,7 +94,7 @@ export function EditTaskButton({
         >
           <div
             ref={dialogRef}
-            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-800 overflow-hidden"
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-800"
             dir="rtl"
           >
             {/* Header */}

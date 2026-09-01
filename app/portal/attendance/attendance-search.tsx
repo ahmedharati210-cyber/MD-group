@@ -4,6 +4,10 @@ import { Search, X } from "lucide-react";
 import { PortalLink } from "@/components/portal/PortalLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import {
+  LIST_FILTER_KEYS,
+  saveListFilters,
+} from "@/lib/portal-list-filters";
 
 type Props = {
   basePath: string;
@@ -37,6 +41,13 @@ export function AttendanceSearch({
       if (paramValue) params.set(key, paramValue);
     }
     if (q) params.set("q", q);
+    saveListFilters(
+      basePath,
+      params,
+      basePath === "/portal/attendance/branches"
+        ? LIST_FILTER_KEYS.attendanceBranches
+        : LIST_FILTER_KEYS.attendance,
+    );
     startTransition(() => {
       router.push(`${basePath}?${params.toString()}`, { scroll: false });
     });

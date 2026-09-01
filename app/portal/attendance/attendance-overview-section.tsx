@@ -154,7 +154,9 @@ export async function AttendanceOverviewSection({
             externalNumber={selectedPerson.external_employee_number}
             recordCount={personAllRecords.length}
             leaveDays={personStats.leaveDays}
-            closeHref={buildBranchAttendanceHref(navContext)}
+            closeHref={buildBranchAttendanceHref(navContext, {
+              q: searchQuery || null,
+            })}
             person={selectedPerson}
             canResetLeaveBalance={canResetLeaveBalance}
           />
